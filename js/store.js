@@ -6,8 +6,8 @@ const Store = (function () {
 
   // schema 1 の記録（旧データベース "typing-test"）は扱わない。旧データベースは消さずにそのまま残す
   const DB_NAME = "typing-records";
-  const DB_VERSION = 2; // 入れ物（保存場所・索引）の構造の版
-  const SCHEMA_VERSION = 2; // 記録1件の形式の版
+  const DB_VERSION = 3; // 入れ物（保存場所・索引）の構造の版
+  const SCHEMA_VERSION = 3; // 記録1件の形式の版（3：正確率を「最後に合っていた文字の割合」に変更）
   const EXPORT_APP = "typing-test";
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
   const RANK_MIN_ACCURACY = 95; // 正確率がこれ未満の記録はランキングに載せない（記録は残す）
@@ -18,6 +18,21 @@ const Store = (function () {
   function avgIki(timeSec, textLength) {
     if (textLength < 2) return null;
     return Math.round((timeSec * 1000 / (textLength - 1)) * 10) / 10;
+  }
+
+  // 正確率(%) = 最後にお題と合っていた文字の割合。直したミスは含めない。定義は docs/scoring.md
+  function accuracy(textLength, uncorrected) {
+    if (textLength < 1) return 100;
+    return Math.round(((textLength - uncorrected) / textLength) * 1000) / 10;
+  }
+
+  // schemaVersion 2 の概要を 3 に直す（正確率を新しい定義で計算し直す。uncorrected は 2 から入っている）
+  function upgradeSession(s) {
+    if (s.schemaVersion === 2) {
+      s.result.accuracy = accuracy(s.textLength, s.result.uncorrected);
+      s.schemaVersion = 3;
+    }
+    return s;
   }
 
   // 生データの全キー入力を再生して、直さずに残った間違いの数を数える
@@ -56,6 +71,10 @@ const Store = (function () {
             sessions.createIndex(RANK_INDEX, ["lang", "mode", "keyLayout", "result.avgIki"]);
             if (e.oldVersion >= 1) migrateTo2(t);
           }
+          if (e.oldVersion === 2) {
+            // 版2 → 3：正確率の定義変更に合わせて計算し直す（版1からは migrateTo2 の中で済ませる）
+            migrateTo3(t);
+          }
         };
         req.onsuccess = function () {
           const db = req.result;
@@ -89,9 +108,20 @@ const Store = (function () {
         if (s) {
           s.result.avgIki = avgIki(s.result.timeSec, s.textLength);
           s.result.uncorrected = countUncorrected(raw);
-          sessions.put(s);
+          sessions.put(upgradeSession(s));
         }
       };
+      c.continue();
+    };
+  }
+
+  // 既存の記録の正確率を新しい定義で計算し直す（生データは変えない）
+  function migrateTo3(t) {
+    const cur = t.objectStore("sessions").openCursor();
+    cur.onsuccess = function () {
+      const c = cur.result;
+      if (!c) return;
+      c.update(upgradeSession(c.value));
       c.continue();
     };
   }
@@ -241,7 +271,8 @@ const Store = (function () {
     if (!data || data.app !== EXPORT_APP) {
       return Promise.reject(new Error("このアプリの記録ファイルではありません"));
     }
-    if (data.schemaVersion !== SCHEMA_VERSION) {
+    // schemaVersion 2 のファイルは、読み込むときに 3 に直す
+    if (data.schemaVersion !== SCHEMA_VERSION && data.schemaVersion !== 2) {
       return Promise.reject(new Error("対応していない形式です（schemaVersion " + (data.schemaVersion || data.schema) + "）"));
     }
     if (!Array.isArray(data.sessions) || !Array.isArray(data.raws)) {
@@ -252,8 +283,8 @@ const Store = (function () {
       .then(function (keys) {
         const have = new Set(keys);
         const fresh = data.sessions.filter(function (s) {
-          return s && s.id && s.schemaVersion === SCHEMA_VERSION && !have.has(s.id) && raws.has(s.id);
-        });
+          return s && s.id && (s.schemaVersion === SCHEMA_VERSION || s.schemaVersion === 2) && !have.has(s.id) && raws.has(s.id);
+        }).map(upgradeSession);
         return tx(["sessions", "raws"], "readwrite", function (t) {
           fresh.forEach(function (s) {
             t.objectStore("sessions").add(s);
@@ -277,6 +308,7 @@ const Store = (function () {
     SCHEMA_VERSION: SCHEMA_VERSION,
     RANK_MIN_ACCURACY: RANK_MIN_ACCURACY,
     avgIki: avgIki,
+    accuracy: accuracy,
     eligible: eligible,
     compare: compare,
     save: save,

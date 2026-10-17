@@ -196,7 +196,9 @@
   function calc() {
     const sec = elapsedSec();
     const wpm = sec > 0 ? (correctCount() / 5) / (sec / 60) : 0;
-    const acc = keystrokes > 0 ? ((keystrokes - misses) / keystrokes) * 100 : 100;
+    // 正確率：今の入力のうちお題と合っている文字の割合。直したミスは含めない（docs/scoring.md）
+    const typed = input.value.length;
+    const acc = typed > 0 ? (correctCount() / typed) * 100 : 100;
     return { sec: sec, wpm: wpm, acc: acc };
   }
 
@@ -258,7 +260,7 @@
       textLength: target.length,
       result: {
         wpm: Math.round(r.wpm * 10) / 10,
-        accuracy: Math.round(r.acc * 10) / 10,
+        accuracy: Store.accuracy(target.length, r.uncorrected),
         timeSec: Math.round(r.sec * 1000) / 1000,
         keystrokes: keystrokes,
         misses: misses,

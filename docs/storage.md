@@ -1,4 +1,4 @@
-# 記録の保存形式（schemaVersion 2）
+# 記録の保存形式（schemaVersion 3）
 
 お題を最後まで打つたびに、その回の記録をブラウザの IndexedDB に保存する。1回の記録は **概要（`sessions`）** と **生データ（`raws`）** の2つに分け、同じ `id` で結び付ける。実装は `js/store.js`（保存・ランキングの取り出し・書き出し・読み込み）と `js/app.js`（記録の組み立て）。
 
@@ -12,7 +12,7 @@
 | 名前 | 何の版か | 場所 |
 | --- | --- | --- |
 | `appVersion` | アプリのバージョン（`index.html` の `?v=`、画面右下の表示） | 概要の記録 |
-| `schemaVersion` | 記録1件・書き出しファイルの形式の版。今は **2** | 概要の記録・書き出しファイル |
+| `schemaVersion` | 記録1件・書き出しファイルの形式の版。今は **3** | 概要の記録・書き出しファイル |
 | `DB_VERSION` | IndexedDB の入れ物（保存場所・索引）の構造の版 | `js/store.js` のコードだけ |
 
 **schemaVersion 1（旧形式）は扱わない。** 旧形式は別のデータベース（`typing-test`）に入っていて、アプリは読まない（消しもしない）。旧形式の書き出しファイルも読み込めない。
@@ -34,7 +34,7 @@
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "0b6c…（UUID）",
   "finishedAt": "2026-10-17T09:12:41.882Z",
   "appVersion": "11",
@@ -57,7 +57,7 @@
 
 | フィールド | 内容 |
 | --- | --- |
-| `schemaVersion` | 形式の版（2） |
+| `schemaVersion` | 形式の版（3） |
 | `id` | 記録ごとの UUID。`raws` と同じ値。読み込み時の重複判定にも使う |
 | `finishedAt` | 打ち終わりの日時（UTC, ISO 8601）。打ち始めは `finishedAt - result.timeSec` で求められるので持たない |
 | `appVersion` | 記録したときのアプリのバージョン |
@@ -66,7 +66,7 @@
 | `keyLayout` | 論理キー配列（今は `"qwerty"` のみ）。画面右上の「配列」で選ぶ |
 | `textId` | お題の題材名（`texts/index.json` の名前。例 `qwerty`） |
 | `textLength` | お題の文字数 |
-| `result` | 結果の数値。`wpm` `accuracy` は小数第1位、`timeSec` は ms 単位。`avgIki` は平均 IKI ＝ 経過時間 ÷（文字数 − 1）で 0.1ms 単位（文字数が1以下なら `null`）。`uncorrected` は終了時に直さず残った間違いの数。定義は `docs/scoring.md` |
+| `result` | 結果の数値。`wpm` `accuracy` は小数第1位（`accuracy` は最後にお題と合っていた文字の割合で、直したミスは含めない）、`timeSec` は ms 単位。`avgIki` は平均 IKI ＝ 経過時間 ÷（文字数 − 1）で 0.1ms 単位（文字数が1以下なら `null`）。`uncorrected` は終了時に直さず残った間違いの数。定義は `docs/scoring.md` |
 
 ## 生データ（`raws`）：1回1件、約3〜10KB
 
@@ -110,7 +110,7 @@
 ```json
 {
   "app": "typing-test",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "exportedAt": "2026-10-20T12:00:00.000Z",
   "sessions": [ …概要… ],
   "raws": [ …生データ… ]
@@ -119,7 +119,15 @@
 
 - 1つのファイルで全記録を戻せる（ファイルを分けると、別々の時点のものを組み合わせて食い違う危険があるため）。
 - 読み込み時、同じ `id` の記録と、概要と生データが揃っていない記録は飛ばす。
-- `schemaVersion` が 2 以外のファイルは読み込まない。
+- `schemaVersion` が 3 のファイルを読み込む。2 のファイルは読み込むときに 3 に直す（正確率を計算し直す）。それ以外は読み込まない。
+
+## 形式の版の履歴（`schemaVersion`）
+
+| 版 | 内容 |
+| --- | --- |
+| 1 | 旧形式（扱わない） |
+| 2 | 概要と生データに分割。`result.accuracy` は (打鍵数 − ミス) ÷ 打鍵数 |
+| 3 | `result.accuracy` を、最後にお題と合っていた文字の割合に変更（直したミスは含めない） |
 
 ## データベースの版の履歴（`DB_VERSION`）
 
@@ -127,6 +135,7 @@
 | --- | --- |
 | 1 | `sessions`・`raws` を作成。索引 `rank` は WPM 順 |
 | 2 | 索引 `rank` を平均 IKI 順に作り直す。既存の記録の `result.avgIki` を新しい定義で計算し直し、`result.uncorrected` を生データから数えて足す（生データは変えない） |
+| 3 | 既存の記録の `result.accuracy` を新しい定義（最後に合っていた文字の割合 ＝ (textLength − uncorrected) ÷ textLength）で計算し直し、`schemaVersion` を 3 にする（生データは変えない） |
 
 ## 形式を変えるとき
 
