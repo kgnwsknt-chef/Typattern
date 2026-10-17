@@ -277,6 +277,8 @@ const Store = (function () {
     SCHEMA_VERSION: SCHEMA_VERSION,
     RANK_MIN_ACCURACY: RANK_MIN_ACCURACY,
     avgIki: avgIki,
+    eligible: eligible,
+    compare: compare,
     save: save,
     count: count,
     top: top,

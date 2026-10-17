@@ -460,6 +460,95 @@ a.text-btn {
   color: var(--sub);
 }
 
+.stats-section {
+  margin-top: 28px;
+}
+
+.small-btn {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+/* 成績の推移 */
+.trend {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.trend-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.trend-empty {
+  margin: 0;
+  padding: 40px 0;
+  text-align: center;
+  color: var(--sub);
+  font-size: 13px;
+}
+
+.trend-axis {
+  stroke: var(--sub);
+  stroke-width: 1;
+}
+
+.trend-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.trend-label {
+  fill: var(--sub);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.trend-axis-title {
+  fill: var(--sub);
+  font-size: 11px;
+}
+
+.trend-point {
+  fill: var(--accent);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.trend-point.out {
+  fill: var(--bg);
+}
+
+.trend-ma {
+  fill: none;
+  stroke: #e08a00;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.trend-line,
+.trend-acc-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+.trend-best {
+  fill: var(--bg);
+  stroke: #e08a00;
+  stroke-width: 1.5;
+}
+
+.trend-threshold {
+  stroke: var(--error);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+}
+
 .stats-summary {
   margin: 0 0 8px;
   font-size: 13px;

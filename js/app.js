@@ -291,7 +291,7 @@
           res.rank.textContent = "-";
           res.rankLabel.textContent = "ランキング対象外（正確率 " + Store.RANK_MIN_ACCURACY + "% 未満）";
         }
-        rankingTitleEl.textContent = categoryLabel(session);
+        rankingTitleEl.textContent = Ranking.categoryLabel(session);
         Ranking.render(rankingEl, v[1], id);
         saveStatusEl.textContent = "記録を保存しました。";
       })
@@ -299,14 +299,6 @@
         console.error(err);
         saveStatusEl.textContent = "記録を保存できませんでした: " + err.message;
       });
-  }
-
-  // ランキングの区分の表示名（例: 英語・通常・QWERTY）
-  function categoryLabel(s) {
-    const lang = { en: "英語", ja: "日本語" }[s.lang] || s.lang;
-    const mode = { normal: "通常", short: "短いお題" }[s.mode] || s.mode;
-    const opt = keyLayoutEl.querySelector('option[value="' + s.keyLayout + '"]');
-    return lang + "・" + mode + "・" + (opt ? opt.textContent : s.keyLayout);
   }
 
   // 全キー入力を記録する。どの行も5要素にそろえる（docs/storage.md）

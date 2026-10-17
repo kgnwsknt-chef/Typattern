@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typing Test 記録</title>
-  <link rel="stylesheet" href="style.css?v=17">
+  <link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
   <header class="header">
@@ -15,38 +15,60 @@
   </header>
 
   <main class="main stats-main">
+    <h2 class="stats-title">記録の絞り込み</h2>
+    <div class="filters stats-filters">
+      <label class="filter">言語
+        <select id="f-lang" class="layout-select">
+          <option value="">すべて</option>
+          <option value="en">英語</option>
+          <option value="ja">日本語</option>
+        </select>
+      </label>
+      <label class="filter">配列
+        <select id="f-layout" class="layout-select">
+          <option value="">すべて</option>
+          <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
+      <label class="filter">モード
+        <select id="f-mode" class="layout-select">
+          <option value="">すべて</option>
+          <option value="normal">通常</option>
+          <option value="short">短いお題</option>
+        </select>
+      </label>
+      <span class="filter">期間
+        <input id="f-from" type="date" class="layout-select" aria-label="開始日">
+        〜
+        <input id="f-to" type="date" class="layout-select" aria-label="終了日">
+        <button id="f-clear" type="button" class="text-btn small-btn" title="期間の指定をなくす">すべて</button>
+      </span>
+    </div>
+    <p id="stats-summary" class="stats-summary">読み込み中…</p>
+
+    <section class="stats-section">
+      <h2 class="stats-title">成績の推移</h2>
+      <div class="filters">
+        <label class="filter">まとめ方
+          <select id="f-group" class="layout-select">
+            <option value="run">1回ごと（横軸: 回数）</option>
+            <option value="day">日ごと（横軸: 年月日）</option>
+          </select>
+        </label>
+      </div>
+      <p id="trend-legend" class="rhythm-legend"></p>
+      <div id="trend" class="trend"></div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">ランキング</h2>
+      <p id="ranking-legend" class="rhythm-legend"></p>
+      <div id="ranking" class="ranking-scroll"></div>
+    </section>
+
     <section class="stats-section">
       <h2 class="stats-title">全記録の n-gram</h2>
-
       <div class="filters">
-        <label class="filter">言語
-          <select id="f-lang" class="layout-select">
-            <option value="">すべて</option>
-            <option value="en">英語</option>
-            <option value="ja">日本語</option>
-          </select>
-        </label>
-        <label class="filter">配列
-          <select id="f-layout" class="layout-select">
-            <option value="">すべて</option>
-            <option value="qwerty">QWERTY</option>
-          </select>
-        </label>
-        <label class="filter">モード
-          <select id="f-mode" class="layout-select">
-            <option value="">すべて</option>
-            <option value="normal">通常</option>
-            <option value="short">短いお題</option>
-          </select>
-        </label>
-        <label class="filter">期間
-          <select id="f-recent" class="layout-select">
-            <option value="0">すべて</option>
-            <option value="100">直近 100 回</option>
-            <option value="30">直近 30 回</option>
-            <option value="10">直近 10 回</option>
-          </select>
-        </label>
         <label class="filter">回数
           <select id="f-min" class="layout-select">
             <option value="1">1 回以上</option>
@@ -56,8 +78,7 @@
           </select>
         </label>
       </div>
-
-      <p id="stats-summary" class="stats-summary">読み込み中…</p>
+      <p id="ngram-summary" class="stats-summary"></p>
       <p class="rhythm-legend">単語の中の連続する2文字（bigram）・3文字（trigram）ごとの平均 IKI を、選んだ記録すべてで集計。trigram は2つの打鍵間隔の平均 ／ ミスが絡んだものとスペースを含むものは除外 ／ 色は全体の打鍵間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い</p>
       <div class="ngram-grid">
         <div class="ngram-col">
@@ -76,9 +97,11 @@
     <span id="version" class="version"></span>
   </footer>
 
-  <script src="js/store.js?v=17"></script>
-  <script src="js/rhythm.js?v=17"></script>
-  <script src="js/ngram.js?v=17"></script>
-  <script src="js/stats.js?v=17"></script>
+  <script src="js/store.js?v=18"></script>
+  <script src="js/rhythm.js?v=18"></script>
+  <script src="js/ngram.js?v=18"></script>
+  <script src="js/ranking.js?v=18"></script>
+  <script src="js/trend.js?v=18"></script>
+  <script src="js/stats.js?v=18"></script>
 </body>
 </html>

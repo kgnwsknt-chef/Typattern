@@ -1,14 +1,25 @@
-// 結果画面の「ランキング」タブ。区分（言語・モード・配列）ごとの上位の記録を表にする
+// 上位の記録の表。結果画面の「ランキング」タブと記録ページで使う
 const Ranking = (function () {
   "use strict";
 
+  const LANG_LABEL = { en: "英語", ja: "日本語" };
+  const MODE_LABEL = { normal: "通常", short: "短いお題" };
+
+  // 区分（言語・モード・配列）の表示名（例: 英語・通常・QWERTY）
+  function categoryLabel(s) {
+    return (LANG_LABEL[s.lang] || s.lang) + "・" + (MODE_LABEL[s.mode] || s.mode) + "・" + s.keyLayout.toUpperCase();
+  }
+
   // rows は平均 IKI の小さい順（同じなら正確率の高い順）の概要の記録。currentId の行を目立たせる
-  function render(container, rows, currentId) {
+  // opts.category: true なら「区分」の列を出す（区分が混ざった一覧のとき）
+  // opts.emptyText: 記録がないときの文言
+  function render(container, rows, currentId, opts) {
+    opts = opts || {};
     container.textContent = "";
     if (rows.length === 0) {
       const p = document.createElement("p");
       p.className = "bg-empty";
-      p.textContent = "まだ記録がありません。";
+      p.textContent = opts.emptyText || "まだ記録がありません。";
       container.appendChild(p);
       return;
     }
@@ -18,7 +29,10 @@ const Ranking = (function () {
 
     const head = document.createElement("thead");
     const hr = document.createElement("tr");
-    ["順位", "平均 IKI(ms)", "正確率(%)", "ミス", "未修正", "お題", "日時"].forEach(function (label) {
+    const labels = ["順位", "平均 IKI(ms)", "正確率(%)", "ミス", "未修正", "お題"];
+    if (opts.category) labels.push("区分");
+    labels.push("日時");
+    labels.forEach(function (label) {
       const th = document.createElement("th");
       th.textContent = label;
       hr.appendChild(th);
@@ -35,15 +49,17 @@ const Ranking = (function () {
 
       const tr = document.createElement("tr");
       if (s.id === currentId) tr.className = "rk-current";
-      [
+      const cells = [
         rank,
         s.result.avgIki.toFixed(1),
         s.result.accuracy.toFixed(1),
         s.result.misses,
         s.result.uncorrected,
-        s.textId,
-        formatDate(s.finishedAt)
-      ].forEach(function (v) {
+        s.textId
+      ];
+      if (opts.category) cells.push(categoryLabel(s));
+      cells.push(formatDate(s.finishedAt));
+      cells.forEach(function (v) {
         const td = document.createElement("td");
         td.textContent = v;
         tr.appendChild(td);
@@ -61,5 +77,5 @@ const Ranking = (function () {
     return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
 
-  return { render: render };
+  return { render: render, categoryLabel: categoryLabel };
 })();
