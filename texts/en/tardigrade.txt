@@ -1,9 +1,5 @@
-Tardigrades, often called water bears, are tiny animals that are
-usually less than a millimeter long. They live almost everywhere,
-from mountain tops to the deep sea, and many of them can be found in
-the damp moss of an ordinary garden. When their surroundings dry out,
-they pull in their legs, lose most of the water in their bodies, and
-enter a state in which their life processes nearly stop. In this form
-they can survive extreme cold, strong radiation, and even a short
-trip to outer space. When water returns, they slowly wake up and
-carry on as if nothing had happened.
+Tardigrades, often called water bears, are tiny animals less than a
+millimeter long. When their surroundings dry out, they lose most of
+their water and enter a state in which life nearly stops. In this
+form they survive extreme cold and strong radiation, then wake up
+again when water returns.

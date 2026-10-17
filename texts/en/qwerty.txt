@@ -1,10 +1,5 @@
-The QWERTY keyboard layout was designed in the eighteen seventies for
-early typewriters, long before computers existed. A popular story
-claims that the letters were arranged to slow typists down, but a
-more likely reason is mechanical. Early typewriters jammed when
-neighboring type bars were struck in quick succession, so common
-letter pairs were spread apart to keep the machine running smoothly.
-Many alternative layouts have since been proposed, and some may allow
-faster typing. Even so, QWERTY has survived for more than a century,
-mostly because millions of people already know it and switching would
-mean learning to type all over again.
+The QWERTY layout was designed in the eighteen seventies for early
+typewriters. Typewriters jammed when neighboring type bars were
+struck quickly, so common letter pairs were spread apart. Faster
+layouts have been proposed since, but QWERTY has survived because
+millions of people already know it.
