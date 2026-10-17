@@ -7,6 +7,12 @@
   // お題ファイルの置き場所。texts/<言語>/<題材名>.txt、短縮版は <題材名>_short.txt
   const TEXT_DIR = "texts/" + LANG + "/";
   const TEXT_SUFFIX = SHORT ? "_short.txt" : ".txt";
+  // 記録のモード。ランキングはモードごとに分ける
+  const MODE = SHORT ? "short" : "normal";
+  // ランキングに表示する件数
+  const RANK_TOP = 30;
+  // 選んだキー配列を覚えておく localStorage のキー
+  const KEY_LAYOUT_STORAGE = "typing-test.keyLayout";
   // index.html で付けた ?v= をお題の読み込みにも付けて、キャッシュで古いお題が出ないようにする
   const ASSET_VERSION = new URL(document.currentScript.src).searchParams.get("v") || "";
 
@@ -25,6 +31,7 @@
   const importFileEl = document.getElementById("import-file");
 
   const stat = {
+    iki: document.getElementById("stat-iki"),
     wpm: document.getElementById("stat-wpm"),
     acc: document.getElementById("stat-acc"),
     time: document.getElementById("stat-time"),
@@ -35,13 +42,19 @@
     acc: document.getElementById("res-acc"),
     time: document.getElementById("res-time"),
     miss: document.getElementById("res-miss"),
-    iki: document.getElementById("res-iki")
+    iki: document.getElementById("res-iki"),
+    uncorrected: document.getElementById("res-uncorrected"),
+    rank: document.getElementById("res-rank"),
+    rankLabel: document.getElementById("res-rank-label")
   };
+  const rankingEl = document.getElementById("ranking");
+  const rankingTitleEl = document.getElementById("ranking-title");
+  const keyLayoutEl = document.getElementById("key-layout");
 
   // 状態
   let texts = []; // 読み込んだお題 { name: 題材名, text: 文 }
   let textIndex = -1;
-  let topic = "";  // 今のお題の題材名
+  let textId = ""; // 今のお題の題材名（texts/index.json の名前）
   let target = "";
   let charEls = [];
   let prevValue = "";
@@ -53,7 +66,6 @@
   let intervals = [];  // お題の位置ごとの打鍵間隔(ms)。間隔がない位置は null
   let missed = [];     // お題の位置ごとに、一度でもミスしたか
   let events = [];     // 全キー入力の記録（保存用。形式は docs/storage.md）
-  let startedAt = 0;   // 打ち始めの日時（Date.now()）
   let timerId = 0;
   let finished = false;
 
@@ -116,10 +128,9 @@
   function reset(next) {
     if (texts.length === 0) return; // 読み込み前・失敗時は何もしない
     const picked = pickText(next);
-    topic = picked.name;
+    textId = picked.name;
     target = picked.text;
     events = [];
-    startedAt = 0;
     saveStatusEl.textContent = "";
     prevValue = "";
     startTime = 0;
@@ -132,6 +143,8 @@
     rhythmEl.textContent = "";
     bigramEl.textContent = "";
     trigramEl.textContent = "";
+    rankingEl.textContent = "";
+    rankingTitleEl.textContent = "";
     finished = false;
     clearInterval(timerId);
 
@@ -195,8 +208,12 @@
 
   function updateStats() {
     const r = calc();
-    // 打ち始め直後は値が極端に跳ねるので、2秒経つまで WPM は出さない
-    stat.wpm.textContent = finished || r.sec >= 2 ? Math.round(r.wpm) : "-";
+    // 打ち始め直後は値が極端に跳ねるので、2秒経つまで平均 IKI と WPM は出さない
+    const show = finished || r.sec >= 2;
+    // 途中の平均 IKI は、ここまでに進んだ文字数で割る（最後まで打つと結果の値と同じになる）
+    const iki = Store.avgIki(r.sec, input.value.length);
+    stat.iki.textContent = show && iki !== null ? Math.round(iki) : "-";
+    stat.wpm.textContent = show ? Math.round(r.wpm) : "-";
     stat.acc.textContent = Math.floor(r.acc);
     stat.time.textContent = r.sec.toFixed(1);
     stat.miss.textContent = misses;
@@ -211,15 +228,19 @@
     board.classList.add("finished");
 
     const r = calc();
+    r.uncorrected = target.length - correctCount(); // 直さずに残した間違いの数
+    r.avgIki = Store.avgIki(Math.round(r.sec * 1000) / 1000, target.length);
+    res.iki.textContent = r.avgIki === null ? "-" : r.avgIki.toFixed(1);
     res.wpm.textContent = Math.round(r.wpm);
     res.acc.textContent = r.acc.toFixed(1);
     res.time.textContent = r.sec.toFixed(1);
     res.miss.textContent = misses;
-    const avg = Rhythm.render(rhythmEl, target, intervals, missed);
-    rhythmAvgEl.textContent = avg;
-    res.iki.textContent = avg;
-    bigramTable.render(bigramEl, target, intervals, missed, avg);
-    trigramTable.render(trigramEl, target, intervals, missed, avg);
+    res.uncorrected.textContent = r.uncorrected;
+    // グラフと n-gram は位置ごとの最後の打鍵の間隔を使う。その平均を点線と色の基準にする
+    const lastAvg = Rhythm.render(rhythmEl, target, intervals, missed);
+    rhythmAvgEl.textContent = lastAvg;
+    bigramTable.render(bigramEl, target, intervals, missed, lastAvg);
+    trigramTable.render(trigramEl, target, intervals, missed, lastAvg);
     resultEl.hidden = false;
 
     saveSession(r);
@@ -230,37 +251,57 @@
     return v === null ? null : Math.round(v * 10) / 10;
   }
 
-  // この回の生データを1件の記録にして IndexedDB に保存する。形式は docs/storage.md
+  // この回を概要（sessions）と生データ（raws）の2つの記録にして保存し、順位を出す。形式は docs/storage.md
   function saveSession(r) {
-    const ikis = intervals.filter(function (v) { return v !== null; });
-    const record = {
-      schema: Store.SCHEMA,
-      id: crypto.randomUUID(),
-      startedAt: new Date(startedAt).toISOString(),
+    const id = crypto.randomUUID();
+    const session = {
+      schemaVersion: Store.SCHEMA_VERSION,
+      id: id,
       finishedAt: new Date().toISOString(),
       appVersion: ASSET_VERSION,
       lang: LANG,
-      short: SHORT,
-      topic: topic,
-      text: target,
+      mode: MODE,
+      keyLayout: keyLayoutEl.value,
+      textId: textId,
+      textLength: target.length,
       result: {
         wpm: Math.round(r.wpm * 10) / 10,
         accuracy: Math.round(r.acc * 10) / 10,
         timeSec: Math.round(r.sec * 1000) / 1000,
         keystrokes: keystrokes,
         misses: misses,
-        avgIki: ikis.length ? round1(ikis.reduce(function (a, b) { return a + b; }, 0) / ikis.length) : null
-      },
-      missedPositions: missed.reduce(function (acc, m, i) { if (m) acc.push(i); return acc; }, []),
-      intervals: intervals.map(round1),
-      events: events
+        uncorrected: r.uncorrected,
+        avgIki: r.avgIki
+      }
     };
+    const raw = {
+      id: id,
+      text: target,
+      events: events,
+      intervals: intervals.map(round1),
+      missedPositions: missed.reduce(function (acc, m, i) { if (m) acc.push(i); return acc; }, [])
+    };
+
     saveStatusEl.textContent = "記録を保存中…";
-    Store.save(record)
-      .then(function () { return Store.count(); })
-      .then(function (n) {
-        saveStatusEl.textContent = "記録を保存しました（通算 " + n + " 回）";
+    res.rank.textContent = "-";
+    res.rankLabel.textContent = "";
+    Store.save(session, raw)
+      .then(function () {
         Store.persist();
+        return Promise.all([Store.rankOf(session), Store.top(session, RANK_TOP)]);
+      })
+      .then(function (v) {
+        const info = v[0];
+        if (info.eligible) {
+          res.rank.textContent = info.rank;
+          res.rankLabel.textContent = "位 / " + info.total + " 回";
+        } else {
+          res.rank.textContent = "-";
+          res.rankLabel.textContent = "ランキング対象外（正確率 " + Store.RANK_MIN_ACCURACY + "% 未満）";
+        }
+        rankingTitleEl.textContent = categoryLabel(session);
+        Ranking.render(rankingEl, v[1], id);
+        saveStatusEl.textContent = "記録を保存しました。";
       })
       .catch(function (err) {
         console.error(err);
@@ -268,12 +309,22 @@
       });
   }
 
-  // 全キー入力を記録する。[経過ms, "+", 文字, 位置, 正解なら1] / [経過ms, "-", 消した文字, 位置]
+  // ランキングの区分の表示名（例: 英語・通常・QWERTY）
+  function categoryLabel(s) {
+    const lang = { en: "英語", ja: "日本語" }[s.lang] || s.lang;
+    const mode = { normal: "通常", short: "短いお題" }[s.mode] || s.mode;
+    const opt = keyLayoutEl.querySelector('option[value="' + s.keyLayout + '"]');
+    return lang + "・" + mode + "・" + (opt ? opt.textContent : s.keyLayout);
+  }
+
+  // 全キー入力を記録する。どの行も5要素にそろえる（docs/storage.md）
+  //   [経過ms, "+", 入力した文字, 位置, 正解なら1・ミスなら0]
+  //   [経過ms, "-", 消した文字, 位置, null]
   function logEvents(prev, value, now) {
     let p = 0;
     while (p < prev.length && p < value.length && prev[p] === value[p]) p++;
     const t = round1(now - startTime);
-    if (p < prev.length) events.push([t, "-", prev.slice(p), p]);
+    if (p < prev.length) events.push([t, "-", prev.slice(p), p, null]);
     for (let i = p; i < value.length; i++) {
       events.push([t, "+", value[i], i, isCorrect(value[i], target[i]) ? 1 : 0]);
     }
@@ -288,7 +339,6 @@
     if (value.length > prevValue.length && value.startsWith(prevValue)) {
       if (!startTime) {
         startTime = now;
-        startedAt = Date.now();
         timerId = setInterval(updateStats, 100);
       }
       for (let i = prevValue.length; i < value.length; i++) {
@@ -345,6 +395,16 @@
         document.getElementById(t.getAttribute("aria-controls")).hidden = !selected;
       });
     });
+  });
+
+  // キー配列の選択。選んだ配列はブラウザに覚えさせ、変えたらその回はやり直す
+  try {
+    const saved = localStorage.getItem(KEY_LAYOUT_STORAGE);
+    if (saved && keyLayoutEl.querySelector('option[value="' + saved + '"]')) keyLayoutEl.value = saved;
+  } catch (e) { /* 保存できない環境では既定の配列を使う */ }
+  keyLayoutEl.addEventListener("change", function () {
+    try { localStorage.setItem(KEY_LAYOUT_STORAGE, keyLayoutEl.value); } catch (e) { /* 無視 */ }
+    reset(false);
   });
 
   // 記録の書き出し・読み込み

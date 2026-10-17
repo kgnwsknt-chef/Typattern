@@ -429,6 +429,47 @@ body {
   font-weight: 600;
 }
 
+/* ランキング */
+.ranking-scroll {
+  max-height: 480px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.rk-table td {
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+.rk-table td:first-child {
+  text-align: right;
+}
+
+.rk-table tr.rk-current td {
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(26, 111, 216, 0.08);
+}
+
+.layout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.layout-select {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
 .bg-empty {
   margin: 12px;
   color: var(--sub);

@@ -4,12 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typing Test</title>
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
   <header class="header">
     <h1 class="logo">Typing Test</h1>
     <div class="header-actions">
+      <label class="layout-label">配列
+        <select id="key-layout" class="layout-select" title="使っているキー配列（記録とランキングに使う）">
+          <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
       <button id="export-btn" class="text-btn" type="button" title="全記録を JSON ファイルに保存">記録を書き出す</button>
       <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録を追加">記録を読み込む</button>
       <input id="import-file" type="file" accept=".json,application/json" hidden>
@@ -24,7 +29,7 @@
     </p>
 
     <div class="stats" aria-live="off">
-      <div class="stat"><span id="stat-wpm" class="stat-value">0</span><span class="stat-label">WPM</span></div>
+      <div class="stat"><span id="stat-iki" class="stat-value">-</span><span class="stat-label">ms 平均 IKI（<span id="stat-wpm">-</span> WPM）</span></div>
       <div class="stat"><span id="stat-acc" class="stat-value">100</span><span class="stat-label">% 正確率</span></div>
       <div class="stat"><span id="stat-time" class="stat-value">0.0</span><span class="stat-label">秒</span></div>
       <div class="stat"><span id="stat-miss" class="stat-value">0</span><span class="stat-label">ミス</span></div>
@@ -40,21 +45,22 @@
     <section id="result" class="result" hidden>
       <h2 class="result-title">結果</h2>
       <div class="result-grid">
-        <div><span id="res-wpm" class="result-value"></span><span class="result-label">WPM</span></div>
+        <div><span id="res-iki" class="result-value"></span><span class="result-label">ms 平均 IKI（<span id="res-wpm"></span> WPM）</span></div>
         <div><span id="res-acc" class="result-value"></span><span class="result-label">% 正確率</span></div>
         <div><span id="res-time" class="result-value"></span><span class="result-label">秒</span></div>
-        <div><span id="res-miss" class="result-value"></span><span class="result-label">ミス</span></div>
-        <div><span id="res-iki" class="result-value"></span><span class="result-label">ms 平均 IKI</span></div>
+        <div><span id="res-miss" class="result-value"></span><span class="result-label">ミス（未修正 <span id="res-uncorrected"></span>）</span></div>
+        <div><span id="res-rank" class="result-value">-</span><span id="res-rank-label" class="result-label"></span></div>
       </div>
       <p id="save-status" class="save-status" aria-live="polite"></p>
 
       <div class="tabs" role="tablist">
         <button type="button" class="tab" role="tab" id="tab-rhythm" data-tab="rhythm" aria-controls="panel-rhythm" aria-selected="true">キーごとの間隔</button>
         <button type="button" class="tab" role="tab" id="tab-ngram" data-tab="ngram" aria-controls="panel-ngram" aria-selected="false">n-gram</button>
+        <button type="button" class="tab" role="tab" id="tab-ranking" data-tab="ranking" aria-controls="panel-ranking" aria-selected="false">ランキング</button>
       </div>
 
       <div class="rhythm tab-panel" role="tabpanel" id="panel-rhythm" aria-labelledby="tab-rhythm">
-        <p class="rhythm-legend">平均 <span id="rhythm-avg" class="rhythm-avg"></span> ms（点線）／ 速い<span class="rhythm-scale"></span>遅い ／ 赤い文字 = ミスあり</p>
+        <p class="rhythm-legend">各文字の最後の打鍵の間隔。その平均 <span id="rhythm-avg" class="rhythm-avg"></span> ms（点線。修正の時間を含まないので、結果の平均 IKI より小さくなる）／ 速い<span class="rhythm-scale"></span>遅い ／ 赤い文字 = ミスあり</p>
         <div id="rhythm" class="rhythm-chart"></div>
       </div>
 
@@ -65,6 +71,11 @@
           <div id="trigram" class="ngram-scroll"></div>
         </div>
       </div>
+
+      <div class="ranking tab-panel" role="tabpanel" id="panel-ranking" aria-labelledby="tab-ranking" hidden>
+        <p class="rhythm-legend">Top 30（<span id="ranking-title"></span>）／ 平均 IKI の小さい順、同じなら正確率の高い順 ／ 正確率 95% 未満は対象外 ／ 太字 = 今回</p>
+        <div id="ranking" class="ranking-scroll"></div>
+      </div>
     </section>
   </main>
 
@@ -73,9 +84,10 @@
     <span id="version" class="version"></span>
   </footer>
 
-  <script src="js/store.js?v=10"></script>
-  <script src="js/rhythm.js?v=10"></script>
-  <script src="js/ngram.js?v=10"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/store.js?v=13"></script>
+  <script src="js/rhythm.js?v=13"></script>
+  <script src="js/ngram.js?v=13"></script>
+  <script src="js/ranking.js?v=13"></script>
+  <script src="js/app.js?v=13"></script>
 </body>
 </html>
