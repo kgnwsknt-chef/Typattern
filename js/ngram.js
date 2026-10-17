@@ -43,7 +43,7 @@ const NGram = (function () {
       const sortBtn = document.createElement("button");
       sortBtn.type = "button";
       sortBtn.className = "bg-sort";
-      sortBtn.textContent = "平均 IKI (ms) " + (order === "asc" ? "▲" : "▼");
+      sortBtn.textContent = "IKI(ms/打) " + (order === "asc" ? "▲" : "▼");
       sortBtn.title = order === "asc" ? "速い順（クリックで遅い順）" : "遅い順（クリックで速い順）";
       sortBtn.addEventListener("click", function () {
         order = order === "asc" ? "desc" : "asc";
