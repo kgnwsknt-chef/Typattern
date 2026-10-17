@@ -107,7 +107,7 @@ body {
   cursor: text;
 }
 
-.passage {
+.text {
   font-family: var(--mono);
   font-size: 22px;
   line-height: 1.9;
@@ -117,23 +117,23 @@ body {
   user-select: none;
 }
 
-.passage .ok {
+.text .ok {
   color: var(--typed);
 }
 
-.passage .ng {
+.text .ng {
   color: var(--error);
   background: var(--error-bg);
   border-radius: 2px;
 }
 
 /* 現在位置のキャレット */
-.passage .current {
+.text .current {
   box-shadow: -2px 0 0 var(--accent);
   animation: blink 1s step-end infinite;
 }
 
-.board.blurred .passage .current {
+.board.blurred .text .current {
   animation: none;
   box-shadow: none;
 }
@@ -336,7 +336,7 @@ body {
 }
 
 @media (max-width: 600px) {
-  .passage {
+  .text {
     font-size: 17px;
   }
   .stats {

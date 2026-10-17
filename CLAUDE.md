@@ -4,17 +4,24 @@
 
 ## 方針
 - HTML / CSS / JavaScript のみ。ビルド・npm・フレームワークなし。
-- `index.html` をダブルクリックで開いても動くこと（`file://`）。そのため ES Modules は使わず、通常の `<script>` で読み込む。
+- お題は `fetch` で読み込むため、`index.html` を直接開く（`file://`）と動かない。
+  ローカルでは `.claude/serve.ps1`（http://localhost:8000）などのサーバー経由で開く。
+- ES Modules は使わず、通常の `<script>` で読み込む。
 - UI の文言は日本語、お題は英語。
 - コメントは日本語。
 - `index.html` で読み込む CSS / JS には `?v=番号` を付けている（ブラウザのキャッシュ対策）。
-  CSS か JS を変更してデプロイするときは、全ファイルの番号をそろえて1つ上げる。
+  お題ファイルにも `app.js` の番号が自動で付く。
+  CSS / JS / お題を変更してデプロイするときは、全ファイルの番号をそろえて1つ上げる。
 
 ## 構成
 - `index.html` … 画面
 - `style.css` … 見た目（色は `:root` の CSS 変数で管理）
-- `js/passages.js` … お題データ。言語ごとに `PASSAGES.en` / `PASSAGES.ja` に入れる
-- `js/app.js` … 入力判定・計測・表示
+- `texts/` … お題。1お題1ファイルの `.txt`（UTF-8、中身は文だけ）
+  - `texts/<言語>/<題材名>.txt` … 通常版（約100語）
+  - `texts/<言語>/<題材名>_short.txt` … 短縮版（約90文字、`?short` で使う）。ない題材は `?short` で出ない
+  - `texts/index.json` … 言語ごとの題材名の一覧。題材を追加・削除したらここも直す
+  - 日本語は `texts/ja/` に置く予定
+- `js/app.js` … お題の読み込み・入力判定・計測・表示
 - `js/rhythm.js` … 結果画面のキーごとの間隔グラフ
 - `docs/scoring.md` … 採点ルール（WPM・正確率・ミス）
 

@@ -4,9 +4,14 @@
   const LANG = "en";
   // URL に ?short が付いていたら短いお題を使う（試し打ち用）
   const SHORT = new URLSearchParams(location.search).has("short");
+  // お題ファイルの置き場所。texts/<言語>/<題材名>.txt、短縮版は <題材名>_short.txt
+  const TEXT_DIR = "texts/" + LANG + "/";
+  const TEXT_SUFFIX = SHORT ? "_short.txt" : ".txt";
+  // index.html で付けた ?v= をお題の読み込みにも付けて、キャッシュで古いお題が出ないようにする
+  const ASSET_VERSION = new URL(document.currentScript.src).searchParams.get("v") || "";
 
   const board = document.getElementById("board");
-  const passageEl = document.getElementById("passage");
+  const textEl = document.getElementById("text");
   const input = document.getElementById("input");
   const resultEl = document.getElementById("result");
   const rhythmEl = document.getElementById("rhythm");
@@ -26,7 +31,8 @@
   };
 
   // 状態
-  let passageIndex = -1;
+  let texts = []; // 読み込んだお題の文
+  let textIndex = -1;
   let target = "";
   let charEls = [];
   let prevValue = "";
@@ -45,20 +51,58 @@
     return typed === expected;
   }
 
-  function pickPassage(next) {
-    const list = SHORT ? PASSAGES_SHORT[LANG] : PASSAGES[LANG];
-    if (next || passageIndex < 0) {
+  function fetchText(path) {
+    return fetch(path + "?v=" + ASSET_VERSION).then(function (r) {
+      if (!r.ok) throw new Error(path + ": " + r.status);
+      return r.text();
+    });
+  }
+
+  // texts/index.json に書かれた題材のお題をすべて読み込む
+  function loadTexts() {
+    return fetchText("texts/index.json")
+      .then(function (json) {
+        const names = JSON.parse(json)[LANG] || [];
+        return Promise.all(names.map(function (name) {
+          // 短縮版がない題材は飛ばす（失敗しても他の題材は使う）
+          return fetchText(TEXT_DIR + name + TEXT_SUFFIX).catch(function (err) {
+            console.warn(err);
+            return "";
+          });
+        }));
+      })
+      .then(function (contents) {
+        // 改行や連続した空白は1つのスペースにそろえる
+        texts = contents
+          .map(function (t) { return t.replace(/\s+/g, " ").trim(); })
+          .filter(function (t) { return t.length > 0; });
+        if (texts.length === 0) throw new Error("no texts in " + TEXT_DIR + " (*" + TEXT_SUFFIX + ")");
+      });
+  }
+
+  function showLoadError(err) {
+    console.error(err);
+    textEl.textContent = location.protocol === "file:"
+      ? "お題を読み込めませんでした。index.html を直接開くと読み込めないため、サーバー経由（例: http://localhost:8000）で開いてください。"
+      : "お題を読み込めませんでした。ページを再読み込みしてください。";
+    input.disabled = true;
+  }
+
+  function pickText(next) {
+    const list = texts;
+    if (next || textIndex < 0) {
       let i;
       do {
         i = Math.floor(Math.random() * list.length);
-      } while (list.length > 1 && i === passageIndex);
-      passageIndex = i;
+      } while (list.length > 1 && i === textIndex);
+      textIndex = i;
     }
-    return list[passageIndex];
+    return list[textIndex];
   }
 
   function reset(next) {
-    target = pickPassage(next);
+    if (texts.length === 0) return; // 読み込み前・失敗時は何もしない
+    target = pickText(next);
     prevValue = "";
     startTime = 0;
     endTime = 0;
@@ -78,7 +122,7 @@
     board.classList.remove("finished");
 
     // お題を1文字ずつ span にする
-    passageEl.textContent = "";
+    textEl.textContent = "";
     const frag = document.createDocumentFragment();
     charEls = Array.from(target, function (ch) {
       const span = document.createElement("span");
@@ -86,7 +130,7 @@
       frag.appendChild(span);
       return span;
     });
-    passageEl.appendChild(frag);
+    textEl.appendChild(frag);
 
     render();
     updateStats();
@@ -211,5 +255,8 @@
   document.getElementById("retry-btn").addEventListener("click", function () { reset(false); });
   document.getElementById("next-btn").addEventListener("click", function () { reset(true); });
 
-  reset(true);
+  textEl.textContent = "お題を読み込み中…";
+  loadTexts()
+    .then(function () { reset(true); })
+    .catch(showLoadError);
 })();
