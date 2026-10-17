@@ -15,7 +15,8 @@
   この番号は画面右下にバージョン（例: v9）として表示される。
 
 ## 構成
-- `index.html` … 画面
+- `index.html` … タイピング画面
+- `stats.html` … 記録ページ（全記録の n-gram など）。タイピング画面右上の「記録を見る」から開く。`?v=` は index.html とそろえる
 - `style.css` … 見た目（色は `:root` の CSS 変数で管理）
 - `texts/` … お題。1お題1ファイルの `.txt`（UTF-8、中身は文だけ）
   - GitHub 上で読みやすいよう、1行70文字前後で単語の切れ目で改行する。
@@ -29,7 +30,8 @@
 - `js/ranking.js` … 結果画面の Top 30（「ランキング」タブ）
 - 画面右上の「配列」でキー配列を選ぶ（今は QWERTY のみ）。記録とランキングの区分に使う
 - `js/rhythm.js` … 結果画面のキーごとの間隔グラフ（「キーごとの間隔」タブ）。配色の関数も持つ
-- `js/ngram.js` … 結果画面の bigram・trigram 別 IKI 一覧（「n-gram」タブに横並びで表示）
+- `js/ngram.js` … bigram・trigram 別 IKI の集計と一覧表（結果画面の「n-gram」タブと記録ページで共通）
+- `js/stats.js` … 記録ページの処理（全記録の n-gram の集計・絞り込み）
 - `docs/scoring.md` … 採点ルール（平均 IKI・WPM・正確率・ミス・ランキング）
 - `docs/storage.md` … 記録の保存形式。記録の形を変えるときは必ず一緒に直す
 

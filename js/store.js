@@ -187,6 +187,19 @@ const Store = (function () {
     });
   }
 
+  // 生データを1件ずつ fn(raw) に渡す（全件を一度にメモリに載せない）。ids を渡すとその id のものだけ
+  function eachRaw(ids, fn) {
+    return tx("raws", "readonly", function (t) {
+      const req = t.objectStore("raws").openCursor();
+      req.onsuccess = function () {
+        const cur = req.result;
+        if (!cur) return;
+        if (!ids || ids.has(cur.value.id)) fn(cur.value);
+        cur.continue();
+      };
+    });
+  }
+
   function getAllRaws() {
     return tx("raws", "readonly", function (t) { return t.objectStore("raws").getAll(); });
   }
@@ -270,6 +283,7 @@ const Store = (function () {
     rankOf: rankOf,
     getAllSessions: getAllSessions,
     getAllRaws: getAllRaws,
+    eachRaw: eachRaw,
     exportFile: exportFile,
     importFile: importFile,
     persist: persist

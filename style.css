@@ -421,12 +421,146 @@ body {
 }
 
 .bg-avg,
+.bg-sd,
 .bg-count {
   font-family: var(--mono);
 }
 
 .bg-avg {
   font-weight: 600;
+}
+
+/* 記録ページ（stats.html） */
+a.text-btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.stats-main {
+  max-width: 900px;
+}
+
+.stats-title {
+  margin: 8px 0 12px;
+  font-size: 18px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.stats-summary {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.stats-footer {
+  padding: 8px 12px;
+  text-align: right;
+}
+
+.stats-footer .version {
+  position: static;
+  transform: none;
+  color: var(--sub);
+}
+
+/* n-gram の行をクリックすると、表の下に IKI の分布を出す */
+.ngram-col {
+  min-width: 0;
+}
+
+.bg-table tr.bg-row {
+  cursor: pointer;
+}
+
+.bg-table tr.bg-row:hover td {
+  background: rgba(26, 111, 216, 0.05);
+}
+
+.bg-table tr.bg-selected td {
+  background: rgba(26, 111, 216, 0.12);
+}
+
+.ngram-dist:not(:empty) {
+  margin-top: 10px;
+  padding: 8px 10px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.dist-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 12px;
+}
+
+.dist-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.dist-info {
+  color: var(--sub);
+}
+
+.dist-close {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--sub);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dist-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dist-axis {
+  stroke: var(--sub);
+  stroke-width: 1;
+}
+
+.dist-rug {
+  stroke: var(--text);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.dist-mean {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.dist-label {
+  fill: var(--sub);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.bg-table td.bg-empty-cell {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--sub);
+  font-size: 13px;
 }
 
 /* ランキング */

@@ -24,8 +24,8 @@
   const rhythmAvgEl = document.getElementById("rhythm-avg");
   const bigramEl = document.getElementById("bigram");
   const trigramEl = document.getElementById("trigram");
-  const bigramTable = NGram.create(2, "bigram");
-  const trigramTable = NGram.create(3, "trigram");
+  const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"));
+  const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"));
   const tabs = Array.from(document.querySelectorAll(".tab"));
   const saveStatusEl = document.getElementById("save-status");
   const importFileEl = document.getElementById("import-file");
@@ -141,8 +141,8 @@
     intervals = new Array(target.length).fill(null);
     missed = new Array(target.length).fill(false);
     rhythmEl.textContent = "";
-    bigramEl.textContent = "";
-    trigramEl.textContent = "";
+    bigramTable.clear();
+    trigramTable.clear();
     rankingEl.textContent = "";
     rankingTitleEl.textContent = "";
     finished = false;
