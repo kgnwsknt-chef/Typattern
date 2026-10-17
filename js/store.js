@@ -6,7 +6,7 @@ const Store = (function () {
 
   // schema 1 の記録（旧データベース "typing-test"）は扱わない。旧データベースは消さずにそのまま残す
   const DB_NAME = "typing-records";
-  const DB_VERSION = 3; // 入れ物（保存場所・索引）の構造の版
+  const DB_VERSION = 4; // 入れ物（保存場所・索引）の構造の版
   const SCHEMA_VERSION = 3; // 記録1件の形式の版（3：正確率を「最後に合っていた文字の割合」に変更）
   const EXPORT_APP = "typing-test"; // 書き出しファイルの app 欄。アプリ名を Typattern に変えた後も、互換のためこのまま
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
@@ -75,6 +75,10 @@ const Store = (function () {
             // 版2 → 3：正確率の定義変更に合わせて計算し直す（版1からは migrateTo2 の中で済ませる）
             migrateTo3(t);
           }
+          if (e.oldVersion >= 1 && e.oldVersion < 4) {
+            // 版3以前 → 4：生データに keyLayout を足す（概要の値を書き写す）
+            migrateTo4(t);
+          }
         };
         req.onsuccess = function () {
           const db = req.result;
@@ -122,6 +126,30 @@ const Store = (function () {
       const c = cur.result;
       if (!c) return;
       c.update(upgradeSession(c.value));
+      c.continue();
+    };
+  }
+
+  // 生データに keyLayout を足す。id の次に置き、ほかの中身は変えない
+  function withKeyLayout(raw, keyLayout) {
+    if (raw.keyLayout) return raw;
+    const out = { id: raw.id, keyLayout: keyLayout };
+    Object.keys(raw).forEach(function (k) { if (k !== "id") out[k] = raw[k]; });
+    return out;
+  }
+
+  function migrateTo4(t) {
+    const sessions = t.objectStore("sessions");
+    const raws = t.objectStore("raws");
+    const cur = raws.openCursor();
+    cur.onsuccess = function () {
+      const c = cur.result;
+      if (!c) return;
+      const raw = c.value;
+      const get = sessions.get(raw.id);
+      get.onsuccess = function () {
+        if (get.result) raws.put(withKeyLayout(raw, get.result.keyLayout));
+      };
       c.continue();
     };
   }
@@ -288,7 +316,8 @@ const Store = (function () {
         return tx(["sessions", "raws"], "readwrite", function (t) {
           fresh.forEach(function (s) {
             t.objectStore("sessions").add(s);
-            t.objectStore("raws").add(raws.get(s.id));
+            // keyLayout がない生データ（前の書き出しファイル）は概要の値で補う
+            t.objectStore("raws").add(withKeyLayout(raws.get(s.id), s.keyLayout));
           });
         }).then(function () {
           return { added: fresh.length, skipped: data.sessions.length - fresh.length };

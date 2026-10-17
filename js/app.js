@@ -270,6 +270,7 @@
     };
     const raw = {
       id: id,
+      keyLayout: session.keyLayout, // 文字から物理キーの位置を求めるのに使う（概要と同じ値）
       text: target,
       events: events,
       intervals: intervals.map(round1),
