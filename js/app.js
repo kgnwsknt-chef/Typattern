@@ -22,10 +22,6 @@
   const resultEl = document.getElementById("result");
   const rhythmEl = document.getElementById("rhythm");
   const rhythmAvgEl = document.getElementById("rhythm-avg");
-  const bigramEl = document.getElementById("bigram");
-  const trigramEl = document.getElementById("trigram");
-  const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"));
-  const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"));
   const tabs = Array.from(document.querySelectorAll(".tab"));
   const saveStatusEl = document.getElementById("save-status");
   const importFileEl = document.getElementById("import-file");
@@ -141,8 +137,6 @@
     intervals = new Array(target.length).fill(null);
     missed = new Array(target.length).fill(false);
     rhythmEl.textContent = "";
-    bigramTable.clear();
-    trigramTable.clear();
     rankingEl.textContent = "";
     rankingTitleEl.textContent = "";
     finished = false;
@@ -236,11 +230,9 @@
     res.time.textContent = r.sec.toFixed(1);
     res.miss.textContent = misses;
     res.uncorrected.textContent = r.uncorrected;
-    // グラフと n-gram は位置ごとの最後の打鍵の間隔を使う。その平均を点線と色の基準にする
+    // グラフは位置ごとの最後の打鍵の間隔を使う。その平均を点線と色の基準にする
     const lastAvg = Rhythm.render(rhythmEl, target, intervals, missed);
     rhythmAvgEl.textContent = lastAvg;
-    bigramTable.render(bigramEl, target, intervals, missed, lastAvg);
-    trigramTable.render(trigramEl, target, intervals, missed, lastAvg);
     resultEl.hidden = false;
 
     saveSession(r);

@@ -30,7 +30,7 @@
 - `js/ranking.js` … 結果画面の Top 30（「ランキング」タブ）
 - 画面右上の「配列」でキー配列を選ぶ（今は QWERTY のみ）。記録とランキングの区分に使う
 - `js/rhythm.js` … 結果画面のキーごとの間隔グラフ（「キーごとの間隔」タブ）。配色の関数も持つ
-- `js/ngram.js` … bigram・trigram 別 IKI の集計と一覧表（結果画面の「n-gram」タブと記録ページで共通）
+- `js/ngram.js` … bigram・trigram 別 IKI の集計と一覧表（記録ページで使う）
 - `js/stats.js` … 記録ページの処理（全記録の n-gram の集計・絞り込み）
 - `docs/scoring.md` … 採点ルール（平均 IKI・WPM・正確率・ミス・ランキング）
 - `docs/storage.md` … 記録の保存形式。記録の形を変えるときは必ず一緒に直す
