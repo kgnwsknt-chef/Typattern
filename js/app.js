@@ -278,6 +278,9 @@
   document.getElementById("retry-btn").addEventListener("click", function () { reset(false); });
   document.getElementById("next-btn").addEventListener("click", function () { reset(true); });
 
+  // 右下隅にバージョン（index.html の ?v= の番号）を出す
+  document.getElementById("version").textContent = ASSET_VERSION ? "v" + ASSET_VERSION : "";
+
   textEl.textContent = "お題を読み込み中…";
   loadTexts()
     .then(function () { reset(true); })
