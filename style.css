@@ -58,6 +58,19 @@ body {
   font-size: 13px;
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.save-status {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--sub);
+}
+
 .text-btn:hover {
   border-color: var(--accent);
 }

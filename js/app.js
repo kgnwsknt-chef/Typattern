@@ -21,6 +21,8 @@
   const bigramTable = NGram.create(2, "bigram");
   const trigramTable = NGram.create(3, "trigram");
   const tabs = Array.from(document.querySelectorAll(".tab"));
+  const saveStatusEl = document.getElementById("save-status");
+  const importFileEl = document.getElementById("import-file");
 
   const stat = {
     wpm: document.getElementById("stat-wpm"),
@@ -37,8 +39,9 @@
   };
 
   // 状態
-  let texts = []; // 読み込んだお題の文
+  let texts = []; // 読み込んだお題 { name: 題材名, text: 文 }
   let textIndex = -1;
+  let topic = "";  // 今のお題の題材名
   let target = "";
   let charEls = [];
   let prevValue = "";
@@ -49,6 +52,8 @@
   let lastKeyTime = 0; // 直前の打鍵（BS含む）の時刻
   let intervals = [];  // お題の位置ごとの打鍵間隔(ms)。間隔がない位置は null
   let missed = [];     // お題の位置ごとに、一度でもミスしたか
+  let events = [];     // 全キー入力の記録（保存用。形式は docs/storage.md）
+  let startedAt = 0;   // 打ち始めの日時（Date.now()）
   let timerId = 0;
   let finished = false;
 
@@ -71,17 +76,19 @@
         const names = JSON.parse(json)[LANG] || [];
         return Promise.all(names.map(function (name) {
           // 短縮版がない題材は飛ばす（失敗しても他の題材は使う）
-          return fetchText(TEXT_DIR + name + TEXT_SUFFIX).catch(function (err) {
-            console.warn(err);
-            return "";
-          });
+          return fetchText(TEXT_DIR + name + TEXT_SUFFIX)
+            .catch(function (err) {
+              console.warn(err);
+              return "";
+            })
+            .then(function (t) {
+              // 改行や連続した空白は1つのスペースにそろえる
+              return { name: name, text: t.replace(/\s+/g, " ").trim() };
+            });
         }));
       })
-      .then(function (contents) {
-        // 改行や連続した空白は1つのスペースにそろえる
-        texts = contents
-          .map(function (t) { return t.replace(/\s+/g, " ").trim(); })
-          .filter(function (t) { return t.length > 0; });
+      .then(function (loaded) {
+        texts = loaded.filter(function (t) { return t.text.length > 0; });
         if (texts.length === 0) throw new Error("no texts in " + TEXT_DIR + " (*" + TEXT_SUFFIX + ")");
       });
   }
@@ -108,7 +115,12 @@
 
   function reset(next) {
     if (texts.length === 0) return; // 読み込み前・失敗時は何もしない
-    target = pickText(next);
+    const picked = pickText(next);
+    topic = picked.name;
+    target = picked.text;
+    events = [];
+    startedAt = 0;
+    saveStatusEl.textContent = "";
     prevValue = "";
     startTime = 0;
     endTime = 0;
@@ -209,6 +221,62 @@
     bigramTable.render(bigramEl, target, intervals, missed, avg);
     trigramTable.render(trigramEl, target, intervals, missed, avg);
     resultEl.hidden = false;
+
+    saveSession(r);
+  }
+
+  // ms を 0.1ms 単位に丸める（保存サイズを抑えるため）
+  function round1(v) {
+    return v === null ? null : Math.round(v * 10) / 10;
+  }
+
+  // この回の生データを1件の記録にして IndexedDB に保存する。形式は docs/storage.md
+  function saveSession(r) {
+    const ikis = intervals.filter(function (v) { return v !== null; });
+    const record = {
+      schema: Store.SCHEMA,
+      id: crypto.randomUUID(),
+      startedAt: new Date(startedAt).toISOString(),
+      finishedAt: new Date().toISOString(),
+      appVersion: ASSET_VERSION,
+      lang: LANG,
+      short: SHORT,
+      topic: topic,
+      text: target,
+      result: {
+        wpm: Math.round(r.wpm * 10) / 10,
+        accuracy: Math.round(r.acc * 10) / 10,
+        timeSec: Math.round(r.sec * 1000) / 1000,
+        keystrokes: keystrokes,
+        misses: misses,
+        avgIki: ikis.length ? round1(ikis.reduce(function (a, b) { return a + b; }, 0) / ikis.length) : null
+      },
+      missedPositions: missed.reduce(function (acc, m, i) { if (m) acc.push(i); return acc; }, []),
+      intervals: intervals.map(round1),
+      events: events
+    };
+    saveStatusEl.textContent = "記録を保存中…";
+    Store.save(record)
+      .then(function () { return Store.count(); })
+      .then(function (n) {
+        saveStatusEl.textContent = "記録を保存しました（通算 " + n + " 回）";
+        Store.persist();
+      })
+      .catch(function (err) {
+        console.error(err);
+        saveStatusEl.textContent = "記録を保存できませんでした: " + err.message;
+      });
+  }
+
+  // 全キー入力を記録する。[経過ms, "+", 文字, 位置, 正解なら1] / [経過ms, "-", 消した文字, 位置]
+  function logEvents(prev, value, now) {
+    let p = 0;
+    while (p < prev.length && p < value.length && prev[p] === value[p]) p++;
+    const t = round1(now - startTime);
+    if (p < prev.length) events.push([t, "-", prev.slice(p), p]);
+    for (let i = p; i < value.length; i++) {
+      events.push([t, "+", value[i], i, isCorrect(value[i], target[i]) ? 1 : 0]);
+    }
   }
 
   input.addEventListener("input", function () {
@@ -220,6 +288,7 @@
     if (value.length > prevValue.length && value.startsWith(prevValue)) {
       if (!startTime) {
         startTime = now;
+        startedAt = Date.now();
         timerId = setInterval(updateStats, 100);
       }
       for (let i = prevValue.length; i < value.length; i++) {
@@ -235,7 +304,10 @@
       // Backspace などで消えた位置の間隔は捨てる
       for (let i = value.length; i < prevValue.length; i++) intervals[i] = null;
     }
-    if (value !== prevValue) lastKeyTime = now;
+    if (value !== prevValue) {
+      if (startTime) logEvents(prevValue, value, now);
+      lastKeyTime = now;
+    }
     prevValue = value;
 
     render();
@@ -273,6 +345,27 @@
         document.getElementById(t.getAttribute("aria-controls")).hidden = !selected;
       });
     });
+  });
+
+  // 記録の書き出し・読み込み
+  document.getElementById("export-btn").addEventListener("click", function () {
+    Store.exportFile()
+      .then(function (n) { if (n === 0) alert("まだ記録がありません。"); })
+      .catch(function (err) { alert("書き出せませんでした: " + err.message); });
+  });
+  document.getElementById("import-btn").addEventListener("click", function () {
+    importFileEl.value = "";
+    importFileEl.click();
+  });
+  importFileEl.addEventListener("change", function () {
+    const file = importFileEl.files[0];
+    if (!file) return;
+    file.text()
+      .then(Store.importFile)
+      .then(function (r) {
+        alert(r.added + " 件の記録を読み込みました。" + (r.skipped ? "（" + r.skipped + " 件はすでにあるため飛ばしました）" : ""));
+      })
+      .catch(function (err) { alert("読み込めませんでした: " + err.message); });
   });
 
   document.getElementById("retry-btn").addEventListener("click", function () { reset(false); });
