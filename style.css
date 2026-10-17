@@ -7,6 +7,10 @@
   --accent: #1a6fd8;
   --error: #d93036;
   --error-bg: rgba(217, 48, 54, 0.15);
+  /* 間隔グラフの色相（速い=青 → 平均=緑 → 遅い=赤）。js/rhythm.js が読む */
+  --rh-hue-fast: 215;
+  --rh-hue-avg: 120;
+  --rh-hue-slow: 0;
   --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "Consolas", "Menlo", monospace;
 }
@@ -202,6 +206,118 @@ body {
 .result-label {
   font-size: 13px;
   color: var(--sub);
+}
+
+/* キーごとの間隔グラフ */
+.rhythm {
+  margin-top: 28px;
+  text-align: left;
+}
+
+.rhythm-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rhythm-legend {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--sub);
+}
+
+.rhythm-avg {
+  font-family: var(--mono);
+  color: var(--accent);
+}
+
+.rhythm-chart {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.rh-word {
+  display: flex;
+}
+
+.rh-col {
+  width: 18px;
+}
+
+/* 棒を描く領域。上の余白は数値ラベル用 */
+.rh-track {
+  position: relative;
+  height: 88px;
+}
+
+/* 平均の点線（列ごとに描き、横に並べて1本の線に見せる） */
+.rh-track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--rh-avg);
+  border-top: 1px dashed var(--sub);
+  z-index: 1;
+}
+
+.rh-bar {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 10px;
+  transform: translateX(-50%);
+  border-radius: 2px 2px 0 0;
+}
+
+/* 凡例の色見本 */
+.rhythm-scale {
+  display: inline-block;
+  width: 72px;
+  height: 8px;
+  margin: 0 4px;
+  border-radius: 4px;
+  vertical-align: middle;
+  background: linear-gradient(to right,
+    hsl(var(--rh-hue-fast), 70%, 42%),
+    hsl(var(--rh-hue-avg), 70%, 42%),
+    hsl(var(--rh-hue-slow), 70%, 42%));
+}
+
+/* 頭打ちにした棒は上端を白線で区切る */
+.rh-bar.clipped {
+  border-top: 3px double var(--bg);
+}
+
+.rh-val {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: -0.5px;
+  color: var(--accent);
+}
+
+.rh-char {
+  padding-top: 2px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 15px;
+}
+
+.rh-char.space {
+  color: var(--sub);
+}
+
+.rh-char.missed {
+  color: var(--error);
+  font-weight: 700;
+  border-top: 2px solid var(--error);
 }
 
 .footer {

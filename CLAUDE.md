@@ -13,6 +13,7 @@
 - `style.css` … 見た目（色は `:root` の CSS 変数で管理）
 - `js/passages.js` … お題データ。言語ごとに `PASSAGES.en` / `PASSAGES.ja` に入れる
 - `js/app.js` … 入力判定・計測・表示
+- `js/rhythm.js` … 結果画面のキーごとの間隔グラフ
 - `docs/scoring.md` … 採点ルール（WPM・正確率・ミス）
 
 ## 仕様

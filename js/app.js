@@ -2,11 +2,15 @@
   "use strict";
 
   const LANG = "en";
+  // URL に ?short が付いていたら短いお題を使う（試し打ち用）
+  const SHORT = new URLSearchParams(location.search).has("short");
 
   const board = document.getElementById("board");
   const passageEl = document.getElementById("passage");
   const input = document.getElementById("input");
   const resultEl = document.getElementById("result");
+  const rhythmEl = document.getElementById("rhythm");
+  const rhythmAvgEl = document.getElementById("rhythm-avg");
 
   const stat = {
     wpm: document.getElementById("stat-wpm"),
@@ -30,6 +34,9 @@
   let endTime = 0;
   let keystrokes = 0; // 打った文字数（BSは含まない）
   let misses = 0;     // 打った時点で間違っていた文字数
+  let lastKeyTime = 0; // 直前の打鍵（BS含む）の時刻
+  let intervals = [];  // お題の位置ごとの打鍵間隔(ms)。間隔がない位置は null
+  let missed = [];     // お題の位置ごとに、一度でもミスしたか
   let timerId = 0;
   let finished = false;
 
@@ -39,7 +46,7 @@
   }
 
   function pickPassage(next) {
-    const list = PASSAGES[LANG];
+    const list = SHORT ? PASSAGES_SHORT[LANG] : PASSAGES[LANG];
     if (next || passageIndex < 0) {
       let i;
       do {
@@ -57,6 +64,10 @@
     endTime = 0;
     keystrokes = 0;
     misses = 0;
+    lastKeyTime = 0;
+    intervals = new Array(target.length).fill(null);
+    missed = new Array(target.length).fill(false);
+    rhythmEl.textContent = "";
     finished = false;
     clearInterval(timerId);
 
@@ -140,24 +151,35 @@
     res.acc.textContent = r.acc.toFixed(1);
     res.time.textContent = r.sec.toFixed(1);
     res.miss.textContent = misses;
+    rhythmAvgEl.textContent = Rhythm.render(rhythmEl, target, intervals, missed);
     resultEl.hidden = false;
   }
 
   input.addEventListener("input", function () {
     if (finished) return;
     const value = input.value;
+    const now = performance.now();
 
     // 末尾に追加された文字だけを打鍵として数える
     if (value.length > prevValue.length && value.startsWith(prevValue)) {
       if (!startTime) {
-        startTime = performance.now();
+        startTime = now;
         timerId = setInterval(updateStats, 100);
       }
       for (let i = prevValue.length; i < value.length; i++) {
         keystrokes++;
-        if (!isCorrect(value[i], target[i])) misses++;
+        if (!isCorrect(value[i], target[i])) {
+          misses++;
+          missed[i] = true;
+        }
+        // 打ち直した位置は最後の1打の間隔で上書き。1回で複数文字入った場合、2文字目以降は 0
+        intervals[i] = !lastKeyTime ? null : (i === prevValue.length ? now - lastKeyTime : 0);
       }
+    } else {
+      // Backspace などで消えた位置の間隔は捨てる
+      for (let i = value.length; i < prevValue.length; i++) intervals[i] = null;
     }
+    if (value !== prevValue) lastKeyTime = now;
     prevValue = value;
 
     render();
