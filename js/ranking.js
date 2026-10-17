@@ -3,9 +3,9 @@ const Ranking = (function () {
   "use strict";
 
   const LANG_LABEL = { en: "英語", ja: "日本語" };
-  const MODE_LABEL = { normal: "通常", short: "短いお題" };
+  const MODE_LABEL = { normal: "文章", short: "短い文章", words: "単語" };
 
-  // 区分（言語・モード・配列）の表示名（例: 英語・通常・QWERTY）
+  // 区分（言語・モード・配列）の表示名（例: 英語・文章・QWERTY）
   function categoryLabel(s) {
     return (LANG_LABEL[s.lang] || s.lang) + "・" + (MODE_LABEL[s.mode] || s.mode) + "・" + s.keyLayout.toUpperCase();
   }

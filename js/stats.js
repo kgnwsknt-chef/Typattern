@@ -73,8 +73,8 @@
     const rows = picked.filter(Store.eligible).sort(Store.compare);
     // 言語・モード・配列が混ざっているときは「区分」の列を出す
     const cats = new Set(rows.map(Ranking.categoryLabel));
-    rankingLegendEl.textContent = "Top " + RANK_TOP + "（" + (cats.size === 1 ? Array.from(cats)[0] : "区分が混ざっています") +
-      "）／ 平均 IKI の小さい順、同じなら正確率の高い順 ／ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満は対象外 ／ 対象 " +
+    const catText = cats.size === 0 ? "" : "（" + (cats.size === 1 ? Array.from(cats)[0] : "区分が混ざっています") + "）";
+    rankingLegendEl.textContent = "Top " + RANK_TOP + catText + " ／ 平均 IKI の小さい順、同じなら正確率の高い順 ／ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満は対象外 ／ 対象 " +
       rows.length + " 回";
     Ranking.render(rankingEl, rows.slice(0, RANK_TOP), null, { category: cats.size > 1, emptyText: "データなし" });
   }

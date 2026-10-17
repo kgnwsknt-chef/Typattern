@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern</title>
-  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
   <header class="header">
@@ -13,6 +13,13 @@
       <label class="layout-label">配列
         <select id="key-layout" class="layout-select" title="使っているキー配列（記録とランキングに使う）">
           <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
+      <label class="layout-label">モード
+        <select id="mode" class="layout-select" title="お題の種類（記録とランキングはモードごとに分かれる）">
+          <option value="normal">文章（約300文字）</option>
+          <option value="short">短い文章（約90文字）</option>
+          <option value="words">単語（約300文字）</option>
         </select>
       </label>
       <a class="text-btn" href="stats.html" title="全記録の n-gram（bigram・trigram）など">記録を見る</a>
@@ -76,9 +83,9 @@
     <span id="version" class="version"></span>
   </footer>
 
-  <script src="js/store.js?v=24"></script>
-  <script src="js/rhythm.js?v=24"></script>
-  <script src="js/ranking.js?v=24"></script>
-  <script src="js/app.js?v=24"></script>
+  <script src="js/store.js?v=25"></script>
+  <script src="js/rhythm.js?v=25"></script>
+  <script src="js/ranking.js?v=25"></script>
+  <script src="js/app.js?v=25"></script>
 </body>
 </html>
