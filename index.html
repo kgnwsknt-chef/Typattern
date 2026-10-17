@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typing Test</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1 class="logo">Typing Test</h1>
+    <button id="next-btn" class="text-btn" type="button">次のお題</button>
+  </header>
+
+  <main class="main">
+    <p class="guide">
+      ペーストを使わずに、下の文を最後まで打ってください。<br>
+      計測は打ち始めた瞬間から始まります。Backspace で修正できます。
+    </p>
+
+    <div class="stats" aria-live="off">
+      <div class="stat"><span id="stat-wpm" class="stat-value">0</span><span class="stat-label">WPM</span></div>
+      <div class="stat"><span id="stat-acc" class="stat-value">100</span><span class="stat-label">% 正確率</span></div>
+      <div class="stat"><span id="stat-time" class="stat-value">0.0</span><span class="stat-label">秒</span></div>
+      <div class="stat"><span id="stat-miss" class="stat-value">0</span><span class="stat-label">ミス</span></div>
+    </div>
+
+    <div id="board" class="board">
+      <div id="passage" class="passage"></div>
+      <!-- 実際の入力はこの見えない textarea で受け取る（BS・スマホ・将来の日本語入力に対応しやすい） -->
+      <textarea id="input" class="input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="入力欄"></textarea>
+      <div id="focus-hint" class="focus-hint">クリックして入力を再開</div>
+    </div>
+
+    <section id="result" class="result" hidden>
+      <h2 class="result-title">結果</h2>
+      <div class="result-grid">
+        <div><span id="res-wpm" class="result-value"></span><span class="result-label">WPM</span></div>
+        <div><span id="res-acc" class="result-value"></span><span class="result-label">% 正確率</span></div>
+        <div><span id="res-time" class="result-value"></span><span class="result-label">秒</span></div>
+        <div><span id="res-miss" class="result-value"></span><span class="result-label">ミス</span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <button id="retry-btn" class="retry-btn" type="button">もう一度 (esc)</button>
+  </footer>
+
+  <script src="js/passages.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
