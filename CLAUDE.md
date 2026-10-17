@@ -24,7 +24,8 @@
   - `texts/index.json` … 言語ごとの題材名の一覧。題材を追加・削除したらここも直す
   - 日本語は `texts/ja/` に置く予定
 - `js/app.js` … お題の読み込み・入力判定・計測・表示
-- `js/rhythm.js` … 結果画面のキーごとの間隔グラフ
+- `js/rhythm.js` … 結果画面のキーごとの間隔グラフ（「キーごとの間隔」タブ）。配色の関数も持つ
+- `js/ngram.js` … 結果画面の bigram・trigram 別 IKI 一覧（「n-gram」タブに横並びで表示）
 - `docs/scoring.md` … 採点ルール（WPM・正確率・ミス）
 
 ## 仕様

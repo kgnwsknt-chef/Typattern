@@ -16,6 +16,11 @@
   const resultEl = document.getElementById("result");
   const rhythmEl = document.getElementById("rhythm");
   const rhythmAvgEl = document.getElementById("rhythm-avg");
+  const bigramEl = document.getElementById("bigram");
+  const trigramEl = document.getElementById("trigram");
+  const bigramTable = NGram.create(2, "bigram");
+  const trigramTable = NGram.create(3, "trigram");
+  const tabs = Array.from(document.querySelectorAll(".tab"));
 
   const stat = {
     wpm: document.getElementById("stat-wpm"),
@@ -112,6 +117,8 @@
     intervals = new Array(target.length).fill(null);
     missed = new Array(target.length).fill(false);
     rhythmEl.textContent = "";
+    bigramEl.textContent = "";
+    trigramEl.textContent = "";
     finished = false;
     clearInterval(timerId);
 
@@ -195,7 +202,10 @@
     res.acc.textContent = r.acc.toFixed(1);
     res.time.textContent = r.sec.toFixed(1);
     res.miss.textContent = misses;
-    rhythmAvgEl.textContent = Rhythm.render(rhythmEl, target, intervals, missed);
+    const avg = Rhythm.render(rhythmEl, target, intervals, missed);
+    rhythmAvgEl.textContent = avg;
+    bigramTable.render(bigramEl, target, intervals, missed, avg);
+    trigramTable.render(trigramEl, target, intervals, missed, avg);
     resultEl.hidden = false;
   }
 
@@ -252,6 +262,17 @@
       reset(false);
     }
   });
+  // 結果のタブ切り替え。選んだタブはやり直しても維持する
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) {
+        const selected = t === tab;
+        t.setAttribute("aria-selected", String(selected));
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !selected;
+      });
+    });
+  });
+
   document.getElementById("retry-btn").addEventListener("click", function () { reset(false); });
   document.getElementById("next-btn").addEventListener("click", function () { reset(true); });
 

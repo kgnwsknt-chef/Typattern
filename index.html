@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typing Test</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <header class="header">
@@ -41,12 +41,22 @@
         <div><span id="res-miss" class="result-value"></span><span class="result-label">ミス</span></div>
       </div>
 
-      <div class="rhythm">
-        <h3 class="rhythm-title">
-          キーごとの間隔
-          <span class="rhythm-legend">平均 <span id="rhythm-avg" class="rhythm-avg"></span> ms（点線）／ 速い<span class="rhythm-scale"></span>遅い ／ 赤い文字 = ミスあり</span>
-        </h3>
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" role="tab" id="tab-rhythm" data-tab="rhythm" aria-controls="panel-rhythm" aria-selected="true">キーごとの間隔</button>
+        <button type="button" class="tab" role="tab" id="tab-ngram" data-tab="ngram" aria-controls="panel-ngram" aria-selected="false">n-gram</button>
+      </div>
+
+      <div class="rhythm tab-panel" role="tabpanel" id="panel-rhythm" aria-labelledby="tab-rhythm">
+        <p class="rhythm-legend">平均 <span id="rhythm-avg" class="rhythm-avg"></span> ms（点線）／ 速い<span class="rhythm-scale"></span>遅い ／ 赤い文字 = ミスあり</p>
         <div id="rhythm" class="rhythm-chart"></div>
+      </div>
+
+      <div class="ngram tab-panel" role="tabpanel" id="panel-ngram" aria-labelledby="tab-ngram" hidden>
+        <p class="rhythm-legend">単語の中の連続する2文字（bigram）・3文字（trigram）ごとの平均 IKI。trigram は2つの打鍵間隔の平均 ／ ミスが絡んだものとスペースを含むものは除外 ／ 速い<span class="rhythm-scale"></span>遅い</p>
+        <div class="ngram-grid">
+          <div id="bigram" class="ngram-scroll"></div>
+          <div id="trigram" class="ngram-scroll"></div>
+        </div>
       </div>
     </section>
   </main>
@@ -55,7 +65,8 @@
     <button id="retry-btn" class="retry-btn" type="button">もう一度 (esc)</button>
   </footer>
 
-  <script src="js/rhythm.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/rhythm.js?v=6"></script>
+  <script src="js/ngram.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

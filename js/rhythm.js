@@ -19,13 +19,7 @@ const Rhythm = (function () {
 
     container.style.setProperty("--rh-avg", toPx(avg) + "px");
 
-    // 色相は style.css の変数から読む
-    const css = getComputedStyle(container);
-    const hue = {
-      fast: parseFloat(css.getPropertyValue("--rh-hue-fast")),
-      avg: parseFloat(css.getPropertyValue("--rh-hue-avg")),
-      slow: parseFloat(css.getPropertyValue("--rh-hue-slow"))
-    };
+    const hue = readHue();
     const toColor = function (v) { return colorFor(v, avg, hue); };
 
     // 単語の途中で折り返さないよう、「単語＋後ろのスペース」をひとまとまりにする
@@ -42,6 +36,16 @@ const Rhythm = (function () {
     container.appendChild(frag);
 
     return Math.round(avg);
+  }
+
+  // 色相は style.css の :root の変数から読む
+  function readHue() {
+    const css = getComputedStyle(document.documentElement);
+    return {
+      fast: parseFloat(css.getPropertyValue("--rh-hue-fast")),
+      avg: parseFloat(css.getPropertyValue("--rh-hue-avg")),
+      slow: parseFloat(css.getPropertyValue("--rh-hue-slow"))
+    };
   }
 
   // 間隔 → 棒の色。0 で青、平均で緑、平均の2倍以上で赤。その間は色相をなめらかに変える
@@ -85,5 +89,10 @@ const Rhythm = (function () {
     return col;
   }
 
-  return { render: render };
+  // 他の表示（バイグラム一覧など）でも同じ配色を使うための関数
+  function color(v, avg) {
+    return colorFor(v, avg, readHue());
+  }
+
+  return { render: render, color: color };
 })();
