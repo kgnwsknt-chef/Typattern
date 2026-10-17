@@ -42,11 +42,6 @@ body {
   font-weight: 600;
 }
 
-.logo::before {
-  content: "⌨ ";
-  color: var(--accent);
-}
-
 .text-btn {
   background: none;
   border: 1px solid var(--border);
