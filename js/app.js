@@ -32,7 +32,8 @@
     wpm: document.getElementById("res-wpm"),
     acc: document.getElementById("res-acc"),
     time: document.getElementById("res-time"),
-    miss: document.getElementById("res-miss")
+    miss: document.getElementById("res-miss"),
+    iki: document.getElementById("res-iki")
   };
 
   // 状態
@@ -204,6 +205,7 @@
     res.miss.textContent = misses;
     const avg = Rhythm.render(rhythmEl, target, intervals, missed);
     rhythmAvgEl.textContent = avg;
+    res.iki.textContent = avg;
     bigramTable.render(bigramEl, target, intervals, missed, avg);
     trigramTable.render(trigramEl, target, intervals, missed, avg);
     resultEl.hidden = false;
