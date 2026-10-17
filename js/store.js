@@ -8,7 +8,7 @@ const Store = (function () {
   const DB_NAME = "typing-records";
   const DB_VERSION = 3; // 入れ物（保存場所・索引）の構造の版
   const SCHEMA_VERSION = 3; // 記録1件の形式の版（3：正確率を「最後に合っていた文字の割合」に変更）
-  const EXPORT_APP = "typing-test";
+  const EXPORT_APP = "typing-test"; // 書き出しファイルの app 欄。アプリ名を Typattern に変えた後も、互換のためこのまま
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
   const RANK_MIN_ACCURACY = 95; // 正確率がこれ未満の記録はランキングに載せない（記録は残す）
 
@@ -250,7 +250,7 @@ const Store = (function () {
       const d = new Date();
       const pad = function (n) { return String(n).padStart(2, "0"); };
       a.href = URL.createObjectURL(blob);
-      a.download = "typing-records-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".json";
+      a.download = "typattern-records-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".json";
       document.body.appendChild(a);
       a.click();
       a.remove();

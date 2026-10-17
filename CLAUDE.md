@@ -1,6 +1,10 @@
-# タイピングアプリ
+# Typattern
 
-ブラウザで動くタイピング練習アプリ。
+ブラウザで動くタイピング練習アプリ。正式名称は **Typattern**（画面・ページタイトルにもこの名前を使う）。
+
+- リポジトリ: https://github.com/kgnwsknt-chef/Typattern
+- 公開サイト: https://kgnwsknt-chef.github.io/Typattern/ （`gh-pages` ブランチ）
+- 記録の保存先や書き出しファイルの中の識別子（`typing-records`・`typing-test`）は、既存の記録との互換のため旧名のまま。
 
 ## 方針
 - HTML / CSS / JavaScript のみ。ビルド・npm・フレームワークなし。
