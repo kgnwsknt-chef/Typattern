@@ -1,11 +1,12 @@
 (function () {
   "use strict";
 
-  const LANG = "en";
+  // お題の言語（"en" 英語 / "ja" 日本語）。画面上部の「言語」で選ぶ
+  let lang = "en";
   // お題ファイルの置き場所。texts/<言語>/<題材名>.txt、短縮版は <題材名>_short.txt
-  const TEXT_DIR = "texts/" + LANG + "/";
+  function textDir() { return "texts/" + lang + "/"; }
   // 単語モードの単語リストの置き場所。wordlists/<言語>/<リスト名>.txt（1行1語、# の行は読み飛ばす）
-  const WORDLIST_DIR = "wordlists/" + LANG + "/";
+  function wordlistDir() { return "wordlists/" + lang + "/"; }
   // 単語モードのお題の長さ（文字数）の目安
   const WORDS_TARGET_LENGTH = 300;
   // ランキングに表示する件数
@@ -13,6 +14,7 @@
   // 選んだキー配列・モードを覚えておく localStorage のキー
   const KEY_LAYOUT_STORAGE = "typing-test.keyLayout";
   const MODE_STORAGE = "typing-test.mode";
+  const LANG_STORAGE = "typing-test.lang";
   // index.html で付けた ?v= をお題の読み込みにも付けて、キャッシュで古いお題が出ないようにする
   const ASSET_VERSION = new URL(document.currentScript.src).searchParams.get("v") || "";
 
@@ -46,6 +48,9 @@
   const rankingTitleEl = document.getElementById("ranking-title");
   const keyLayoutEl = document.getElementById("key-layout");
   const modeEl = document.getElementById("mode");
+  const langEl = document.getElementById("lang");
+  const guideEl = document.getElementById("guide");
+  const GUIDE_EN = guideEl.textContent.trim();
 
   // 状態
   // 記録のモード（"normal" 文章 / "short" 短い文章 / "words" 単語）。ランキングはモードごとに分ける
@@ -90,35 +95,51 @@
 
   // texts/index.json に書かれた題材のお題をすべて読み込む
   function loadTexts(suffix) {
+    const dir = textDir();
     return fetchText("texts/index.json")
       .then(function (json) {
-        const names = JSON.parse(json)[LANG] || [];
+        const names = JSON.parse(json)[lang] || [];
         return Promise.all(names.map(function (name) {
           // 短縮版がない題材は飛ばす（失敗しても他の題材は使う）
-          return fetchText(TEXT_DIR + name + suffix)
+          return fetchText(dir + name + suffix)
             .catch(function (err) {
               console.warn(err);
               return "";
             })
             .then(function (t) {
-              // 改行や連続した空白は1つのスペースにそろえる
-              return { name: name, text: t.replace(/\s+/g, " ").trim() };
+              return lang === "ja" ? parseJaText(name, t) : { name: name, text: t.replace(/\s+/g, " ").trim() };
             });
         }));
       })
       .then(function (loaded) {
         sources = loaded.filter(function (t) { return t.text.length > 0; });
-        if (sources.length === 0) throw new Error("no texts in " + TEXT_DIR + " (*" + suffix + ")");
+        if (sources.length === 0) throw new Error("no texts in " + dir + " (*" + suffix + ")");
       });
+  }
+
+  // 日本語のお題ファイルを読む。「表示する文」と「読み（ひらがな）」を1行ずつ交互に書く。
+  // 空の行と # で始まる行は読み飛ばす。お題（打つ文字）は読みをスペースなしでつなげたもの
+  function parseJaText(name, t) {
+    const rows = t.split(/\r?\n/)
+      .map(function (s) { return s.trim(); })
+      .filter(function (s) { return s && s[0] !== "#"; });
+    if (rows.length % 2 !== 0) console.warn(name + ": 表示する文と読みの行の数が合いません");
+    const lines = [];
+    for (let i = 0; i + 1 < rows.length; i += 2) lines.push({ display: rows[i], reading: rows[i + 1] });
+    return {
+      name: name,
+      text: lines.map(function (l) { return l.reading; }).join(""),
+      lines: lines
+    };
   }
 
   // wordlists/index.json に書かれた単語リストをすべて読み込む
   function loadWordlists() {
     return fetchText("wordlists/index.json")
       .then(function (json) {
-        const names = JSON.parse(json)[LANG] || [];
+        const names = JSON.parse(json)[lang] || [];
         return Promise.all(names.map(function (name) {
-          return fetchText(WORDLIST_DIR + name + ".txt").then(function (t) {
+          return fetchText(wordlistDir() + name + ".txt").then(function (t) {
             const words = t.split(/\r?\n/)
               .map(function (w) { return w.trim(); })
               .filter(function (w) { return w && w[0] !== "#"; });
@@ -128,7 +149,7 @@
       })
       .then(function (loaded) {
         sources = loaded.filter(function (l) { return l.words.length > 0; });
-        if (sources.length === 0) throw new Error("no word lists in " + WORDLIST_DIR);
+        if (sources.length === 0) throw new Error("no word lists in " + wordlistDir());
       });
   }
 
@@ -180,6 +201,10 @@
 
   // モードを切り替えて、そのモードのお題を読み込み直す
   function setMode(newMode) {
+    // 日本語の単語リストはまだないので、日本語では単語モードを選べない
+    const wordsOption = modeEl.querySelector('option[value="words"]');
+    wordsOption.disabled = lang === "ja";
+    if (lang === "ja" && newMode === "words") newMode = "normal";
     mode = newMode;
     modeEl.value = mode;
     sources = [];
@@ -218,19 +243,39 @@
 
     input.value = "";
     input.maxLength = target.length;
-    input.disabled = false;
+    // 日本語の入力（ローマ字の判定）はまだ作っていないので、日本語では入力欄を使えないようにしておく
+    input.disabled = lang === "ja";
+    guideEl.textContent = lang === "ja" ? "日本語の入力は準備中です（お題の表示だけ確かめられます）。" : GUIDE_EN;
     resultEl.hidden = true;
     board.classList.remove("finished");
 
-    // お題を1文字ずつ span にする
+    // お題を1文字ずつ span にする。日本語は、1行ごとに表示する文を上に、読みを下に並べる
     textEl.textContent = "";
+    textEl.classList.toggle("ja", lang === "ja");
     const frag = document.createDocumentFragment();
-    charEls = Array.from(target, function (ch) {
-      const span = document.createElement("span");
-      span.textContent = ch;
-      frag.appendChild(span);
-      return span;
-    });
+    charEls = [];
+    function addChars(parent, str) {
+      Array.from(str).forEach(function (ch) {
+        const span = document.createElement("span");
+        span.textContent = ch;
+        parent.appendChild(span);
+        charEls.push(span);
+      });
+    }
+    if (picked.lines) {
+      picked.lines.forEach(function (l) {
+        const display = document.createElement("div");
+        display.className = "ja-display";
+        display.textContent = l.display;
+        const reading = document.createElement("div");
+        reading.className = "ja-reading";
+        addChars(reading, l.reading);
+        frag.appendChild(display);
+        frag.appendChild(reading);
+      });
+    } else {
+      addChars(frag, target);
+    }
     textEl.appendChild(frag);
 
     render();
@@ -327,7 +372,7 @@
       id: id,
       finishedAt: new Date().toISOString(),
       appVersion: ASSET_VERSION,
-      lang: LANG,
+      lang: lang,
       mode: mode,
       keyLayout: keyLayoutEl.value,
       textId: textId,
@@ -531,6 +576,21 @@
     // ?short は最初のモードを決めるだけなので、切り替えたら URL から外す
     if (location.search) history.replaceState(null, "", location.pathname);
     setMode(modeEl.value);
+  });
+
+  // 言語の選択。選んだ言語はブラウザに覚えさせ、変えたらその言語のお題を読み込み直す
+  try {
+    const saved = localStorage.getItem(LANG_STORAGE);
+    if (saved && langEl.querySelector('option[value="' + saved + '"]')) lang = saved;
+  } catch (e) { /* 既定の言語を使う */ }
+  langEl.value = lang;
+  langEl.addEventListener("change", function () {
+    lang = langEl.value;
+    try { localStorage.setItem(LANG_STORAGE, lang); } catch (e) { /* 無視 */ }
+    // 英語に戻したときは、前に選んでいたモード（単語など）に戻す
+    let m = modeEl.value;
+    try { m = localStorage.getItem(MODE_STORAGE) || m; } catch (e) { /* 今のモードを使う */ }
+    setMode(m);
   });
 
   setMode(initialMode);

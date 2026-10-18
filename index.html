@@ -10,6 +10,12 @@
   <header class="header">
     <h1 class="logo">Typattern<span id="version" class="version"></span></h1>
     <div class="header-actions">
+      <label class="layout-label">言語
+        <select id="lang" class="layout-select" title="お題の言語（記録とランキングは言語ごとに分かれる）">
+          <option value="en">英語</option>
+          <option value="ja">日本語</option>
+        </select>
+      </label>
       <label class="layout-label">モード
         <select id="mode" class="layout-select" title="お題の種類（記録とランキングはモードごとに分かれる）">
           <option value="normal">文章（約300文字）</option>
@@ -28,7 +34,7 @@
   </header>
 
   <main class="main">
-    <p class="guide">
+    <p id="guide" class="guide">
       計測は打ち始めた瞬間から始まります。Backspace で修正できます。
     </p>
 
