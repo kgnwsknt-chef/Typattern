@@ -61,12 +61,12 @@
 | `id` | 記録ごとの UUID。`raws` と同じ値。読み込み時の重複判定にも使う |
 | `finishedAt` | 打ち終わりの日時（UTC, ISO 8601）。打ち始めは `finishedAt - result.timeSec` で求められるので持たない |
 | `appVersion` | 記録したときのアプリのバージョン |
-| `lang` | お題の言語（`en`、将来は `ja`） |
+| `lang` | お題の言語（`en` 英語・`ja` 日本語） |
 | `mode` | `"normal"`（文章）・`"short"`（短い文章）・`"words"`（単語）。IndexedDB の索引に true/false は使えないため文字列にしている |
 | `keyLayout` | 論理キー配列（今は `"qwerty"` のみ）。画面上部の「配列」で選ぶ |
 | `textId` | お題の題材名（`texts/index.json` の名前。例 `qwerty`）。単語モードは単語リスト名（例 `basic1000`） |
-| `textLength` | お題の文字数 |
-| `result` | 結果の数値。`wpm` `accuracy` は小数第1位（`accuracy` は最後にお題と合っていた文字の割合で、直したミスは含めない）、`timeSec` は ms 単位。`avgIki` は平均 IKI ＝ 経過時間 ÷（文字数 − 1）で 0.1ms 単位（文字数が1以下なら `null`）。`uncorrected` は終了時に直さず残った間違いの数。定義は `docs/measurement.md` |
+| `textLength` | お題の文字数（日本語は読みのかなの数） |
+| `result` | 結果の数値。`wpm` `accuracy` は小数第1位（`accuracy` は最後にお題と合っていた文字の割合で、直したミスは含めない）、`timeSec` は ms 単位。`avgIki` は平均 IKI ＝ 経過時間 ÷（文字数 − 1）で 0.1ms 単位（文字数が1以下なら `null`）。`uncorrected` は終了時に直さず残った間違いの数。日本語では `wpm` は `null` で、代わりに `kanaPerMin`（かな/分、小数第1位）と `correctKeys`（最後に残った正しいかなを打ったキーの数。平均 IKI の分母）を持ち、`avgIki` ＝ 経過時間 ÷（`correctKeys` − 1）。`keystrokes` は日本語では押したキーの数（Shift・Backspace を除く）、`misses` は間違えたキーの数。定義は `docs/measurement.md` |
 
 ## 生データ（`raws`）：1回1件、約3〜10KB
 

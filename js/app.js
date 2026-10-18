@@ -51,6 +51,10 @@
   const langEl = document.getElementById("lang");
   const guideEl = document.getElementById("guide");
   const GUIDE_EN = guideEl.textContent.trim();
+  const GUIDE_JA = "読み（ひらがな）をローマ字で打ちます。IME はオフにしてください。計測は打ち始めた瞬間から始まります。Backspace で修正できます。";
+  const romajiGuideEl = document.getElementById("romaji-guide");
+  // 速さの単位（英語は WPM、日本語はかな/分）
+  const speedUnitEls = Array.from(document.querySelectorAll(".speed-unit"));
 
   // 状態
   // 記録のモード（"normal" 文章 / "short" 短い文章 / "words" 単語）。ランキングはモードごとに分ける
@@ -73,10 +77,12 @@
   let keyTime = 0;     // 直前に押したキーの時刻。そのキーで入った文字の時刻に使う
   let preKeys = [];    // 計測開始前に押したキー { code, number, time }。開始したら events に移す
   const heldShifts = new Set(); // 今押されている Shift キーの e.code
+  let typer = null;    // 日本語のときのローマ字の入力の状態（js/romaji.js）。英語では null
+  let imeOn = false;   // IME がオンのまま打たれたか（日本語のとき、注意を出す）
   let timerId = 0;
   let finished = false;
 
-  // 1文字の正誤判定。日本語対応時はここを言語ごとに差し替える
+  // 英語の1文字の正誤判定。日本語は js/romaji.js で、お題のかなに合う打ち方かを判定する
   function isCorrect(typed, expected) {
     return typed === expected;
   }
@@ -241,11 +247,13 @@
     finished = false;
     clearInterval(timerId);
 
+    typer = lang === "ja" ? Romaji.create(target) : null;
+    imeOn = false;
     input.value = "";
     input.maxLength = target.length;
-    // 日本語の入力（ローマ字の判定）はまだ作っていないので、日本語では入力欄を使えないようにしておく
-    input.disabled = lang === "ja";
-    guideEl.textContent = lang === "ja" ? "日本語の入力は準備中です（お題の表示だけ確かめられます）。" : GUIDE_EN;
+    input.disabled = false;
+    guideEl.textContent = lang === "ja" ? GUIDE_JA : GUIDE_EN;
+    speedUnitEls.forEach(function (el) { el.textContent = lang === "ja" ? "かな/分" : "WPM"; });
     resultEl.hidden = true;
     board.classList.remove("finished");
 
@@ -283,28 +291,63 @@
     input.focus();
   }
 
+  // 打ち終えた位置ごとの正誤（true = お題と合っている）。長さは打ち終えた文字数
+  function typedStates() {
+    if (typer) {
+      const states = [];
+      typer.units.forEach(function (u) {
+        for (let j = 0; j < u.len; j++) states.push(u.correct);
+      });
+      return states;
+    }
+    return Array.from(input.value, function (ch, i) { return isCorrect(ch, target[i]); });
+  }
+
   function render() {
-    const value = input.value;
+    const states = typedStates();
     for (let i = 0; i < charEls.length; i++) {
       let cls = "";
-      if (i < value.length) {
-        cls = isCorrect(value[i], target[i]) ? "ok" : "ng";
-      } else if (i === value.length) {
+      if (i < states.length) {
+        cls = states[i] ? "ok" : "ng";
+      } else if (i === states.length) {
         cls = "current";
       }
       if (charEls[i].className !== cls) {
         charEls[i].className = cls;
       }
     }
+    renderRomajiGuide();
+  }
+
+  // 日本語：次に打つローマ字の手引き。打ちかけ（灰色）・今のかなの残り（青）・その先（薄く）
+  function renderRomajiGuide() {
+    romajiGuideEl.hidden = !typer;
+    if (!typer) return;
+    romajiGuideEl.textContent = "";
+    if (imeOn) {
+      const warn = document.createElement("span");
+      warn.className = "rg-warn";
+      warn.textContent = "IME がオンになっています。オフにして（英字入力にして）から打ってください。";
+      romajiGuideEl.appendChild(warn);
+      return;
+    }
+    if (finished) return;
+    const g = typer.guide(24);
+    [["rg-typed", g.typed], ["rg-rest", g.rest], ["rg-ahead", g.ahead]].forEach(function (p) {
+      const span = document.createElement("span");
+      span.className = p[0];
+      span.textContent = p[1];
+      romajiGuideEl.appendChild(span);
+    });
   }
 
   function correctCount() {
-    const value = input.value;
-    let n = 0;
-    for (let i = 0; i < value.length; i++) {
-      if (isCorrect(value[i], target[i])) n++;
-    }
-    return n;
+    return typedStates().filter(function (ok) { return ok; }).length;
+  }
+
+  // 日本語：最後に残った正しいかなを打ったキーの数（平均 IKI の分母に使う）
+  function correctKeys() {
+    return typer.units.reduce(function (n, u) { return u.correct ? n + u.keys.length : n; }, 0);
   }
 
   function elapsedSec() {
@@ -312,12 +355,14 @@
     return ((endTime || performance.now()) - startTime) / 1000;
   }
 
+  // 速さ（wpm）は、英語は WPM、日本語はかな/分（正しいかなの数 ÷ 分）
   function calc() {
     const sec = elapsedSec();
-    const wpm = sec > 0 ? (correctCount() / 5) / (sec / 60) : 0;
+    const correct = correctCount();
+    const wpm = sec <= 0 ? 0 : typer ? correct / (sec / 60) : (correct / 5) / (sec / 60);
     // 正確率：今の入力のうちお題と合っている文字の割合。直したミスは含めない（docs/measurement.md）
-    const typed = input.value.length;
-    const acc = typed > 0 ? (correctCount() / typed) * 100 : 100;
+    const typed = typedStates().length;
+    const acc = typed > 0 ? (correct / typed) * 100 : 100;
     return { sec: sec, wpm: wpm, acc: acc };
   }
 
@@ -325,8 +370,8 @@
     const r = calc();
     // 打ち始め直後は値が極端に跳ねるので、2秒経つまで平均 IKI と WPM は出さない
     const show = finished || r.sec >= 2;
-    // 途中の平均 IKI は、ここまでに進んだ文字数で割る（最後まで打つと結果の値と同じになる）
-    const iki = Store.avgIki(r.sec, input.value.length);
+    // 途中の平均 IKI は、ここまでに進んだ文字数（日本語は正しく打ったキーの数）で割る（最後まで打つと結果の値と同じになる）
+    const iki = Store.avgIki(r.sec, typer ? correctKeys() : input.value.length);
     stat.iki.textContent = show && iki !== null ? Math.round(iki) : "-";
     stat.wpm.textContent = show ? Math.round(r.wpm) : "-";
     stat.acc.textContent = Math.floor(r.acc);
@@ -344,7 +389,8 @@
 
     const r = calc();
     r.uncorrected = target.length - correctCount(); // 直さずに残した間違いの数
-    r.avgIki = Store.avgIki(Math.round(r.sec * 1000) / 1000, target.length);
+    // 平均 IKI：英語は文字あたり、日本語はキーあたり（正しく打ったキーの数で割る）
+    r.avgIki = Store.avgIki(Math.round(r.sec * 1000) / 1000, typer ? correctKeys() : target.length);
     res.iki.textContent = r.avgIki === null ? "-" : r.avgIki.toFixed(1);
     res.wpm.textContent = Math.round(r.wpm);
     res.acc.textContent = r.acc.toFixed(1);
@@ -378,7 +424,7 @@
       textId: textId,
       textLength: target.length,
       result: {
-        wpm: Math.round(r.wpm * 10) / 10,
+        wpm: typer ? null : Math.round(r.wpm * 10) / 10,
         accuracy: Store.accuracy(target.length, r.uncorrected),
         timeSec: Math.round(r.sec * 1000) / 1000,
         keystrokes: keystrokes,
@@ -387,6 +433,11 @@
         avgIki: r.avgIki
       }
     };
+    if (typer) {
+      // 日本語：かな/分と、平均 IKI の分母（最後に残った正しいかなを打ったキーの数）
+      session.result.kanaPerMin = Math.round(r.wpm * 10) / 10;
+      session.result.correctKeys = correctKeys();
+    }
     const raw = {
       id: id,
       keyLayout: session.keyLayout, // 文字から物理キーの位置を求めるのに使う（概要と同じ値）
@@ -436,15 +487,22 @@
     const pos = input.value.length;
     let judge = null;
     if (!Keys.isShift(e.code) && !isBackspace) judge = e.key === target[pos] ? 1 : 0;
+    pushKey(e.code, number, now, pos, judge);
+  }
+
+  // "k" の行を足す。計測開始前は preKeys にためる
+  function pushKey(code, number, now, pos, judge) {
     if (startTime) {
       events.push([round1(now - startTime), "k", number, pos, judge]);
       return;
     }
     // 開始前：前に押したキーのうち、押したままの Shift だけを残す（大文字で打ち始めるときの Shift）
-    if (!Keys.isShift(e.code)) {
-      preKeys = preKeys.filter(function (k) { return Keys.isShift(k.code) && heldShifts.has(k.code); });
-    }
-    preKeys.push({ code: e.code, number: number, time: now, pos: pos, judge: judge });
+    if (!Keys.isShift(code)) dropReleasedPreKeys();
+    preKeys.push({ code: code, number: number, time: now, pos: pos, judge: judge });
+  }
+
+  function dropReleasedPreKeys() {
+    preKeys = preKeys.filter(function (k) { return Keys.isShift(k.code) && heldShifts.has(k.code); });
   }
 
   // 計測開始の瞬間に、開始前のキーを events に移す（開始の打鍵が 0、その前の Shift は負の時刻になる）
@@ -453,6 +511,73 @@
       events.push([round1(k.time - startTime), "k", k.number, k.pos, k.judge]);
     });
     preKeys = [];
+  }
+
+  // 日本語：キーを押したときの処理。入力欄は使わず、e.code から US キーボードの文字を求めてローマ字の判定にかける
+  function handleJaKey(e, now) {
+    if (finished) return;
+    // IME がオンだと key が "Process" になる。かなに変換されてしまうので受け付けず、注意を出す
+    if (e.key === "Process" || e.isComposing) {
+      e.preventDefault();
+      imeOn = true;
+      renderRomajiGuide();
+      return;
+    }
+    if ((e.ctrlKey || e.altKey || e.metaKey) && e.code !== "Backspace") return;
+    const number = Keys.number(e.code);
+    if (number === null) return;
+    e.preventDefault();
+    imeOn = false;
+
+    if (Keys.isShift(e.code)) {
+      pushKey(e.code, number, now, typer.pos, null);
+      return;
+    }
+
+    if (e.code === "Backspace") {
+      if (!startTime) return; // まだ何も打っていない
+      const pos = typer.pos;
+      const u = typer.backspace(now);
+      pushKey(e.code, number, now, pos, null);
+      if (u) {
+        // 確定したかなを消したときだけ "-" の行を残す（打ちかけのキーを消したときは残さない）
+        events.push([round1(now - startTime), "-", target.substr(u.pos, u.len), u.pos, null]);
+        for (let i = u.pos; i < u.pos + u.len; i++) intervals[i] = null;
+      }
+      lastKeyTime = now;
+      render();
+      updateStats();
+      return;
+    }
+
+    if (!startTime) {
+      startTime = now;
+      dropReleasedPreKeys();
+      startKeys();
+      timerId = setInterval(updateStats, 100);
+    }
+    keystrokes++;
+    // 文字のないキー（JIS の「ろ」など）は、どの打ち方にも合わない文字として渡す
+    const r = typer.press(Keys.char(e.code, e.shiftKey) || "\u0000", now);
+    pushKey(e.code, number, now, r.pos, r.judge);
+    r.confirmed.forEach(function (u) {
+      // "+" の時刻は、そのかなを生んだ最後のキーの時刻（次のキーで確定した「ん」も n の時刻）
+      const t = round1(u.time - startTime);
+      for (let j = 0; j < u.len; j++) {
+        const i = u.pos + j;
+        events.push([t, "+", target[i], i, u.correct ? 1 : 0]);
+        // 間隔：そのかなの最初のキーの直前のキーから、最後のキーまで。2文字まとめて打ったときの2文字目は 0
+        intervals[i] = j > 0 ? 0 : (u.prevTime === null ? null : u.time - u.prevTime);
+      }
+      if (!u.correct) {
+        misses++;
+        missed[u.pos] = true;
+      }
+    });
+    lastKeyTime = now;
+    render();
+    updateStats();
+    if (typer.done()) finish();
   }
 
   // 入力欄の変化を記録する。時刻は、その文字を入力したキーを押した時刻
@@ -470,6 +595,11 @@
 
   input.addEventListener("input", function () {
     if (finished) return;
+    if (typer) {
+      // 日本語は入力欄を使わない（IME などで入ってしまった文字は捨てる）
+      input.value = "";
+      return;
+    }
     const value = input.value;
     // 時刻は、この変化を起こしたキーを押した時刻（キーを押さずに変わったときは今の時刻）
     const now = keyTime || performance.now();
@@ -515,7 +645,11 @@
     }
     const now = performance.now();
     if (Keys.isShift(e.code)) heldShifts.add(e.code);
-    else keyTime = now; // Shift だけでは入力欄は変わらない
+    if (typer) {
+      handleJaKey(e, now);
+      return;
+    }
+    if (!Keys.isShift(e.code)) keyTime = now; // Shift だけでは入力欄は変わらない
     logKey(e, now);
   });
   input.addEventListener("keyup", function (e) {

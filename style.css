@@ -125,6 +125,38 @@ body {
   user-select: none;
 }
 
+/* 日本語：次に打つローマ字の手引き。打ちかけ（灰色）・今のかなの残り（青）・その先（薄い灰色） */
+.romaji-guide {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 18px;
+  min-height: 1.6em;
+  margin: -12px 0 16px;
+  white-space: pre;
+  overflow: hidden;
+}
+
+.romaji-guide .rg-typed {
+  color: var(--typed);
+}
+
+.romaji-guide .rg-rest {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.romaji-guide .rg-ahead {
+  color: var(--sub);
+  opacity: 0.6;
+}
+
+.romaji-guide .rg-warn {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--error);
+  white-space: normal;
+}
+
 /* 日本語：1行ごとに、表示する文（漢字かな交じり）を上に、打つ読み（かな）を下に並べる */
 .text.ja .ja-display {
   font-family: var(--font);

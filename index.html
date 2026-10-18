@@ -39,11 +39,14 @@
     </p>
 
     <div class="stats" aria-live="off">
-      <div class="stat"><span id="stat-iki" class="stat-value">-</span><span class="stat-label">ms 平均 IKI（<span id="stat-wpm">-</span> WPM）</span></div>
+      <div class="stat"><span id="stat-iki" class="stat-value">-</span><span class="stat-label">ms 平均 IKI（<span id="stat-wpm">-</span> <span class="speed-unit">WPM</span>）</span></div>
       <div class="stat"><span id="stat-acc" class="stat-value">100</span><span class="stat-label">% 正確率</span></div>
       <div class="stat"><span id="stat-time" class="stat-value">0.0</span><span class="stat-label">秒</span></div>
       <div class="stat"><span id="stat-miss" class="stat-value">0</span><span class="stat-label">ミス</span></div>
     </div>
+
+    <!-- 日本語のとき：次に打つローマ字の手引き -->
+    <div id="romaji-guide" class="romaji-guide" hidden></div>
 
     <div id="board" class="board">
       <div id="text" class="text"></div>
@@ -55,7 +58,7 @@
     <section id="result" class="result" hidden>
       <h2 class="result-title">結果</h2>
       <div class="result-grid">
-        <div><span id="res-iki" class="result-value"></span><span class="result-label">ms 平均 IKI（<span id="res-wpm"></span> WPM）</span></div>
+        <div><span id="res-iki" class="result-value"></span><span class="result-label">ms 平均 IKI（<span id="res-wpm"></span> <span class="speed-unit">WPM</span>）</span></div>
         <div><span id="res-acc" class="result-value"></span><span class="result-label">% 正確率</span></div>
         <div><span id="res-time" class="result-value"></span><span class="result-label">秒</span></div>
         <div><span id="res-miss" class="result-value"></span><span class="result-label">ミス（未修正 <span id="res-uncorrected"></span>）</span></div>
@@ -96,6 +99,7 @@
 
   <script src="js/store.js?v=29"></script>
   <script src="js/keys.js?v=29"></script>
+  <script src="js/romaji.js?v=29"></script>
   <script src="js/page-footer.js?v=29"></script>
   <script src="js/rhythm.js?v=29"></script>
   <script src="js/ranking.js?v=29"></script>
