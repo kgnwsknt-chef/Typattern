@@ -52,6 +52,7 @@
   const guideEl = document.getElementById("guide");
   const GUIDE_EN = guideEl.textContent.trim();
   const GUIDE_JA = "読み（ひらがな）をローマ字で打ちます。IME はオフにしてください。計測は打ち始めた瞬間から始まります。Backspace で修正できます。";
+  const GUIDE_KANA = "読み（ひらがな）を、選んだかな配列で打ちます。IME はオフにしてください。計測は打ち始めた瞬間から始まります。Backspace で修正できます。配列にないかなは、ミスとして飛ばします。";
   const romajiGuideEl = document.getElementById("romaji-guide");
   // 速さの単位（英語は WPM、日本語はかな/分）
   const speedUnitEls = Array.from(document.querySelectorAll(".speed-unit"));
@@ -79,7 +80,9 @@
   let keyTime = 0;     // 直前に押したキーの時刻。そのキーで入った文字の時刻に使う
   let preKeys = [];    // 計測開始前に押したキー { code, number, time }。開始したら events に移す
   const heldShifts = new Set(); // 今押されている Shift キーの e.code
-  let typer = null;    // 日本語のときのローマ字の入力の状態（js/romaji.js）。英語では null
+  let typer = null;    // 日本語のときの入力の状態（js/typer.js）。英語では null
+  let showRomajiGuide = false; // ローマ字の手引きを出すか（日本語のローマ字入力のときだけ。かな配列では出さない）
+  const kanaLayouts = {}; // 登録したかな配列（配列名 → KanaLayout.create の結果）
   let imeOn = false;   // IME がオンのまま打たれたか（日本語のとき、注意を出す）
   let timerId = 0;
   let finished = false;
@@ -249,12 +252,15 @@
     finished = false;
     clearInterval(timerId);
 
-    typer = lang === "ja" ? Typer.create(target, Romaji.options) : null;
+    // 日本語：QWERTY ならローマ字、かな配列ならその割り当て表で判定する
+    const kana = kanaLayouts[keyLayoutEl.value];
+    typer = lang !== "ja" ? null : Typer.create(target, kana ? kana.options : Romaji.options);
+    showRomajiGuide = lang === "ja" && !kana;
     imeOn = false;
     input.value = "";
     input.maxLength = target.length;
     input.disabled = false;
-    guideEl.textContent = lang === "ja" ? GUIDE_JA : GUIDE_EN;
+    guideEl.textContent = lang !== "ja" ? GUIDE_EN : showRomajiGuide ? GUIDE_JA : GUIDE_KANA;
     speedUnitEls.forEach(function (el) { el.textContent = lang === "ja" ? "かな/分" : "WPM"; });
     // 「キーごとの間隔」の説明。日本語は押したキーごとの間隔（かなは下の段に書く）
     rhythmWhatEl.textContent = lang === "ja" ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
@@ -336,7 +342,7 @@
       romajiGuideEl.appendChild(warn);
       return;
     }
-    if (finished) return;
+    if (finished || !showRomajiGuide) return; // かな配列では手引きを出さない（IME の注意だけ）
     const g = typer.guide(24);
     [["rg-typed", g.typed], ["rg-rest", g.rest], ["rg-ahead", g.ahead]].forEach(function (p) {
       const span = document.createElement("span");
@@ -729,10 +735,36 @@
   });
 
   // キー配列の選択。選んだ配列はブラウザに覚えさせ、変えたらその回はやり直す
-  try {
-    const saved = localStorage.getItem(KEY_LAYOUT_STORAGE);
-    if (saved && keyLayoutEl.querySelector('option[value="' + saved + '"]')) keyLayoutEl.value = saved;
-  } catch (e) { /* 保存できない環境では既定の配列を使う */ }
+  // 選択肢は QWERTY と、キー配列のページで登録したかな配列（日本語のときだけ選べる）
+  function addKanaLayouts(records) {
+    records.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+    records.forEach(function (r) {
+      kanaLayouts[r.id] = KanaLayout.create(r.entries);
+      const o = document.createElement("option");
+      o.value = r.id;
+      o.textContent = r.name + "（かな配列）";
+      keyLayoutEl.appendChild(o);
+    });
+  }
+
+  function restoreKeyLayout() {
+    try {
+      const saved = localStorage.getItem(KEY_LAYOUT_STORAGE);
+      if (saved && keyLayoutEl.querySelector('option[value="' + saved + '"]')) keyLayoutEl.value = saved;
+    } catch (e) { /* 保存できない環境では既定の配列を使う */ }
+  }
+
+  // 英語ではかな配列を選べないようにする。かな配列を選んでいたら QWERTY に戻す
+  function updateKeyLayoutOptions() {
+    Array.prototype.forEach.call(keyLayoutEl.options, function (o) {
+      o.disabled = lang !== "ja" && o.value in kanaLayouts;
+    });
+    if (keyLayoutEl.selectedOptions[0] && keyLayoutEl.selectedOptions[0].disabled) {
+      keyLayoutEl.value = "qwerty";
+      try { localStorage.setItem(KEY_LAYOUT_STORAGE, "qwerty"); } catch (e) { /* 無視 */ }
+    }
+  }
+
   keyLayoutEl.addEventListener("change", function () {
     try { localStorage.setItem(KEY_LAYOUT_STORAGE, keyLayoutEl.value); } catch (e) { /* 無視 */ }
     reset(false);
@@ -770,8 +802,17 @@
     // 英語に戻したときは、前に選んでいたモード（単語など）に戻す
     let m = modeEl.value;
     try { m = localStorage.getItem(MODE_STORAGE) || m; } catch (e) { /* 今のモードを使う */ }
+    updateKeyLayoutOptions();
     setMode(m);
   });
 
-  setMode(initialMode);
+  // 登録したかな配列を読み込んでから、前に選んだ配列に戻して始める（読み込めなくても QWERTY で始める）
+  Store.getAllLayouts()
+    .then(addKanaLayouts)
+    .catch(function (err) { console.error(err); })
+    .then(function () {
+      restoreKeyLayout();
+      updateKeyLayoutOptions();
+      setMode(initialMode);
+    });
 })();
