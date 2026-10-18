@@ -86,7 +86,7 @@ const KanaLayout = (function () {
       return entries.some(function (e) { return e[0].length > s.length && e[0].indexOf(s) === 0; });
     }
 
-    // 段（シフト）の候補。2打の並びの1打目によく出るキーは前置、2打目によく出るキーは後置のシフトとみなす
+    // シフト面の候補。2打の並びの1打目によく出るキーは前置、2打目によく出るキーは後置のシフトとみなす
     function shiftKeys(minCount) {
       const first = new Map();
       const second = new Map();

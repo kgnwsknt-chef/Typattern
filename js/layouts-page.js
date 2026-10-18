@@ -8,7 +8,7 @@
   const UNIT = 44; // キー1個分の大きさ(px)
   const GAP = 4;   // キーどうしの隙間(px)
   const OUTPUT_MAX = 200; // 試し打ちの欄に残す文字数
-  const SHIFT_MIN = 5; // 2打の並びでこの回数以上出てくるキーを、シフトの段の候補にする
+  const SHIFT_MIN = 5; // 2打の並びでこの回数以上出てくるキーを、シフト面の候補にする
 
   const layoutEl = document.getElementById("layout");
   const shapeEl = document.getElementById("shape");
@@ -23,7 +23,7 @@
   const lastEl = document.getElementById("trial-last");
 
   const LEGEND_QWERTY = "左上の小さな数字は物理キーの番号（行＋列。列は16進数）。大きい文字は Shift なし、右上の小さい文字は Shift を押したときの文字。";
-  const LEGEND_KANA = "左上の小さな数字は物理キーの番号、右下の小さな文字はそのキーの QWERTY の文字。大きい文字は、表示中の段でそのキーを押したときのかな（右上は Shift を押したとき）。";
+  const LEGEND_KANA = "左上の小さな数字は物理キーの番号、右下の小さな文字はそのキーの QWERTY の文字。大きい文字は、表示中のシフト面でそのキーを押したときのかな（右上は Shift を押したとき）。外形線がオレンジのキーは前置シフト、紫のキーは後置シフト（両方なら二重線）。";
 
   // 配列の一覧。QWERTY は最初から入っている。かな配列は割り当て表を読み込むと足す（まだ保存はしない）
   const layouts = [{ id: "qwerty", name: "QWERTY", type: "qwerty" }];
@@ -71,9 +71,11 @@
   function drawLabels() {
     const layout = current();
     const view = layout.type === "kana" ? currentView(layout) : null;
+    // かな配列のシフト用のキー（前置・後置）。外形線の色を変えて示す
+    const shifts = layout.type === "kana" ? layout.kana.shiftKeys(SHIFT_MIN) : { prefix: [], postfix: [] };
     keyboardEl.classList.toggle("kb-kana", layout.type === "kana");
     viewNowEl.hidden = !view;
-    if (view) viewNowEl.textContent = "表示中の段：" + view.label;
+    if (view) viewNowEl.textContent = "表示中のシフト面：" + view.label;
     shape.keys.forEach(function (k) {
       const el = k.el;
       const pressed = el.classList.contains("pressed");
@@ -89,13 +91,15 @@
         return;
       }
       if (layout.type === "kana") {
-        // かな配列：表示中の段で、このキー（と Shift ＋ このキー）を押したときのかな
+        // かな配列：表示中のシフト面で、このキー（と Shift ＋ このキー）を押したときのかな
         const main = view.kana(plain);
         const sub = view.kana(shifted);
         if (sub) el.appendChild(span("kb-shift", sub));
         if (main) el.appendChild(span("kb-main kb-kana-char", main));
         else el.classList.add("kb-empty");
         el.appendChild(span("kb-qwerty", plain));
+        if (shifts.prefix.indexOf(plain) !== -1) el.classList.add("kb-prefix");
+        if (shifts.postfix.indexOf(plain) !== -1) el.classList.add("kb-postfix");
         return;
       }
       // QWERTY：英字は Shift ありが大文字になるだけなので、上の段は書かない（Shift を押すと大文字で表示する）
@@ -106,7 +110,7 @@
     keyboardEl.classList.toggle("shift-on", heldShifts.size > 0);
   }
 
-  // かな配列の表示中の段。{ label, kana(ch) }：キーの文字 ch を押したときのかな（なければ null）
+  // かな配列の表示中のシフト面。{ label, kana(ch) }：キーの文字 ch を押したときのかな（なければ null）
   //   自動：試し打ちの打ちかけの並びに続けて押したとき（何も打ちかけていなければ単独）
   //   前置 x：x の次に押したとき。後置 y：そのキーの次に y を押したとき
   function currentView(layout) {
@@ -116,7 +120,7 @@
       const st = conv ? conv.state() : { pending: "", tentative: "" };
       const pending = st.pending;
       return {
-        label: !pending ? "単独で押したとき"
+        label: !pending ? "シフトなし（そのキーだけを押したとき）"
           : "「" + pending + "」の次に押したとき" + (st.tentative ? "（ほかのキーか Enter を押すと「" + st.tentative + "」で確定）" : ""),
         kana: function (ch) { return ch === null ? null : get(pending + ch); }
       };
@@ -124,7 +128,7 @@
     const type = v[0];
     const key = v.slice(2);
     if (type === "a") {
-      return { label: "単独で押したとき", kana: function (ch) { return ch === null ? null : get(ch); } };
+      return { label: "シフトなし（そのキーだけを押したとき）", kana: function (ch) { return ch === null ? null : get(ch); } };
     }
     if (type === "p") {
       return { label: "「" + key + "」の次に押したとき（前置）", kana: function (ch) { return ch === null ? null : get(key + ch); } };
@@ -132,7 +136,7 @@
     return { label: "押した後に「" + key + "」を押したとき（後置）", kana: function (ch) { return ch === null ? null : get(ch + key); } };
   }
 
-  // 段の選び方の選択肢を作る（かな配列のときだけ出す）
+  // シフト面の選び方の選択肢を作る（かな配列のときだけ出す）
   function buildViewOptions() {
     const layout = current();
     const isKana = layout.type === "kana";
@@ -147,10 +151,10 @@
       viewEl.appendChild(o);
     };
     add("auto", "自動（試し打ちに合わせる）");
-    add("a:", "単独");
+    add("a:", "シフトなし");
     const shifts = layout.kana.shiftKeys(SHIFT_MIN);
-    shifts.prefix.forEach(function (k) { add("p:" + k, "前置「" + k + "」"); });
-    shifts.postfix.forEach(function (k) { add("s:" + k, "後置「" + k + "」"); });
+    shifts.prefix.forEach(function (k) { add("p:" + k, "前置シフト「" + k + "」"); });
+    shifts.postfix.forEach(function (k) { add("s:" + k, "後置シフト「" + k + "」"); });
   }
 
   function span(className, text) {
@@ -219,7 +223,7 @@
       qwertyOutput = (qwertyOutput + ch).slice(-OUTPUT_MAX);
     }
     renderOutput();
-    // 自動の段は、打ちかけの並びに合わせて書き直す
+    // 自動のシフト面は、打ちかけの並びに合わせて書き直す
     drawLabels();
     lastEl.textContent = "押したキー：" + (number ? "番号 " + number + " ／ " : "番号なし ／ ") + "e.code " + e.code +
       (ch !== null && ch !== " " ? " ／ 文字 " + ch : "");
@@ -264,7 +268,7 @@
     for (let i = layouts.length - 1; i >= 0; i--) {
       if (layouts[i].id === record.id || layouts[i].id === UNSAVED + record.id) layouts.splice(i, 1);
     }
-    layouts.push({ id: record.id, name: record.name, type: "kana", entries: record.entries, kana: KanaLayout.create(record.entries) });
+    layouts.push({ id: record.id, name: record.name, type: "kana", entries: record.entries, source: record.source, kana: KanaLayout.create(record.entries) });
   }
 
   function updateActions() {
@@ -288,7 +292,8 @@
         return;
       }
       if (exists && !confirm("「" + name + "」という配列がすでに保存されています。上書きしますか？")) return;
-      const record = { id: name, name: name, type: "kana", entries: layout.entries, savedAt: new Date().toISOString() };
+      // source は読み込んだ割り当て表の文字列（ローマ字で書いたままの形）。フォームに出し直すのに使う
+      const record = { id: name, name: name, type: "kana", entries: layout.entries, source: layout.source, savedAt: new Date().toISOString() };
       return Store.saveLayout(record).then(function () {
         addSaved(record);
         buildLayoutOptions();
@@ -304,12 +309,10 @@
 
   deleteBtn.addEventListener("click", function () {
     const layout = current();
+    // その配列で打った記録があっても削除できる。記録は消さず、記録ページでは「配列名（削除済）」と出す
     Store.countSessionsWithLayout(layout.id).then(function (n) {
-      if (n > 0) {
-        layoutMsgEl.textContent = "「" + layout.name + "」で打った記録が " + n + " 件あるため、削除できません。";
-        return;
-      }
-      if (!confirm("「" + layout.name + "」を削除しますか？")) return;
+      if (!confirm("「" + layout.name + "」を削除しますか？" +
+        (n > 0 ? "\nこの配列で打った記録 " + n + " 件は消さずに残ります（記録ページでは「" + layout.name + "（削除済）」と表示します）。" : ""))) return;
       return Store.deleteLayout(layout.id).then(function () {
         layouts.splice(layouts.indexOf(layout), 1);
         buildLayoutOptions();
@@ -368,7 +371,7 @@
       return;
     }
     const id = UNSAVED + name;
-    const layout = { id: id, name: name, type: "kana", entries: parsed.entries, kana: KanaLayout.create(parsed.entries) };
+    const layout = { id: id, name: name, type: "kana", entries: parsed.entries, source: tableTextEl.value, kana: KanaLayout.create(parsed.entries) };
     const i = layouts.findIndex(function (l) { return l.id === id; });
     if (i === -1) layouts.push(layout);
     else layouts[i] = layout;
@@ -431,6 +434,16 @@
     resetTrial();
     drawLabels();
     renderEntries();
+    fillForm();
+  }
+
+  // 表示中のかな配列の名前と割り当て表を、登録のフォームに出す（直して読み込み直せるように）
+  // 割り当て表は、読み込んだときの文字列（ローマ字で書いたならローマ字のまま）。それがない配列は「キーの並び<タブ>かな」で書き出す
+  function fillForm() {
+    const layout = current();
+    if (layout.type !== "kana") return; // QWERTY のときは、書きかけのフォームをそのままにする
+    nameEl.value = layout.name;
+    tableTextEl.value = layout.source || layout.entries.map(function (e) { return e[0] + "\t" + e[1]; }).join("\n");
   }
 
   KeyboardShapes.SHAPES.forEach(function (s) {

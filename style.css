@@ -11,6 +11,9 @@
   --rh-hue-fast: 215;
   --rh-hue-avg: 120;
   --rh-hue-slow: 0;
+  /* キー配列の配列図：前置シフト・後置シフトのキーの外形線の色 */
+  --kb-prefix: #e07b00;
+  --kb-postfix: #8a3fd1;
   --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "Consolas", "Menlo", monospace;
 }
@@ -602,6 +605,20 @@ a.text-btn {
   bottom: 1px;
   font-size: 9px;
   color: var(--typed);
+}
+
+/* かな配列のシフト用のキー：外形線の色で示す（前置シフト＝オレンジ、後置シフト＝紫。両方なら外側にもう1本） */
+.kb-key.kb-prefix {
+  border: 2px solid var(--kb-prefix);
+}
+
+.kb-key.kb-postfix {
+  border: 2px solid var(--kb-postfix);
+}
+
+.kb-key.kb-prefix.kb-postfix {
+  border-color: var(--kb-prefix);
+  box-shadow: 0 0 0 2px var(--kb-postfix);
 }
 
 /* かながないキー */
