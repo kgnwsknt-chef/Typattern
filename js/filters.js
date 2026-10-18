@@ -1,4 +1,4 @@
-// 記録ページ（推移・ランキング / n-gram）共通の「データの絞り込み」
+// 記録ページ（記録 / n-gram）共通の「データの絞り込み」
 // 言語・配列・モード・期間で概要の記録を絞り込む。決まりは docs/records.md の「データの絞り込み」
 const Filters = (function () {
   "use strict";
@@ -95,5 +95,5 @@ const Filters = (function () {
     return Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
   }
 
-  return { init: init, summary: summary };
+  return { init: init, summary: summary, localDate: localDate };
 })();

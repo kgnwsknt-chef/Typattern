@@ -34,7 +34,7 @@ const Ranking = (function () {
 
     const head = document.createElement("thead");
     const hr = document.createElement("tr");
-    const labels = ["順位", "平均 IKI(ms)", "正確率(%)", "ミス", "未修正", "お題"];
+    const labels = ["順位", "平均 IKI(ms)", "レベル（文字/秒）", "正確率(%)", "ミス", "未修正", "お題"];
     if (opts.category) labels.push("区分");
     labels.push("日時");
     labels.forEach(function (label) {
@@ -57,6 +57,7 @@ const Ranking = (function () {
       const cells = [
         rank,
         s.result.avgIki.toFixed(1),
+        levelText(s),
         s.result.accuracy.toFixed(1),
         s.result.misses,
         s.result.uncorrected,
@@ -73,6 +74,15 @@ const Ranking = (function () {
     });
     table.appendChild(body);
     container.appendChild(table);
+  }
+
+  // その回のレベルと文字/秒（例「SB（6.78）」）。レベルがなければ「-」（js/levels.js、docs/levels.md）
+  // 短い文章は達成レベルに数えないので、ランキングでもレベルを出さない（空欄）
+  function levelText(s) {
+    if (Levels.COUNTED_MODES.indexOf(s.mode) === -1) return "";
+    const level = Levels.ofSession(s);
+    const rate = Levels.rateOfSession(s);
+    return (level ? level.name : "-") + (rate !== null ? "（" + rate.toFixed(2) + "）" : "");
   }
 
   // ISO の日時を、このPCの時刻で「2026/10/17 18:12」の形にする

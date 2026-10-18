@@ -1,4 +1,4 @@
-// 推移・ランキングのページの「推移」グラフ。上段に平均 IKI（左軸 ms・右軸 打/s）、
+// 記録のページの「推移」グラフ。上段に平均 IKI（左軸 ms・右軸 打/s）、
 // 下段に正確率（修正後）とミスも数えた正確率を描く
 // 決まりは docs/records.md の「推移」を参照
 const Trend = (function () {
@@ -14,7 +14,9 @@ const Trend = (function () {
   const T2 = T + PH1 + GAP; // 下段の上端
 
   // sessions：絞り込んだ概要の記録（古い順）。group："run"（1回ごと）か "day"（日ごと）
-  function render(container, legendEl, sessions, group) {
+  // opts.levelUps：達成レベルが上がった回（Levels.levelUps の結果）。その点に「SB達成」のように書く
+  function render(container, legendEl, sessions, group, opts) {
+    const ups = (opts && opts.levelUps) || new Map();
     container.textContent = "";
     const list = sessions.filter(function (s) { return s.result.avgIki !== null; });
     if (list.length === 0) {
@@ -26,12 +28,13 @@ const Trend = (function () {
       return;
     }
 
-    const data = group === "day" ? byDay(list) : byRun(list);
+    const data = group === "day" ? byDay(list, ups) : byRun(list, ups);
     legendEl.textContent = group === "day"
       ? "● その日の平均（正確率 " + Store.RANK_MIN_ACCURACY + "% 以上の回）／ ◇ その日の最高 ／ ○ その日は " +
         Store.RANK_MIN_ACCURACY + "% 以上の回がない（全回の平均）／ 下段はその日の正確率の平均"
       : "● 1回ごとの平均 IKI ／ ○ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満（ランキング対象外。移動平均に含めない）／ ━ 移動平均（直近 " +
         MA_WINDOW + " 回）";
+    legendEl.textContent += " ／ 「SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
     legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
     // 平均 IKI は、英語は文字あたり、日本語はキーあたり。両方が混ざっているときは注意を出す
     const langs = new Set(list.map(function (s) { return s.lang; }));
@@ -100,6 +103,16 @@ const Trend = (function () {
       const c = svgEl("circle", { cx: X(p.x), cy: YI(p.iki), r: 3.5, class: "trend-point" + (p.eligible ? "" : " out") });
       c.appendChild(title(p.tip));
       svg.appendChild(c);
+      // 達成レベルが上がった点：輪で囲み、上に「SB達成」と書く
+      if (p.levelUp) {
+        svg.appendChild(svgEl("circle", { cx: X(p.x), cy: YI(p.iki), r: 7, class: "trend-levelup-ring" }));
+        // 端の点では、文字が枠からはみ出さないよう寄せる
+        const lx = X(p.x);
+        const anchor = lx > L + PW - 30 ? "end" : lx < L + 30 ? "start" : "middle";
+        const label = text(lx, YI(p.iki) - 11, p.levelUp, anchor, "trend-levelup");
+        label.appendChild(title(p.tip));
+        svg.appendChild(label);
+      }
     });
 
     // 下段：正確率
@@ -148,18 +161,20 @@ const Trend = (function () {
   }
 
   // 1回ごと：横軸は何回目か。移動平均は正確率が基準以上の回だけで計算する
-  function byRun(list) {
+  function byRun(list, ups) {
     const points = list.map(function (s, i) {
+      const up = ups.get(s.id);
       return {
         x: i + 1,
         iki: s.result.avgIki,
         acc: s.result.accuracy,
         accRaw: rawAccuracy(s),
         eligible: s.result.accuracy >= Store.RANK_MIN_ACCURACY,
+        levelUp: up ? up.level.name + "達成" : "",
         tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + s.textId + "\n平均 IKI " + s.result.avgIki.toFixed(1) +
           " ms（" + (1000 / s.result.avgIki).toFixed(2) + " 打/s, " + speedText(s) + "）\n正確率 " +
           s.result.accuracy.toFixed(1) + "%（ミスも数えると " + rawAccuracy(s).toFixed(1) + "%）／ ミス " + s.result.misses +
-          "（未修正 " + s.result.uncorrected + "）"
+          "（未修正 " + s.result.uncorrected + "）\n" + levelTip(s) + (up ? "\n" + upText(up) : "")
       };
     });
     const ma = [];
@@ -174,7 +189,7 @@ const Trend = (function () {
   }
 
   // 日ごと：横軸はこのPCの日付。その日の平均と最高は正確率が基準以上の回で出す
-  function byDay(list) {
+  function byDay(list, ups) {
     const days = new Map();
     list.forEach(function (s) {
       const k = dayNumber(s.finishedAt);
@@ -189,14 +204,23 @@ const Trend = (function () {
       const iki = mean(use, function (s) { return s.result.avgIki; });
       const acc = mean(ss, function (s) { return s.result.accuracy; });
       const accRaw = mean(ss, rawAccuracy);
+      // その日に達成レベルが上がった回（言語・モードごとに、その日の最後に届いたレベル）
+      const dayUps = new Map();
+      ss.forEach(function (s) {
+        const up = ups.get(s.id);
+        if (up) dayUps.set(up.lang + "/" + up.mode, up);
+      });
+      const upList = Array.from(dayUps.values());
       const p = {
         x: day,
         iki: iki,
         acc: acc,
         accRaw: accRaw,
         eligible: ok.length > 0,
+        levelUp: upList.map(function (u) { return u.level.name; }).join("・") + (upList.length ? "達成" : ""),
         tip: fmtDay(day) + " ／ " + ss.length + " 回（うち正確率 " + Store.RANK_MIN_ACCURACY + "% 以上 " + ok.length + " 回）\n平均 IKI " +
-          iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%（ミスも数えると " + accRaw.toFixed(1) + "%）"
+          iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%（ミスも数えると " + accRaw.toFixed(1) + "%）" +
+          upList.map(function (u) { return "\n" + upText(u); }).join("")
       };
       if (ok.length) p.best = Math.min.apply(null, ok.map(function (s) { return s.result.avgIki; }));
       return p;
@@ -205,6 +229,21 @@ const Trend = (function () {
   }
 
   // ---- 補助 ----
+
+  const LANG_NAME = { en: "英語", ja: "日本語" };
+  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語" };
+
+  // その回のレベルと文字/秒（docs/levels.md）
+  function levelTip(s) {
+    const level = Levels.ofSession(s);
+    const rate = Levels.rateOfSession(s);
+    return "レベル " + (level ? level.name : "なし") + (rate !== null ? "（" + rate.toFixed(2) + " 文字/秒）" : "");
+  }
+
+  // 達成レベルが上がったことの説明（例「日本語・文章で SB を達成」）
+  function upText(up) {
+    return LANG_NAME[up.lang] + "・" + MODE_NAME[up.mode] + "で " + up.level.name + " を達成";
+  }
 
   // 速さの表示。英語は WPM、日本語はかな/分（日本語の記録は wpm が null。docs/storage.md）
   function speedText(s) {

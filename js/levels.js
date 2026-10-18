@@ -73,6 +73,50 @@ const Levels = (function () {
     return TABLE[level.index + 1] || null;
   }
 
+  // 言語・モードの組の達成度（記録ページの表に使う）。sessions は古い順
+  //   { count: その組の記録の数, level: 達成レベル, achievedAt: そのレベルに初めて届いた日時,
+  //     bestRate: 正確率95%以上の回の一番速い文字/秒, target: 次の目標, gap: 目標まであと何文字/秒 }
+  function summary(sessions, lang, mode) {
+    const chars = charsFor(lang);
+    let count = 0;
+    let level = null;
+    let achievedAt = null;
+    let bestRate = null;
+    sessions.forEach(function (s) {
+      if (s.lang !== lang || s.mode !== mode) return;
+      count++;
+      if (s.result.accuracy < Store.RANK_MIN_ACCURACY) return;
+      const rate = rateOfSession(s);
+      if (rate !== null && (bestRate === null || rate > bestRate)) bestRate = rate;
+      const l = fromRate(rate, chars);
+      if (l && (!level || l.index > level.index)) {
+        level = l;
+        achievedAt = s.finishedAt;
+      }
+    });
+    const target = next(level);
+    const gap = target && bestRate !== null ? minRate(target, chars) - bestRate : null;
+    return { count: count, level: level, achievedAt: achievedAt, bestRate: bestRate, target: target, gap: gap };
+  }
+
+  // 達成レベルが上がった回の一覧（記録の id → { lang, mode, level }）。sessions は古い順。
+  // 言語・モードの組ごとに、それまでの達成レベルを初めて超えた回。短い文章は数えない
+  function levelUps(sessions) {
+    const best = {};
+    const ups = new Map();
+    sessions.forEach(function (s) {
+      if (COUNTED_MODES.indexOf(s.mode) === -1) return;
+      const l = ofSession(s);
+      if (!l) return;
+      const key = s.lang + "/" + s.mode;
+      if (!best[key] || l.index > best[key].index) {
+        best[key] = l;
+        ups.set(s.id, { lang: s.lang, mode: s.mode, level: l });
+      }
+    });
+    return ups;
+  }
+
   // 短い文章で打ったときの目標は、文章の目標を使う
   function targetMode(mode) {
     return COUNTED_MODES.indexOf(mode) === -1 ? "normal" : mode;
@@ -89,6 +133,8 @@ const Levels = (function () {
     ofSession: ofSession,
     achieved: achieved,
     next: next,
+    summary: summary,
+    levelUps: levelUps,
     targetMode: targetMode
   };
 })();

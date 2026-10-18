@@ -819,6 +819,60 @@ a.text-btn {
   margin-top: 28px;
 }
 
+/* 記録のページ：レベルの達成度の表 */
+.stats-section.level-section {
+  margin-top: 0;
+  margin-bottom: 28px;
+}
+
+.level-table-wrap {
+  overflow-x: auto;
+}
+
+.level-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 640px;
+}
+
+.level-table th,
+.level-table td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: center;
+  vertical-align: top;
+}
+
+.level-table thead th,
+.level-table tbody th {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+  background: #f7f7f7;
+}
+
+.level-table tbody th {
+  vertical-align: middle;
+}
+
+.level-name {
+  font-family: var(--mono);
+  font-size: 28px;
+  color: var(--accent);
+}
+
+.level-sub,
+.level-none {
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.level-target {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text);
+}
+
 .small-btn {
   padding: 2px 8px;
   font-size: 12px;
@@ -907,6 +961,23 @@ a.text-btn {
   fill: var(--bg);
   stroke: #e08a00;
   stroke-width: 1.5;
+}
+
+/* 推移：達成レベルが上がった点の輪と「SB達成」の文字 */
+.trend-levelup-ring {
+  fill: none;
+  stroke: #d4a017;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.trend-levelup {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #b8860b;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
 }
 
 .trend-threshold {
