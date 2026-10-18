@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typattern n-gram</title>
+  <link rel="stylesheet" href="style.css?v=28">
+</head>
+<body>
+  <header class="header page-header">
+    <div class="logo">Typattern<span id="version" class="version"></span></div>
+    <h1 class="page-title">n-gram</h1>
+  </header>
+
+  <main class="main stats-main">
+    <h2 class="stats-title">データの絞り込み</h2>
+    <div class="filters stats-filters">
+      <label class="filter">言語
+        <select id="f-lang" class="layout-select">
+          <option value="">すべて</option>
+          <option value="en">英語</option>
+          <option value="ja">日本語</option>
+        </select>
+      </label>
+      <label class="filter">配列
+        <select id="f-layout" class="layout-select">
+          <option value="">すべて</option>
+          <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
+      <label class="filter">モード
+        <select id="f-mode" class="layout-select">
+          <option value="">すべて</option>
+          <option value="normal">文章</option>
+          <option value="short">短い文章</option>
+          <option value="words">単語</option>
+        </select>
+      </label>
+      <span class="filter">期間
+        <input id="f-from" type="date" class="layout-select" aria-label="開始日">
+        〜
+        <input id="f-to" type="date" class="layout-select" aria-label="終了日">
+        <button id="f-clear" type="button" class="text-btn small-btn" title="期間の指定をなくす">すべて</button>
+      </span>
+    </div>
+    <p id="stats-summary" class="stats-summary">読み込み中…</p>
+
+    <section class="stats-section">
+      <h2 class="stats-title">n-gram</h2>
+      <div class="filters">
+        <label class="filter">回数
+          <select id="f-min" class="layout-select">
+            <option value="1">1 回以上</option>
+            <option value="3">3 回以上</option>
+            <option value="5">5 回以上</option>
+            <option value="10">10 回以上</option>
+          </select>
+        </label>
+      </div>
+      <p id="ngram-summary" class="stats-summary"></p>
+      <p class="rhythm-legend">単語の中の連続する2文字（bigram）・3文字（trigram）ごとの平均 IKI を、選んだ記録すべてで集計。trigram は2つの打鍵間隔の平均 ／ ミスが絡んだものとスペースを含むものは除外 ／ 色は全体の打鍵間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い ／ 行をクリックで分布を表示</p>
+      <div class="ngram-grid">
+        <div class="ngram-col">
+          <div id="bigram" class="ngram-scroll"></div>
+          <div id="bigram-dist" class="ngram-dist"></div>
+        </div>
+        <div class="ngram-col">
+          <div id="trigram" class="ngram-scroll"></div>
+          <div id="trigram-dist" class="ngram-dist"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->
+  <footer class="footer page-footer">
+    <nav class="footer-links" aria-label="ページ">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="成績の推移とランキング">推移・ランキング</a>
+      <a class="text-btn" href="ngram.html" aria-current="page" title="bigram・trigram ごとの IKI">n-gram</a>
+    </nav>
+    <div class="footer-actions">
+      <button id="export-btn" class="text-btn" type="button" title="全記録を JSON ファイルに保存">記録を書き出す</button>
+      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録を追加">記録を読み込む</button>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+    </div>
+  </footer>
+
+  <script src="js/store.js?v=28"></script>
+  <script src="js/page-footer.js?v=28"></script>
+  <script src="js/rhythm.js?v=28"></script>
+  <script src="js/ngram.js?v=28"></script>
+  <script src="js/filters.js?v=28"></script>
+  <script src="js/ngram-page.js?v=28"></script>
+</body>
+</html>

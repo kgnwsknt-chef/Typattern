@@ -4,17 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern</title>
-  <link rel="stylesheet" href="style.css?v=25">
+  <link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
   <header class="header">
-    <h1 class="logo">Typattern</h1>
+    <h1 class="logo">Typattern<span id="version" class="version"></span></h1>
     <div class="header-actions">
-      <label class="layout-label">配列
-        <select id="key-layout" class="layout-select" title="使っているキー配列（記録とランキングに使う）">
-          <option value="qwerty">QWERTY</option>
-        </select>
-      </label>
       <label class="layout-label">モード
         <select id="mode" class="layout-select" title="お題の種類（記録とランキングはモードごとに分かれる）">
           <option value="normal">文章（約300文字）</option>
@@ -22,17 +17,18 @@
           <option value="words">単語（約300文字）</option>
         </select>
       </label>
-      <a class="text-btn" href="stats.html" title="全記録の n-gram（bigram・trigram）など">記録を見る</a>
-      <button id="export-btn" class="text-btn" type="button" title="全記録を JSON ファイルに保存">記録を書き出す</button>
-      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録を追加">記録を読み込む</button>
-      <input id="import-file" type="file" accept=".json,application/json" hidden>
-      <button id="next-btn" class="text-btn" type="button">次のお題</button>
+      <label class="layout-label">配列
+        <select id="key-layout" class="layout-select" title="使っているキー配列（記録とランキングに使う）">
+          <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
+      <button id="retry-btn" class="text-btn" type="button" title="同じお題で最初から">もう一度 (Esc)</button>
+      <button id="next-btn" class="text-btn" type="button" title="別のお題にする">次のお題</button>
     </div>
   </header>
 
   <main class="main">
     <p class="guide">
-      ペーストを使わずに、下の文を最後まで打ってください。<br>
       計測は打ち始めた瞬間から始まります。Backspace で修正できます。
     </p>
 
@@ -78,14 +74,24 @@
     </section>
   </main>
 
-  <footer class="footer">
-    <button id="retry-btn" class="retry-btn" type="button">もう一度 (esc)</button>
-    <span id="version" class="version"></span>
+  <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->
+  <footer class="footer page-footer">
+    <nav class="footer-links" aria-label="ページ">
+      <a class="text-btn" href="index.html" aria-current="page">タイピング</a>
+      <a class="text-btn" href="stats.html" title="成績の推移とランキング">推移・ランキング</a>
+      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+    </nav>
+    <div class="footer-actions">
+      <button id="export-btn" class="text-btn" type="button" title="全記録を JSON ファイルに保存">記録を書き出す</button>
+      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録を追加">記録を読み込む</button>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+    </div>
   </footer>
 
-  <script src="js/store.js?v=25"></script>
-  <script src="js/rhythm.js?v=25"></script>
-  <script src="js/ranking.js?v=25"></script>
-  <script src="js/app.js?v=25"></script>
+  <script src="js/store.js?v=28"></script>
+  <script src="js/page-footer.js?v=28"></script>
+  <script src="js/rhythm.js?v=28"></script>
+  <script src="js/ranking.js?v=28"></script>
+  <script src="js/app.js?v=28"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
-// 記録ページの「成績の推移」グラフ。上段に平均 IKI（左軸 ms・右軸 打/s）、下段に正確率を描く
+// 推移・ランキングのページの「推移」グラフ。上段に平均 IKI（左軸 ms・右軸 打/s）、
+// 下段に正確率（修正後）とミスも数えた正確率を描く
 // 決まりは docs/scoring.md の「成績の推移」を参照
 const Trend = (function () {
   "use strict";
@@ -31,6 +32,7 @@ const Trend = (function () {
         Store.RANK_MIN_ACCURACY + "% 以上の回がない（全回の平均）／ 下段はその日の正確率の平均"
       : "● 1回ごとの平均 IKI ／ ○ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満（ランキング対象外。移動平均に含めない）／ ━ 移動平均（直近 " +
         MA_WINDOW + " 回）";
+    legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
 
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "trend-svg", role: "img", "aria-label": "成績の推移" });
 
@@ -52,7 +54,8 @@ const Trend = (function () {
     const YI = function (v) { return T + ((v - lo) / (hi - lo)) * PH1; };
 
     // 下段の縦軸（正確率）
-    const accs = data.points.map(function (p) { return p.acc; });
+    const accs = [];
+    data.points.forEach(function (p) { accs.push(p.acc, p.accRaw); });
     const accLo = Math.min(90, Math.floor(Math.min.apply(null, accs) / 5) * 5);
     const YA = function (v) { return T2 + ((100 - v) / (100 - accLo)) * PH2; };
 
@@ -110,6 +113,15 @@ const Trend = (function () {
     if (data.points.length > 1) {
       svg.appendChild(svgEl("polyline", { points: data.points.map(function (p) { return X(p.x) + "," + YA(p.acc); }).join(" "), class: "trend-acc-line" }));
     }
+    // ミスも数えた正確率（オレンジの線と小さい四角）
+    if (data.points.length > 1) {
+      svg.appendChild(svgEl("polyline", { points: data.points.map(function (p) { return X(p.x) + "," + YA(p.accRaw); }).join(" "), class: "trend-raw-line" }));
+    }
+    data.points.forEach(function (p) {
+      const sq = svgEl("rect", { x: X(p.x) - 2.5, y: YA(p.accRaw) - 2.5, width: 5, height: 5, class: "trend-raw-point" });
+      sq.appendChild(title(p.tip));
+      svg.appendChild(sq);
+    });
     data.points.forEach(function (p) {
       const c = svgEl("circle", { cx: X(p.x), cy: YA(p.acc), r: 2.5, class: "trend-point" + (p.acc >= Store.RANK_MIN_ACCURACY ? "" : " out") });
       c.appendChild(title(p.tip));
@@ -139,10 +151,12 @@ const Trend = (function () {
         x: i + 1,
         iki: s.result.avgIki,
         acc: s.result.accuracy,
+        accRaw: rawAccuracy(s),
         eligible: s.result.accuracy >= Store.RANK_MIN_ACCURACY,
         tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + s.textId + "\n平均 IKI " + s.result.avgIki.toFixed(1) +
           " ms（" + (1000 / s.result.avgIki).toFixed(2) + " 打/s, " + Math.round(s.result.wpm) + " WPM）\n正確率 " +
-          s.result.accuracy.toFixed(1) + "% ／ ミス " + s.result.misses + "（未修正 " + s.result.uncorrected + "）"
+          s.result.accuracy.toFixed(1) + "%（ミスも数えると " + rawAccuracy(s).toFixed(1) + "%）／ ミス " + s.result.misses +
+          "（未修正 " + s.result.uncorrected + "）"
       };
     });
     const ma = [];
@@ -171,13 +185,15 @@ const Trend = (function () {
       const mean = function (arr, f) { return arr.reduce(function (a, s) { return a + f(s); }, 0) / arr.length; };
       const iki = mean(use, function (s) { return s.result.avgIki; });
       const acc = mean(ss, function (s) { return s.result.accuracy; });
+      const accRaw = mean(ss, rawAccuracy);
       const p = {
         x: day,
         iki: iki,
         acc: acc,
+        accRaw: accRaw,
         eligible: ok.length > 0,
         tip: fmtDay(day) + " ／ " + ss.length + " 回（うち正確率 " + Store.RANK_MIN_ACCURACY + "% 以上 " + ok.length + " 回）\n平均 IKI " +
-          iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%"
+          iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%（ミスも数えると " + accRaw.toFixed(1) + "%）"
       };
       if (ok.length) p.best = Math.min.apply(null, ok.map(function (s) { return s.result.avgIki; }));
       return p;
@@ -186,6 +202,13 @@ const Trend = (function () {
   }
 
   // ---- 補助 ----
+
+  // ミスも数えた正確率(%) = (打鍵数 - ミス) / 打鍵数。直したミスも含む（正確率は直したミスを含まない）
+  function rawAccuracy(s) {
+    const k = s.result.keystrokes;
+    return k > 0 ? ((k - s.result.misses) / k) * 100 : 100;
+  }
+
 
   // 範囲を maxTicks 個以内で区切る、steps の中で一番細かい間隔
   function niceStep(range, maxTicks, steps) {

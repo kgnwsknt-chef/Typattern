@@ -24,7 +24,6 @@
   const rhythmAvgEl = document.getElementById("rhythm-avg");
   const tabs = Array.from(document.querySelectorAll(".tab"));
   const saveStatusEl = document.getElementById("save-status");
-  const importFileEl = document.getElementById("import-file");
 
   const stat = {
     iki: document.getElementById("stat-iki"),
@@ -464,32 +463,11 @@
     reset(false);
   });
 
-  // 記録の書き出し・読み込み
-  document.getElementById("export-btn").addEventListener("click", function () {
-    Store.exportFile()
-      .then(function (n) { if (n === 0) alert("まだ記録がありません。"); })
-      .catch(function (err) { alert("書き出せませんでした: " + err.message); });
-  });
-  document.getElementById("import-btn").addEventListener("click", function () {
-    importFileEl.value = "";
-    importFileEl.click();
-  });
-  importFileEl.addEventListener("change", function () {
-    const file = importFileEl.files[0];
-    if (!file) return;
-    file.text()
-      .then(Store.importFile)
-      .then(function (r) {
-        alert(r.added + " 件の記録を読み込みました。" + (r.skipped ? "（" + r.skipped + " 件はすでにあるため飛ばしました）" : ""));
-      })
-      .catch(function (err) { alert("読み込めませんでした: " + err.message); });
-  });
-
   document.getElementById("retry-btn").addEventListener("click", function () { reset(false); });
   document.getElementById("next-btn").addEventListener("click", function () { reset(true); });
 
-  // 右下隅にバージョン（index.html の ?v= の番号）を出す
-  document.getElementById("version").textContent = ASSET_VERSION ? "v" + ASSET_VERSION : "";
+  // バージョン表示と、記録の書き出し・読み込み（全ページ共通）
+  PageFooter.init();
 
   // モードの選択。URL に ?short があれば短い文章、なければ前に選んだモード（初めては文章）で始める
   let initialMode = "normal";
