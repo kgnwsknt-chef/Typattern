@@ -200,5 +200,46 @@ const Romaji = (function () {
     };
   }
 
-  return { create: create, options: options };
+  // ---- ローマ字の文字列をかなに直す（かな配列の割り当て表をローマ字で書いたときに使う） ----
+
+  // ローマ字 → かな。上の表を逆に引く。表にない記号と、割り当て表で使われる書き方（txu = っ）も足す
+  // （txu はタイピング画面のローマ字の判定では受け付けない。割り当て表を読むときだけ）
+  const TO_KANA = { "n'": "ん", "/": "・", "[": "「", "]": "」", "~": "〜", "txu": "っ" };
+  Object.keys(TABLE).forEach(function (kana) {
+    TABLE[kana].forEach(function (r) { if (!(r in TO_KANA)) TO_KANA[r] = kana; });
+  });
+  const TO_KANA_MAX = Object.keys(TO_KANA).reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+
+  // ふつうのローマ字入力と同じ決まりで、ローマ字の文字列 s をかなに直す（例 "xtu" → "っ"、"kya" → "きゃ"）
+  //   - 長く一致する書き方を先に使う
+  //   - n の次が母音・y・n・' でなければ（最後の n も）「ん」
+  //   - 同じ子音が2つ続いたら（n を除く）、前の1つは「っ」
+  // 直せないときは null
+  function toKana(s) {
+    s = s.toLowerCase();
+    let out = "";
+    let i = 0;
+    while (i < s.length) {
+      let hit = null;
+      for (let len = Math.min(TO_KANA_MAX, s.length - i); len > 0; len--) {
+        const part = s.substr(i, len);
+        if (part in TO_KANA) { hit = part; break; }
+      }
+      if (hit) {
+        out += TO_KANA[hit];
+        i += hit.length;
+      } else if (s[i] === "n" && !/[aiueoyn']/.test(s[i + 1] || "")) {
+        out += "ん";
+        i += 1;
+      } else if (/[a-z]/.test(s[i]) && !/[aiueon]/.test(s[i]) && s[i + 1] === s[i]) {
+        out += "っ";
+        i += 1;
+      } else {
+        return null;
+      }
+    }
+    return out;
+  }
+
+  return { create: create, options: options, toKana: toKana };
 })();

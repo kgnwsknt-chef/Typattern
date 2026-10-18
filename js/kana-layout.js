@@ -4,14 +4,16 @@
 const KanaLayout = (function () {
   "use strict";
 
-  // 割り当て表の文字列を読む。返り値 { entries: [[キーの並び, かな], …], errors: [読めなかった行番号, …] }
+  // 割り当て表の文字列を読む。返り値 { entries: [[キーの並び, かな], …], errors: [{ line: 行番号, text: 行, reason: 理由 }, …], romaji: ローマ字から直した行の数 }
   // 1行に1つ。次の2つの形を読める。空の行と、# か // で始まる行は読み飛ばす
   //   {"j'", "ぴ"},      … 波かっこと二重引用符の形（行末のカンマはあってもなくてもよい。\" と \\ が使える）
   //   j'<区切り>ぴ        … 空白区切り。区切りはタブ・半角スペース・全角スペースで、いくつ続いてもよい（例 t<タブ><タブ>を、te うぇ）
+  // かなの欄はローマ字で書いてもよい（例 j xtu）。英数字と記号だけなら、ふつうのローマ字入力の決まりでかなに直す（js/romaji.js の toKana）
   // 同じキーの並びが2回出てきたら、後の行を使う
   function parse(text) {
     const map = new Map();
     const errors = [];
+    let romaji = 0;
     const BRACE = /^\{\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\}\s*,?$/;
     const SPACED = /^(\S+)\s+(\S+)$/; // \s はタブ・半角スペース・全角スペースを含む
     const unescape = function (s) { return s.replace(/\\(.)/g, "$1"); };
@@ -30,12 +32,22 @@ const KanaLayout = (function () {
         kana = s[2];
       }
       if (!keys || !kana) {
-        errors.push(i + 1);
+        errors.push({ line: i + 1, text: line, reason: "キーの並びとかなに分けられません" });
         return;
+      }
+      if (/^[\x21-\x7e]+$/.test(kana)) {
+        // ローマ字で書いたかな
+        const converted = Romaji.toKana(kana);
+        if (converted === null) {
+          errors.push({ line: i + 1, text: line, reason: "「" + kana + "」をかなに直せません" });
+          return;
+        }
+        kana = converted;
+        romaji++;
       }
       map.set(keys, kana);
     });
-    return { entries: Array.from(map), errors: errors };
+    return { entries: Array.from(map), errors: errors, romaji: romaji };
   }
 
   // 読み込んだ表から、変換と配列図に使う形を作る
@@ -102,6 +114,8 @@ const KanaLayout = (function () {
       return {
         press: press,
         backspace: backspace,
+        // 打ちかけの並びをそこで確定する（試し打ちの Enter）
+        confirm: flush,
         clear: function () { pending = ""; out = ""; },
         // 確定した文字と、打ちかけの並び（とそれだけで確定したときのかな）
         state: function () {

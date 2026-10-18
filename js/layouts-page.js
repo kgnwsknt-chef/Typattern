@@ -117,7 +117,7 @@
       const pending = st.pending;
       return {
         label: !pending ? "単独で押したとき"
-          : "「" + pending + "」の次に押したとき" + (st.tentative ? "（ほかのキーを押すと「" + st.tentative + "」で確定）" : ""),
+          : "「" + pending + "」の次に押したとき" + (st.tentative ? "（ほかのキーか Enter を押すと「" + st.tentative + "」で確定）" : ""),
         kana: function (ch) { return ch === null ? null : get(pending + ch); }
       };
     }
@@ -211,6 +211,7 @@
     const ch = Keys.char(e.code, heldShifts.size > 0);
     if (conv) {
       if (e.code === "Backspace") conv.backspace();
+      else if (e.code === "Enter" || e.code === "NumpadEnter") conv.confirm(); // 打ちかけの並びを確定する
       else if (ch !== null) conv.press(ch);
     } else if (e.code === "Backspace") {
       qwertyOutput = qwertyOutput.slice(0, -1);
@@ -247,7 +248,97 @@
     trialEl.focus();
   });
 
-  // ---- 割り当て表の読み込み（段階2：まだ保存しない） ----
+  // ---- 保存・削除 ----
+
+  const saveBtn = document.getElementById("layout-save");
+  const deleteBtn = document.getElementById("layout-delete");
+  const layoutMsgEl = document.getElementById("layout-msg");
+  const UNSAVED = "unsaved:"; // 読み込んだだけでまだ保存していない配列の id の頭
+
+  function isUnsaved(layout) {
+    return layout.id.indexOf(UNSAVED) === 0;
+  }
+
+  // 保存した配列を一覧に入れる（同じ名前の未保存のものは一覧から外す）
+  function addSaved(record) {
+    for (let i = layouts.length - 1; i >= 0; i--) {
+      if (layouts[i].id === record.id || layouts[i].id === UNSAVED + record.id) layouts.splice(i, 1);
+    }
+    layouts.push({ id: record.id, name: record.name, type: "kana", entries: record.entries, kana: KanaLayout.create(record.entries) });
+  }
+
+  function updateActions() {
+    const layout = current();
+    saveBtn.hidden = !(layout.type === "kana" && isUnsaved(layout));
+    deleteBtn.hidden = !(layout.type === "kana" && !isUnsaved(layout));
+  }
+
+  saveBtn.addEventListener("click", function () {
+    const layout = current();
+    const name = layout.name;
+    // 最初から入っている配列と同じ名前は使えない（記録の keyLayout が区別できなくなるため）
+    if (layouts.some(function (l) { return l.type !== "kana" && l.id.toLowerCase() === name.toLowerCase(); })) {
+      layoutMsgEl.textContent = "「" + name + "」は最初から入っている配列の名前なので使えません。別の名前で読み込み直してください。";
+      return;
+    }
+    const exists = layouts.some(function (l) { return l.id === name; });
+    Store.countSessionsWithLayout(name).then(function (n) {
+      if (exists && n > 0) {
+        layoutMsgEl.textContent = "「" + name + "」で打った記録が " + n + " 件あるため、上書きできません。別の名前で読み込み直してください。";
+        return;
+      }
+      if (exists && !confirm("「" + name + "」という配列がすでに保存されています。上書きしますか？")) return;
+      const record = { id: name, name: name, type: "kana", entries: layout.entries, savedAt: new Date().toISOString() };
+      return Store.saveLayout(record).then(function () {
+        addSaved(record);
+        buildLayoutOptions();
+        layoutEl.value = name;
+        changeLayout();
+        layoutMsgEl.textContent = "「" + name + "」を保存しました。";
+      });
+    }).catch(function (err) {
+      console.error(err);
+      layoutMsgEl.textContent = "保存できませんでした: " + err.message;
+    });
+  });
+
+  deleteBtn.addEventListener("click", function () {
+    const layout = current();
+    Store.countSessionsWithLayout(layout.id).then(function (n) {
+      if (n > 0) {
+        layoutMsgEl.textContent = "「" + layout.name + "」で打った記録が " + n + " 件あるため、削除できません。";
+        return;
+      }
+      if (!confirm("「" + layout.name + "」を削除しますか？")) return;
+      return Store.deleteLayout(layout.id).then(function () {
+        layouts.splice(layouts.indexOf(layout), 1);
+        buildLayoutOptions();
+        layoutEl.value = "qwerty";
+        changeLayout();
+        layoutMsgEl.textContent = "「" + layout.name + "」を削除しました。";
+      });
+    }).catch(function (err) {
+      console.error(err);
+      layoutMsgEl.textContent = "削除できませんでした: " + err.message;
+    });
+  });
+
+  // 保存した配列を読み込んで一覧に入れる
+  function loadSaved() {
+    return Store.getAllLayouts().then(function (records) {
+      records.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      records.forEach(addSaved);
+      const selected = layoutEl.value;
+      buildLayoutOptions();
+      if (layouts.some(function (l) { return l.id === selected; })) layoutEl.value = selected;
+      changeLayout();
+    }).catch(function (err) {
+      console.error(err);
+      layoutMsgEl.textContent = "保存した配列を読み込めませんでした: " + err.message;
+    });
+  }
+
+  // ---- 割り当て表の読み込み ----
 
   const nameEl = document.getElementById("import-name");
   const tableFileEl = document.getElementById("import-table-file");
@@ -271,21 +362,37 @@
       return;
     }
     const parsed = KanaLayout.parse(tableTextEl.value);
+    showImportErrors(parsed.errors);
     if (parsed.entries.length === 0) {
       importMsgEl.textContent = "割り当て表から1行も読めませんでした。";
       return;
     }
-    const id = "unsaved:" + name;
-    const layout = { id: id, name: name, type: "kana", kana: KanaLayout.create(parsed.entries) };
+    const id = UNSAVED + name;
+    const layout = { id: id, name: name, type: "kana", entries: parsed.entries, kana: KanaLayout.create(parsed.entries) };
     const i = layouts.findIndex(function (l) { return l.id === id; });
     if (i === -1) layouts.push(layout);
     else layouts[i] = layout;
     buildLayoutOptions();
     layoutEl.value = id;
     changeLayout();
-    importMsgEl.textContent = parsed.entries.length + " 行を読み込みました（まだ保存していません）。" +
-      (parsed.errors.length ? "読めなかった行：" + parsed.errors.slice(0, 20).join("・") + (parsed.errors.length > 20 ? " ほか" : "") : "");
+    layoutMsgEl.textContent = "";
+    importMsgEl.textContent = parsed.entries.length + " 行を読み込みました" +
+      (parsed.romaji ? "（うち " + parsed.romaji + " 行はローマ字からかなに直しました）" : "") +
+      "。まだ保存していません。配列図の上の「この配列を保存する」で保存します。" +
+      (parsed.errors.length ? "読めなかった行が " + parsed.errors.length + " 行あります（下の一覧）。" : "");
   });
+
+  // 読めなかった行を、行番号・行の中身・理由の一覧で出す
+  function showImportErrors(errors) {
+    const el = document.getElementById("import-errors");
+    el.textContent = "";
+    el.hidden = errors.length === 0;
+    errors.forEach(function (e) {
+      const li = document.createElement("li");
+      li.textContent = e.line + " 行目：" + e.text + " … " + e.reason;
+      el.appendChild(li);
+    });
+  }
 
   // 割り当て表の一覧（キーの並びの順）
   function renderEntries() {
@@ -313,12 +420,13 @@
     layouts.forEach(function (l) {
       const o = document.createElement("option");
       o.value = l.id;
-      o.textContent = l.name + (l.id.indexOf("unsaved:") === 0 ? "（未保存）" : "");
+      o.textContent = l.name + (isUnsaved(l) ? "（未保存）" : "");
       layoutEl.appendChild(o);
     });
   }
 
   function changeLayout() {
+    updateActions();
     buildViewOptions();
     resetTrial();
     drawLabels();
@@ -339,12 +447,16 @@
     try { localStorage.setItem(SHAPE_STORAGE, shapeEl.value); } catch (e) { /* 無視 */ }
     drawKeyboard();
   });
-  layoutEl.addEventListener("change", changeLayout);
+  layoutEl.addEventListener("change", function () {
+    layoutMsgEl.textContent = "";
+    changeLayout();
+  });
   viewEl.addEventListener("change", drawLabels);
 
-  // バージョン表示と、記録の書き出し・読み込み（全ページ共通）
-  PageFooter.init();
+  // バージョン表示と、記録の書き出し・読み込み（全ページ共通。読み込んだら保存した配列を読み直す）
+  PageFooter.init({ onImport: loadSaved });
   buildLayoutOptions();
   drawKeyboard();
   changeLayout();
+  loadSaved();
 })();

@@ -27,6 +27,11 @@
         <select id="view" class="layout-select" title="配列図に出すかなの段（どのキーと組み合わせたときか）"></select>
       </label>
     </div>
+    <div id="layout-actions" class="layout-actions">
+      <button id="layout-save" class="text-btn" type="button" title="この配列をブラウザに保存する" hidden>この配列を保存する</button>
+      <button id="layout-delete" class="text-btn" type="button" title="保存したこの配列を消す" hidden>この配列を削除する</button>
+      <span id="layout-msg" class="trial-last"></span>
+    </div>
     <p id="kb-legend" class="rhythm-legend"></p>
     <p id="view-now" class="view-now" hidden></p>
     <div class="kb-scroll">
@@ -34,7 +39,7 @@
     </div>
 
     <h2 class="stats-title">試し打ち</h2>
-    <p class="rhythm-legend">下の枠をクリックしてからキーを押すと、配列図のそのキーの色が変わり、打った文字が出ます。IME はオフにしてください。記録には残りません。</p>
+    <p class="rhythm-legend">下の枠をクリックしてからキーを押すと、配列図のそのキーの色が変わり、打った文字が出ます。かな配列では、打ちかけの並び（薄い文字）を Enter で確定できます。IME はオフにしてください。記録には残りません。</p>
     <div id="trial" class="trial" tabindex="0" aria-label="試し打ち">
       <div id="trial-output" class="trial-output"></div>
       <div id="trial-hint" class="trial-hint">ここをクリックして打ってください</div>
@@ -49,8 +54,8 @@
       <div id="entries" class="entries"></div>
     </details>
 
-    <h2 class="stats-title">かな配列の読み込み</h2>
-    <p class="rhythm-legend">割り当て表（キーの並び → かな）を読み込むと、配列図と試し打ちで確かめられます。1行に1つ、<code>{"j'", "ぴ"},</code> の形か、<code>j' ぴ</code> のようにキーの並びとかなを空白（タブ・スペース。いくつ続いてもよい）で区切った形で書きます。キーは US キーボードの QWERTY の文字で書きます。</p>
+    <h2 class="stats-title">かな配列の登録</h2>
+    <p class="rhythm-legend">割り当て表（キーの並び → かな）を読み込むと、配列図と試し打ちで確かめられます。確かめたら、配列図の上の「この配列を保存する」でブラウザに保存します（記録の書き出しにも入ります）。配列名は自由に付けられます（版を付けるなら名前に入れてください）。1行に1つ、<code>{"j'", "ぴ"},</code> の形か、<code>j' ぴ</code> のようにキーの並びとかなを空白（タブ・スペース。いくつ続いてもよい）で区切った形で書きます。キーは US キーボードの QWERTY の文字で書きます。かなはローマ字で書いてもかまいません（例 <code>j xtu</code>。ふつうのローマ字入力の決まりで「っ」に直します）。</p>
     <div class="import-form">
       <label class="filter">配列名
         <input id="import-name" class="layout-select import-name" type="text" placeholder="例：tsukimisou-v2">
@@ -60,13 +65,14 @@
       </label>
     </div>
     <textarea id="import-table-text" class="import-text" spellcheck="false" placeholder='ファイルを選ぶか、ここに貼り付けてください。例：
-{"j", "っ"},
-{"j&apos;", "ぴ"},
-{"j&apos;e", "ぴゃ"},'></textarea>
+j xtu
+j&apos; pi
+j&apos;e pya'></textarea>
     <div class="trial-bar">
       <span id="import-msg" class="trial-last"></span>
       <button id="import-show" class="text-btn" type="button">読み込んで表示する</button>
     </div>
+    <ul id="import-errors" class="import-errors" hidden></ul>
   </main>
 
   <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->
@@ -78,8 +84,8 @@
       <a class="text-btn" href="layouts.html" aria-current="page" title="キー配列の確認と試し打ち">キー配列</a>
     </nav>
     <div class="footer-actions">
-      <button id="export-btn" class="text-btn" type="button" title="全記録を JSON ファイルに保存">記録を書き出す</button>
-      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録を追加">記録を読み込む</button>
+      <button id="export-btn" class="text-btn" type="button" title="全記録と登録したキー配列を JSON ファイルに保存">記録を書き出す</button>
+      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録とキー配列を追加">記録を読み込む</button>
       <input id="import-file" type="file" accept=".json,application/json" hidden>
     </div>
   </footer>
@@ -87,6 +93,7 @@
   <script src="js/store.js?v=29"></script>
   <script src="js/keys.js?v=29"></script>
   <script src="js/keyboard-shapes.js?v=29"></script>
+  <script src="js/romaji.js?v=29"></script>
   <script src="js/kana-layout.js?v=29"></script>
   <script src="js/page-footer.js?v=29"></script>
   <script src="js/layouts-page.js?v=29"></script>

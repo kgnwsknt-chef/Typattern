@@ -6,7 +6,7 @@ const Store = (function () {
 
   // schemaVersion 3 以前の記録（旧データベース "typing-records"・"typing-test"）は扱わない。旧データベースは消さずにそのまま残す
   const DB_NAME = "typattern-records";
-  const DB_VERSION = 1; // 入れ物（保存場所・索引）の構造の版
+  const DB_VERSION = 2; // 入れ物（保存場所・索引）の構造の版（2：キー配列の保存場所 layouts を追加）
   const SCHEMA_VERSION = 4; // 記録1件の形式の版（4：events にキーの行 "k" を足し、"+" の時刻を「その文字を生んだ最後のキーの時刻」にした）
   const EXPORT_APP = "typattern"; // 書き出しファイルの app 欄
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
@@ -34,12 +34,18 @@ const Store = (function () {
           return;
         }
         const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = function () {
+        req.onupgradeneeded = function (e) {
           const db = req.result;
-          const sessions = db.createObjectStore("sessions", { keyPath: "id" });
-          sessions.createIndex("finishedAt", "finishedAt");
-          sessions.createIndex(RANK_INDEX, ["lang", "mode", "keyLayout", "result.avgIki"]);
-          db.createObjectStore("raws", { keyPath: "id" });
+          if (e.oldVersion < 1) {
+            const sessions = db.createObjectStore("sessions", { keyPath: "id" });
+            sessions.createIndex("finishedAt", "finishedAt");
+            sessions.createIndex(RANK_INDEX, ["lang", "mode", "keyLayout", "result.avgIki"]);
+            db.createObjectStore("raws", { keyPath: "id" });
+          }
+          if (e.oldVersion < 2) {
+            // 版1 → 2：登録したキー配列の保存場所を足す（記録は変えない）
+            db.createObjectStore("layouts", { keyPath: "id" });
+          }
         };
         req.onsuccess = function () {
           const db = req.result;
@@ -167,17 +173,42 @@ const Store = (function () {
     return tx("raws", "readonly", function (t) { return t.objectStore("raws").getAll(); });
   }
 
-  // 全記録を JSON ファイルとしてダウンロードさせる。返り値は件数
+  // ---- 登録したキー配列（layouts） ----
+  // 1件 { id: 配列名, name: 配列名, type: "kana", entries: [[キーの並び, かな], …], savedAt }。形式は docs/storage.md
+
+  function getAllLayouts() {
+    return tx("layouts", "readonly", function (t) { return t.objectStore("layouts").getAll(); });
+  }
+
+  // 同じ id があれば上書きする（上書きしてよいかは呼ぶ側で確かめる）
+  function saveLayout(layout) {
+    return tx("layouts", "readwrite", function (t) { t.objectStore("layouts").put(layout); });
+  }
+
+  function deleteLayout(id) {
+    return tx("layouts", "readwrite", function (t) { t.objectStore("layouts").delete(id); });
+  }
+
+  // その配列で打った記録の数（記録に使われた配列は上書き・削除させない）
+  function countSessionsWithLayout(id) {
+    return getAllSessions().then(function (all) {
+      return all.filter(function (s) { return s.keyLayout === id; }).length;
+    });
+  }
+
+  // 全記録と登録したキー配列を JSON ファイルとしてダウンロードさせる。返り値 { sessions, layouts }（件数）
   function exportFile() {
-    return Promise.all([getAllSessions(), getAllRaws()]).then(function (all) {
+    return Promise.all([getAllSessions(), getAllRaws(), getAllLayouts()]).then(function (all) {
       const data = {
         app: EXPORT_APP,
         schemaVersion: SCHEMA_VERSION,
         exportedAt: new Date().toISOString(),
         sessions: all[0],
-        raws: all[1]
+        raws: all[1],
+        layouts: all[2]
       };
-      if (data.sessions.length === 0) return 0;
+      const counts = { sessions: data.sessions.length, layouts: data.layouts.length };
+      if (counts.sessions === 0 && counts.layouts === 0) return counts;
       const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
       const a = document.createElement("a");
       const d = new Date();
@@ -188,12 +219,14 @@ const Store = (function () {
       a.click();
       a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-      return data.sessions.length;
+      return counts;
     });
   }
 
   // 書き出しファイル（JSON 文字列）を読み込んで追加する。
-  // 同じ id の記録と、概要・生データが揃っていない記録は飛ばす
+  // 同じ id の記録と、概要・生データが揃っていない記録は飛ばす。
+  // キー配列は、同じ名前のものがなければ足す。同じ名前で中身も同じなら飛ばし、中身が違えば今のものを残す（conflicts に数える）
+  // 返り値 { added, skipped, layoutsAdded, layoutConflicts: [配列名, …] }
   function importFile(text) {
     let data;
     try {
@@ -212,21 +245,41 @@ const Store = (function () {
       return Promise.reject(new Error("記録ファイルの中身が壊れています"));
     }
     const raws = new Map(data.raws.map(function (r) { return [r && r.id, r]; }));
-    return tx("sessions", "readonly", function (t) { return t.objectStore("sessions").getAllKeys(); })
-      .then(function (keys) {
-        const have = new Set(keys);
-        const fresh = data.sessions.filter(function (s) {
-          return s && s.id && s.schemaVersion === SCHEMA_VERSION && !have.has(s.id) && raws.has(s.id);
-        });
-        return tx(["sessions", "raws"], "readwrite", function (t) {
-          fresh.forEach(function (s) {
-            t.objectStore("sessions").add(s);
-            t.objectStore("raws").add(raws.get(s.id));
-          });
-        }).then(function () {
-          return { added: fresh.length, skipped: data.sessions.length - fresh.length };
-        });
+    // layouts がないファイル（キー配列を保存する前の書き出し）も読める
+    const layouts = Array.isArray(data.layouts) ? data.layouts.filter(function (l) {
+      return l && typeof l.id === "string" && Array.isArray(l.entries);
+    }) : [];
+    return Promise.all([
+      tx("sessions", "readonly", function (t) { return t.objectStore("sessions").getAllKeys(); }),
+      getAllLayouts()
+    ]).then(function (have) {
+      const haveIds = new Set(have[0]);
+      const fresh = data.sessions.filter(function (s) {
+        return s && s.id && s.schemaVersion === SCHEMA_VERSION && !haveIds.has(s.id) && raws.has(s.id);
       });
+      const haveLayouts = new Map(have[1].map(function (l) { return [l.id, l]; }));
+      const conflicts = [];
+      const freshLayouts = layouts.filter(function (l) {
+        const mine = haveLayouts.get(l.id);
+        if (!mine) return true;
+        if (JSON.stringify(mine.entries) !== JSON.stringify(l.entries)) conflicts.push(l.id);
+        return false;
+      });
+      return tx(["sessions", "raws", "layouts"], "readwrite", function (t) {
+        fresh.forEach(function (s) {
+          t.objectStore("sessions").add(s);
+          t.objectStore("raws").add(raws.get(s.id));
+        });
+        freshLayouts.forEach(function (l) { t.objectStore("layouts").add(l); });
+      }).then(function () {
+        return {
+          added: fresh.length,
+          skipped: data.sessions.length - fresh.length,
+          layoutsAdded: freshLayouts.length,
+          layoutConflicts: conflicts
+        };
+      });
+    });
   }
 
   // ブラウザに、容量が足りなくなっても記録を自動で消さないよう頼む
@@ -251,6 +304,10 @@ const Store = (function () {
     getAllSessions: getAllSessions,
     getAllRaws: getAllRaws,
     eachRaw: eachRaw,
+    getAllLayouts: getAllLayouts,
+    saveLayout: saveLayout,
+    deleteLayout: deleteLayout,
+    countSessionsWithLayout: countSessionsWithLayout,
     exportFile: exportFile,
     importFile: importFile,
     persist: persist
