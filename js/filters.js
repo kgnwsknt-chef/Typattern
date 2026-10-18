@@ -9,24 +9,47 @@ const Filters = (function () {
   const FILTER_STORAGE = "typing-test.filters";
   const IDS = { lang: "f-lang", layout: "f-layout", mode: "f-mode", from: "f-from", to: "f-to" };
 
+  // 配列の選択肢に、登録したかな配列と、記録の中にある配列（配列を消した後の記録も）を足す
+  function addLayoutOptions(sel, layouts, sessions) {
+    const names = new Map(); // 配列名 → 表示名
+    layouts.forEach(function (l) { names.set(l.id, l.name); });
+    sessions.forEach(function (s) {
+      if (s.keyLayout && !names.has(s.keyLayout)) names.set(s.keyLayout, s.keyLayout + "（削除済）");
+    });
+    Array.from(names).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }).forEach(function (n) {
+      if (hasOption(sel, n[0])) return; // QWERTY など、最初からある選択肢
+      const o = document.createElement("option");
+      o.value = n[0];
+      o.textContent = n[1];
+      sel.appendChild(o);
+    });
+  }
+
   // onChange：条件が変わったときに呼ぶ関数
+  // 返り値の ready は、配列の選択肢を足して前の条件に戻し終えたら解決する（最初の表示はその後にする）
   function init(onChange) {
     const f = {};
     Object.keys(IDS).forEach(function (k) { f[k] = document.getElementById(IDS[k]); });
 
     // 初期値：このタブで前に選んだ条件。なければ、配列だけタイピング画面で選んでいるもの
-    let saved = null;
-    try { saved = JSON.parse(sessionStorage.getItem(FILTER_STORAGE) || "null"); } catch (e) { /* 使わない */ }
-    if (saved) {
-      Object.keys(f).forEach(function (k) {
-        if (typeof saved[k] === "string" && (f[k].tagName !== "SELECT" || hasOption(f[k], saved[k]))) f[k].value = saved[k];
-      });
-    } else {
-      try {
-        const layout = localStorage.getItem(KEY_LAYOUT_STORAGE);
-        if (layout && hasOption(f.layout, layout)) f.layout.value = layout;
-      } catch (e) { /* 既定の配列を使う */ }
+    function restore() {
+      let saved = null;
+      try { saved = JSON.parse(sessionStorage.getItem(FILTER_STORAGE) || "null"); } catch (e) { /* 使わない */ }
+      if (saved) {
+        Object.keys(f).forEach(function (k) {
+          if (typeof saved[k] === "string" && (f[k].tagName !== "SELECT" || hasOption(f[k], saved[k]))) f[k].value = saved[k];
+        });
+      } else {
+        try {
+          const layout = localStorage.getItem(KEY_LAYOUT_STORAGE);
+          if (layout && hasOption(f.layout, layout)) f.layout.value = layout;
+        } catch (e) { /* 既定の配列を使う */ }
+      }
     }
+    const ready = Promise.all([Store.getAllLayouts(), Store.getAllSessions()])
+      .then(function (v) { addLayoutOptions(f.layout, v[0], v[1]); })
+      .catch(function (err) { console.error(err); })
+      .then(restore);
 
     function changed() {
       const values = {};
@@ -51,7 +74,7 @@ const Filters = (function () {
       });
     }
 
-    return { pick: pick };
+    return { pick: pick, ready: ready };
   }
 
   // 「対象 N 回（YYYY/MM/DD 〜 YYYY/MM/DD）」

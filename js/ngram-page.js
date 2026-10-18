@@ -62,5 +62,5 @@
   minEl.addEventListener("change", update);
   // バージョン表示と、記録の書き出し・読み込み（読み込んだら表示を更新する）
   PageFooter.init({ onImport: update });
-  update();
+  filters.ready.then(update);
 })();

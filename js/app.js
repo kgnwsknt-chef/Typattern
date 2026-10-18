@@ -742,7 +742,7 @@
       kanaLayouts[r.id] = KanaLayout.create(r.entries);
       const o = document.createElement("option");
       o.value = r.id;
-      o.textContent = r.name + "（かな配列）";
+      o.textContent = r.name;
       keyLayoutEl.appendChild(o);
     });
   }
