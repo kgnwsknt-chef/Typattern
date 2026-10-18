@@ -7,7 +7,8 @@ const NGram = (function () {
 
   // n 文字ごとの一覧表を1つ作る。並び順は表ごとに持ち、やり直しても維持する
   // distEl を渡すと、行のクリックで分布のグラフをそこに描く
-  function create(n, label, distEl) {
+  // onSelect(gram) を渡すと、分布を出す n-gram が変わったときに呼ぶ（閉じたときは null）
+  function create(n, label, distEl, onSelect) {
     let rows = [];     // 集計結果 { gram, avg, sd, count, values }
     let order = "asc"; // 平均 IKI の並び順
     let baseAvg = 0;   // 色の基準にする全体の平均間隔
@@ -23,7 +24,10 @@ const NGram = (function () {
       baseAvg = avg;
       emptyMessage = emptyText || "対象になる " + label + " がありません。";
       // 表示中の n-gram が新しいデータにもあれば、分布を出し続ける
-      if (selected && !rows.some(function (r) { return r.gram === selected; })) selected = null;
+      if (selected && !rows.some(function (r) { return r.gram === selected; })) {
+        selected = null;
+        if (onSelect) onSelect(null);
+      }
       draw();
       return rows.length;
     }
@@ -38,6 +42,7 @@ const NGram = (function () {
 
     function select(gram) {
       selected = selected === gram ? null : gram; // 同じ行をもう一度クリックすると閉じる
+      if (onSelect) onSelect(selected);
       draw();
     }
 
@@ -111,7 +116,17 @@ const NGram = (function () {
       }
     }
 
-    return { renderRows: renderRows, clear: clear };
+    // 表の外（bigram の2次元ヒストグラムのマス）から選ぶ。行のクリックと同じく、同じものをもう一度選ぶと閉じる
+    // 選んだときは、表の中をその行までスクロールし、分布が見えるところまでページをスクロールする
+    function show(gram) {
+      select(gram);
+      if (selected === null) return;
+      const tr = containerEl.querySelector("tr.bg-selected");
+      if (tr) containerEl.scrollTop += tr.getBoundingClientRect().top - containerEl.getBoundingClientRect().top - containerEl.clientHeight / 2;
+      if (distEl) distEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    return { renderRows: renderRows, clear: clear, show: show, selected: function () { return selected; } };
   }
 
   // 1つの n-gram の IKI の分布をヒストグラムで描く。平均を点線、1回ごとの値を軸の下の短い線で示す
@@ -215,7 +230,9 @@ const NGram = (function () {
   // bigram の2次元ヒストグラム（ヒートマップ）。横軸 = 1キー目、縦軸 = 2キー目、マスの色 = 値
   //   kind："count"（回数。0 回は白、一番多いマスが一番濃い。回数に比例）か "iki"（平均 IKI。表と同じ配色、baseAvg が基準）
   //   rows：toRows の結果（bigram）。軸には rows に出てくるキーだけを並べる
-  function drawHeatmap(el, rows, kind, baseAvg) {
+  //   opts.selected：枠で囲むマスの bigram。opts.onSelect(row)：データのあるマスをクリック（または Enter）したときに呼ぶ
+  function drawHeatmap(el, rows, kind, baseAvg, opts) {
+    opts = opts || {};
     el.textContent = "";
     if (rows.length === 0) {
       const p = document.createElement("p");
@@ -267,6 +284,14 @@ const NGram = (function () {
         const tip = svgEl("title", {});
         tip.textContent = first + second + "：" + (r ? r.count + " 回・平均 " + Math.round(r.avg) + " ms" : "なし");
         rect.appendChild(tip);
+        if (r && opts.onSelect) {
+          rect.setAttribute("class", "hm-cell hm-click");
+          rect.setAttribute("tabindex", "0");
+          rect.addEventListener("click", function () { opts.onSelect(r); });
+          rect.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onSelect(r); }
+          });
+        }
         svg.appendChild(rect);
       });
     });
@@ -278,6 +303,11 @@ const NGram = (function () {
       svg.appendChild(svgEl("line", { x1: L, y1: T + i * C, x2: L + n * C, y2: T + i * C, class: "hm-sep" }));
     }
     svg.appendChild(svgEl("rect", { x: L, y: T, width: n * C, height: n * C, class: "hm-frame" }));
+    // 分布を表示中のマスを枠で囲む
+    if (opts.selected && cells.has(opts.selected)) {
+      const sx = keys.indexOf(opts.selected[0]), sy = keys.indexOf(opts.selected[1]);
+      svg.appendChild(svgEl("rect", { x: L + sx * C, y: T + sy * C, width: C, height: C, class: "hm-selected" }));
+    }
 
     // 凡例（色の帯と目盛り）
     const ly = T + n * C + 12, lw = Math.min(n * C, 260), lh = 8;

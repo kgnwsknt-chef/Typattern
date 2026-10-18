@@ -1096,6 +1096,26 @@ a.text-btn {
   stroke-width: 0.5;
 }
 
+.hm-click {
+  cursor: pointer;
+}
+
+.hm-click:hover,
+.hm-click:focus {
+  stroke: var(--text);
+  stroke-width: 1;
+  outline: none;
+}
+
+/* 分布を表示中のマス */
+.hm-selected {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+
 .hm-sep {
   stroke: var(--sub);
   stroke-width: 0.8;

@@ -9,7 +9,10 @@
   const trigramEl = document.getElementById("trigram");
   const hmCountEl = document.getElementById("hm-count"); // bigram の2次元ヒストグラム（回数）
   const hmIkiEl = document.getElementById("hm-iki");     // 同じく平均 IKI
-  const bigramTable =NGram.create(2, "bigram", document.getElementById("bigram-dist"));
+  let hmRows = [];        // 2次元ヒストグラムに描いている bigram
+  let hmBase = 0;         // 色の基準
+  // bigram の表で分布を出す行が変わったら、2次元ヒストグラムのそのマスを枠で囲み直す
+  const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"), redrawHeatmaps);
   const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"));
   const filters = Filters.init(update);
 
@@ -26,8 +29,7 @@
         ngramSummaryEl.textContent = "";
         bigramTable.renderRows(bigramEl, [], 0, "データなし");
         trigramTable.renderRows(trigramEl, [], 0, "データなし");
-        NGram.drawHeatmap(hmCountEl, [], "count", 0);
-        NGram.drawHeatmap(hmIkiEl, [], "iki", 0);
+        drawHeatmaps([], 0);
         return;
       }
 
@@ -55,14 +57,26 @@
         const tri = NGram.toRows(trigrams).filter(keep);
         bigramTable.renderRows(bigramEl, bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
-        NGram.drawHeatmap(hmCountEl, bi, "count", base);
-        NGram.drawHeatmap(hmIkiEl, bi, "iki", base);
+        drawHeatmaps(bi, base);
         ngramSummaryEl.textContent = "bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
       });
     }).catch(function (err) {
       console.error(err);
       summaryEl.textContent = "記録を読み込めませんでした: " + err.message;
     });
+  }
+
+  // 2次元ヒストグラム2枚を描く。マスをクリックすると、その bigram の分布を表の行のクリックと同じ場所（bigram の表の下）に出す
+  function drawHeatmaps(rows, base) {
+    hmRows = rows;
+    hmBase = base;
+    redrawHeatmaps();
+  }
+
+  function redrawHeatmaps() {
+    const opts = { selected: bigramTable.selected(), onSelect: function (r) { bigramTable.show(r.gram); } };
+    NGram.drawHeatmap(hmCountEl, hmRows, "count", hmBase, opts);
+    NGram.drawHeatmap(hmIkiEl, hmRows, "iki", hmBase, opts);
   }
 
   minEl.addEventListener("change", update);
