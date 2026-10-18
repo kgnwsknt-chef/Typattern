@@ -4,7 +4,7 @@
 
 - リポジトリ: https://github.com/kgnwsknt-chef/Typattern
 - 公開サイト: https://kgnwsknt-chef.github.io/Typattern/ （`gh-pages` ブランチ）
-- 記録の保存先や書き出しファイルの中の識別子（`typing-records`・`typing-test`）は、既存の記録との互換のため旧名のまま。
+- 記録の保存先は `typattern-records`（schemaVersion 4 から）。旧データベース `typing-records`・`typing-test` は読まず、消しもしない。localStorage・sessionStorage のキー（`typing-test.*`）は旧名のまま。
 
 ## 方針
 - HTML / CSS / JavaScript のみ。ビルド・npm・フレームワークなし。
@@ -39,6 +39,7 @@
   - 日本語は `texts/ja/` に置く予定
 - `js/app.js` … お題の読み込み・入力判定・計測・表示・記録の組み立て
 - `js/store.js` … 記録の保存（IndexedDB。概要 `sessions` と生データ `raws`）・ランキングの取り出し・書き出し・読み込み。保存形式は `docs/storage.md`
+- `js/keys.js` … `e.code`（押したキーの物理的な位置）から、物理キーの番号（`11` など）と US キーボードの文字を求める表
 - `js/ranking.js` … Top 30 の表（結果画面の「ランキング」タブと推移・ランキングのページ）
 - 画面上部の「配列」でキー配列を選ぶ（今は QWERTY のみ）。記録とランキングの区分に使う
 - `js/rhythm.js` … 結果画面のキーごとの間隔グラフ（「キーごとの間隔」タブ）。配色の関数も持つ

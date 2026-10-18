@@ -65,6 +65,9 @@
   let intervals = [];  // お題の位置ごとの打鍵間隔(ms)。間隔がない位置は null
   let missed = [];     // お題の位置ごとに、一度でもミスしたか
   let events = [];     // 全キー入力の記録（保存用。形式は docs/storage.md）
+  let keyTime = 0;     // 直前に押したキーの時刻。そのキーで入った文字の時刻に使う
+  let preKeys = [];    // 計測開始前に押したキー { code, number, time }。開始したら events に移す
+  const heldShifts = new Set(); // 今押されている Shift キーの e.code
   let timerId = 0;
   let finished = false;
 
@@ -196,6 +199,8 @@
     textId = picked.name;
     target = picked.text;
     events = [];
+    keyTime = 0;
+    preKeys = [];
     saveStatusEl.textContent = "";
     prevValue = "";
     startTime = 0;
@@ -373,7 +378,39 @@
       });
   }
 
-  // 全キー入力を記録する。どの行も5要素にそろえる（docs/storage.md）
+  // 押したキーを1行記録する。どの行も5要素にそろえる（docs/storage.md）
+  //   [経過ms, "k", 物理キーの番号, 打っている位置, 正解なら1・ミスなら0（Shift・Backspace は null）]
+  // 計測開始前のキーは preKeys にためておき、開始したときに startKeys で events に移す
+  function logKey(e, now) {
+    if (finished || input.disabled) return;
+    const number = Keys.number(e.code);
+    if (number === null) return; // Ctrl・矢印など、番号のないキーは記録しない
+    const isBackspace = e.code === "Backspace";
+    // Ctrl などと一緒に押したキーは文字を入力しないので記録しない（Ctrl + Backspace は削除するので記録する）
+    if ((e.ctrlKey || e.altKey || e.metaKey) && !isBackspace) return;
+    const pos = input.value.length;
+    let judge = null;
+    if (!Keys.isShift(e.code) && !isBackspace) judge = e.key === target[pos] ? 1 : 0;
+    if (startTime) {
+      events.push([round1(now - startTime), "k", number, pos, judge]);
+      return;
+    }
+    // 開始前：前に押したキーのうち、押したままの Shift だけを残す（大文字で打ち始めるときの Shift）
+    if (!Keys.isShift(e.code)) {
+      preKeys = preKeys.filter(function (k) { return Keys.isShift(k.code) && heldShifts.has(k.code); });
+    }
+    preKeys.push({ code: e.code, number: number, time: now, pos: pos, judge: judge });
+  }
+
+  // 計測開始の瞬間に、開始前のキーを events に移す（開始の打鍵が 0、その前の Shift は負の時刻になる）
+  function startKeys() {
+    preKeys.forEach(function (k) {
+      events.push([round1(k.time - startTime), "k", k.number, k.pos, k.judge]);
+    });
+    preKeys = [];
+  }
+
+  // 入力欄の変化を記録する。時刻は、その文字を入力したキーを押した時刻
   //   [経過ms, "+", 入力した文字, 位置, 正解なら1・ミスなら0]
   //   [経過ms, "-", 消した文字, 位置, null]
   function logEvents(prev, value, now) {
@@ -389,12 +426,15 @@
   input.addEventListener("input", function () {
     if (finished) return;
     const value = input.value;
-    const now = performance.now();
+    // 時刻は、この変化を起こしたキーを押した時刻（キーを押さずに変わったときは今の時刻）
+    const now = keyTime || performance.now();
+    keyTime = 0;
 
     // 末尾に追加された文字だけを打鍵として数える
     if (value.length > prevValue.length && value.startsWith(prevValue)) {
       if (!startTime) {
         startTime = now;
+        startKeys();
         timerId = setInterval(updateStats, 100);
       }
       for (let i = prevValue.length; i < value.length; i++) {
@@ -424,7 +464,17 @@
   // キャレットは常に末尾。矢印キー等での移動とペーストを禁止
   const blockedKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Enter", "Tab"];
   input.addEventListener("keydown", function (e) {
-    if (blockedKeys.indexOf(e.key) !== -1) e.preventDefault();
+    if (blockedKeys.indexOf(e.key) !== -1) {
+      e.preventDefault();
+      return;
+    }
+    const now = performance.now();
+    if (Keys.isShift(e.code)) heldShifts.add(e.code);
+    else keyTime = now; // Shift だけでは入力欄は変わらない
+    logKey(e, now);
+  });
+  input.addEventListener("keyup", function (e) {
+    if (Keys.isShift(e.code)) heldShifts.delete(e.code);
   });
   ["paste", "drop", "cut"].forEach(function (type) {
     input.addEventListener(type, function (e) { e.preventDefault(); });

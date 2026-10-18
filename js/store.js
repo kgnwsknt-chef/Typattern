@@ -4,11 +4,11 @@
 const Store = (function () {
   "use strict";
 
-  // schema 1 の記録（旧データベース "typing-test"）は扱わない。旧データベースは消さずにそのまま残す
-  const DB_NAME = "typing-records";
-  const DB_VERSION = 4; // 入れ物（保存場所・索引）の構造の版
-  const SCHEMA_VERSION = 3; // 記録1件の形式の版（3：正確率を「最後に合っていた文字の割合」に変更）
-  const EXPORT_APP = "typing-test"; // 書き出しファイルの app 欄。アプリ名を Typattern に変えた後も、互換のためこのまま
+  // schemaVersion 3 以前の記録（旧データベース "typing-records"・"typing-test"）は扱わない。旧データベースは消さずにそのまま残す
+  const DB_NAME = "typattern-records";
+  const DB_VERSION = 1; // 入れ物（保存場所・索引）の構造の版
+  const SCHEMA_VERSION = 4; // 記録1件の形式の版（4：events にキーの行 "k" を足し、"+" の時刻を「その文字を生んだ最後のキーの時刻」にした）
+  const EXPORT_APP = "typattern"; // 書き出しファイルの app 欄
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
   const RANK_MIN_ACCURACY = 95; // 正確率がこれ未満の記録はランキングに載せない（記録は残す）
 
@@ -26,26 +26,6 @@ const Store = (function () {
     return Math.round(((textLength - uncorrected) / textLength) * 1000) / 10;
   }
 
-  // schemaVersion 2 の概要を 3 に直す（正確率を新しい定義で計算し直す。uncorrected は 2 から入っている）
-  function upgradeSession(s) {
-    if (s.schemaVersion === 2) {
-      s.result.accuracy = accuracy(s.textLength, s.result.uncorrected);
-      s.schemaVersion = 3;
-    }
-    return s;
-  }
-
-  // 生データの全キー入力を再生して、直さずに残った間違いの数を数える
-  function countUncorrected(raw) {
-    let value = "";
-    raw.events.forEach(function (e) {
-      value = e[1] === "+" ? value.slice(0, e[3]) + e[2] : value.slice(0, e[3]);
-    });
-    let n = 0;
-    for (let i = 0; i < raw.text.length; i++) if (value[i] !== raw.text[i]) n++;
-    return n;
-  }
-
   function open() {
     if (!dbPromise) {
       dbPromise = new Promise(function (resolve, reject) {
@@ -54,31 +34,12 @@ const Store = (function () {
           return;
         }
         const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = function (e) {
+        req.onupgradeneeded = function () {
           const db = req.result;
-          const t = req.transaction;
-          let sessions;
-          if (e.oldVersion < 1) {
-            sessions = db.createObjectStore("sessions", { keyPath: "id" });
-            sessions.createIndex("finishedAt", "finishedAt");
-            db.createObjectStore("raws", { keyPath: "id" });
-          } else {
-            sessions = t.objectStore("sessions");
-          }
-          if (e.oldVersion < 2) {
-            // 版1 → 2：ランキングを WPM 順から平均 IKI 順に変え、平均 IKI の定義変更に合わせて計算し直す
-            if (sessions.indexNames.contains(RANK_INDEX)) sessions.deleteIndex(RANK_INDEX);
-            sessions.createIndex(RANK_INDEX, ["lang", "mode", "keyLayout", "result.avgIki"]);
-            if (e.oldVersion >= 1) migrateTo2(t);
-          }
-          if (e.oldVersion === 2) {
-            // 版2 → 3：正確率の定義変更に合わせて計算し直す（版1からは migrateTo2 の中で済ませる）
-            migrateTo3(t);
-          }
-          if (e.oldVersion >= 1 && e.oldVersion < 4) {
-            // 版3以前 → 4：生データに keyLayout を足す（概要の値を書き写す）
-            migrateTo4(t);
-          }
+          const sessions = db.createObjectStore("sessions", { keyPath: "id" });
+          sessions.createIndex("finishedAt", "finishedAt");
+          sessions.createIndex(RANK_INDEX, ["lang", "mode", "keyLayout", "result.avgIki"]);
+          db.createObjectStore("raws", { keyPath: "id" });
         };
         req.onsuccess = function () {
           const db = req.result;
@@ -96,62 +57,6 @@ const Store = (function () {
       });
     }
     return dbPromise;
-  }
-
-  // 既存の記録の平均 IKI を新しい定義で計算し直し、直さずに残した間違いの数を足す（生データは変えない）
-  function migrateTo2(t) {
-    const sessions = t.objectStore("sessions");
-    const cur = t.objectStore("raws").openCursor();
-    cur.onsuccess = function () {
-      const c = cur.result;
-      if (!c) return;
-      const raw = c.value;
-      const get = sessions.get(raw.id);
-      get.onsuccess = function () {
-        const s = get.result;
-        if (s) {
-          s.result.avgIki = avgIki(s.result.timeSec, s.textLength);
-          s.result.uncorrected = countUncorrected(raw);
-          sessions.put(upgradeSession(s));
-        }
-      };
-      c.continue();
-    };
-  }
-
-  // 既存の記録の正確率を新しい定義で計算し直す（生データは変えない）
-  function migrateTo3(t) {
-    const cur = t.objectStore("sessions").openCursor();
-    cur.onsuccess = function () {
-      const c = cur.result;
-      if (!c) return;
-      c.update(upgradeSession(c.value));
-      c.continue();
-    };
-  }
-
-  // 生データに keyLayout を足す。id の次に置き、ほかの中身は変えない
-  function withKeyLayout(raw, keyLayout) {
-    if (raw.keyLayout) return raw;
-    const out = { id: raw.id, keyLayout: keyLayout };
-    Object.keys(raw).forEach(function (k) { if (k !== "id") out[k] = raw[k]; });
-    return out;
-  }
-
-  function migrateTo4(t) {
-    const sessions = t.objectStore("sessions");
-    const raws = t.objectStore("raws");
-    const cur = raws.openCursor();
-    cur.onsuccess = function () {
-      const c = cur.result;
-      if (!c) return;
-      const raw = c.value;
-      const get = sessions.get(raw.id);
-      get.onsuccess = function () {
-        if (get.result) raws.put(withKeyLayout(raw, get.result.keyLayout));
-      };
-      c.continue();
-    };
   }
 
   // fn(t) の中でリクエストを作り、その結果をトランザクション完了後に返す
@@ -299,8 +204,8 @@ const Store = (function () {
     if (!data || data.app !== EXPORT_APP) {
       return Promise.reject(new Error("このアプリの記録ファイルではありません"));
     }
-    // schemaVersion 2 のファイルは、読み込むときに 3 に直す
-    if (data.schemaVersion !== SCHEMA_VERSION && data.schemaVersion !== 2) {
+    // schemaVersion 3 以前のファイルは読み込まない
+    if (data.schemaVersion !== SCHEMA_VERSION) {
       return Promise.reject(new Error("対応していない形式です（schemaVersion " + (data.schemaVersion || data.schema) + "）"));
     }
     if (!Array.isArray(data.sessions) || !Array.isArray(data.raws)) {
@@ -311,13 +216,12 @@ const Store = (function () {
       .then(function (keys) {
         const have = new Set(keys);
         const fresh = data.sessions.filter(function (s) {
-          return s && s.id && (s.schemaVersion === SCHEMA_VERSION || s.schemaVersion === 2) && !have.has(s.id) && raws.has(s.id);
-        }).map(upgradeSession);
+          return s && s.id && s.schemaVersion === SCHEMA_VERSION && !have.has(s.id) && raws.has(s.id);
+        });
         return tx(["sessions", "raws"], "readwrite", function (t) {
           fresh.forEach(function (s) {
             t.objectStore("sessions").add(s);
-            // keyLayout がない生データ（前の書き出しファイル）は概要の値で補う
-            t.objectStore("raws").add(withKeyLayout(raws.get(s.id), s.keyLayout));
+            t.objectStore("raws").add(raws.get(s.id));
           });
         }).then(function () {
           return { added: fresh.length, skipped: data.sessions.length - fresh.length };
