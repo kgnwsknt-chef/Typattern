@@ -59,6 +59,28 @@ const KanaLayout = (function () {
       for (let i = 1; i <= e[0].length; i++) prefixes.add(e[0].slice(0, i));
     });
 
+    // かな → そのかなを打てるキーの並び（表を逆に引く）。タイピング画面の判定（js/typer.js）に使う
+    const byKana = new Map();
+    let maxKana = 0;
+    entries.forEach(function (e) {
+      if (!byKana.has(e[1])) byKana.set(e[1], []);
+      byKana.get(e[1]).push(e[0]);
+      maxKana = Math.max(maxKana, e[1].length);
+    });
+    // 同じかなを打てる並びが複数あれば、短い並びを先にする
+    byKana.forEach(function (list) { list.sort(function (a, b) { return a.length - b.length; }); });
+
+    // お題 text の pos 文字目から打てる打ち方の一覧 [{ seq, len }]（js/typer.js の optionsFn）
+    // 「ぴゃ」のように複数のかなを1つの並びで打てるときは、長い方を先にする。表にないかなは空
+    function options(text, pos) {
+      const res = [];
+      for (let len = Math.min(maxKana, text.length - pos); len > 0; len--) {
+        const list = byKana.get(text.substr(pos, len));
+        if (list) list.forEach(function (seq) { res.push({ seq: seq, len: len }); });
+      }
+      return res;
+    }
+
     // s で始まり、s より長い並びがあるか
     function hasLonger(s) {
       return entries.some(function (e) { return e[0].length > s.length && e[0].indexOf(s) === 0; });
@@ -127,6 +149,7 @@ const KanaLayout = (function () {
     return {
       entries: entries,
       get: function (keys) { return table.has(keys) ? table.get(keys) : null; },
+      options: options,
       shiftKeys: shiftKeys,
       converter: converter
     };

@@ -1,8 +1,7 @@
-// ローマ字入力の判定。お題のかなに合う打ち方だけを正解とする（決まりは docs/japanese-input.md）
+// ローマ字入力の打ち方の一覧（お題のかなを打てるローマ字の並び）と、ローマ字をかなに直す関数。判定そのものは js/typer.js
 //   - 打ち方の一覧は「かな → キーの並び」の表から作る。先に書いた打ち方を手引きに使う
 //   - 「ん」は次のかなが母音・ナ行・ヤ行で始まらなければ n 1つでもよい
 //   - 「っ」は次のかなの最初の子音を重ねてもよい（kka など）
-//   - どの打ち方の続きにもならないキーを押したら、今のかなを間違いとして確定し、次のかなに進む
 const Romaji = (function () {
   "use strict";
 
@@ -83,123 +82,6 @@ const Romaji = (function () {
     return res;
   }
 
-  // 打ち方の一覧を、前のかなの「っ」の重ねに合わせて絞る（kka の2つ目の k から始まるものだけ）
-  function constrain(opts, doubled) {
-    if (!doubled) return opts;
-    return opts.filter(function (o) { return o.seq[0] === doubled; });
-  }
-
-  // お題1つ分の入力の状態を作る
-  function create(text) {
-    let pos = 0;           // 確定したかなの数（次に打つかなの位置）
-    let pending = "";      // 今のかなに打ちかけのキー
-    let pendingStart = null; // 打ちかけの最初のキーの直前のキーの時刻
-    let lastTime = null;   // 直前のキー（Backspace を含む）の時刻
-    let lastPendingTime = null; // 打ちかけの最後のキーの時刻
-    let pendingKeys = [];  // 打ちかけのキー { ch, time, prev }（prev はその直前のキーの時刻）
-    const units = [];      // 確定したかなのまとまり { pos, len, keys, keyList, correct, doubled, time, prevTime }
-
-    function current() {
-      const prev = units[units.length - 1];
-      const doubled = prev && prev.correct && prev.pos + prev.len === pos ? prev.doubled : null;
-      return constrain(options(text, pos), doubled);
-    }
-
-    // 今のかなを確定する。time はそのかなの最後のキーの時刻
-    function confirm(len, keys, correct, doubled, time) {
-      const u = { pos: pos, len: len, keys: keys, keyList: pendingKeys, correct: correct, doubled: correct ? doubled : undefined, time: time, prevTime: pendingStart };
-      pendingKeys = [];
-      units.push(u);
-      pos += len;
-      pending = "";
-      pendingStart = null;
-      lastPendingTime = null;
-      return u;
-    }
-
-    // キーを1つ押す。ch は US キーボードの文字、time は押した時刻
-    // 返り値 { pos: このキーを当てたかなの位置, judge: 正解 1・ミス 0, confirmed: このキーで確定したまとまり }
-    function press(ch, time) {
-      const confirmed = [];
-      let opts = current();
-      if (pending && !opts.some(function (o) { return o.seq.indexOf(pending + ch) === 0; })) {
-        // 打ちかけがそれだけで完成していれば（ん の n など）、それを確定してから次のかなに当てる
-        const done = opts.filter(function (o) { return o.seq === pending; })[0];
-        if (done) {
-          confirmed.push(confirm(done.len, pending, true, done.doubled, lastPendingTime));
-          opts = current();
-        }
-      }
-      const at = pos;
-      const key = { ch: ch, time: time, prev: lastTime };
-      if (pending === "") pendingStart = lastTime;
-      const s = pending + ch;
-      let judge;
-      if (opts.some(function (o) { return o.seq.indexOf(s) === 0; })) {
-        judge = 1;
-        pending = s;
-        pendingKeys.push(key);
-        lastPendingTime = time;
-        // 打ち方が完成し、それより長い打ち方の途中でもなければ確定する
-        const exact = opts.filter(function (o) { return o.seq === s; })[0];
-        const longer = opts.some(function (o) { return o.seq.length > s.length && o.seq.indexOf(s) === 0; });
-        if (exact && !longer) confirmed.push(confirm(exact.len, s, true, exact.doubled, time));
-      } else {
-        // どの打ち方の続きにもならない：今のかな1文字を間違いとして確定する
-        judge = 0;
-        pendingKeys.push(key);
-        confirmed.push(confirm(1, s, false, null, time));
-      }
-      lastTime = time;
-      return { pos: at, judge: judge, confirmed: confirmed };
-    }
-
-    // Backspace。打ちかけがあればキーを1つ消し、なければ最後に確定したまとまりを消す
-    // 返り値は消したまとまり（打ちかけのキーを消したときは null）
-    function backspace(time) {
-      lastTime = time;
-      if (pending) {
-        pending = pending.slice(0, -1);
-        pendingKeys.pop();
-        lastPendingTime = pendingKeys.length ? pendingKeys[pendingKeys.length - 1].time : null;
-        if (!pending) pendingStart = null;
-        return null;
-      }
-      const u = units.pop();
-      if (!u) return null;
-      pos = u.pos;
-      return u;
-    }
-
-    // 手引き：{ typed: 打ちかけ, rest: 今のかなの残り, ahead: その先の打ち方 }
-    function guide(maxAhead) {
-      const opts = current();
-      const o = opts.filter(function (x) { return x.seq.indexOf(pending) === 0; })[0];
-      if (!o) return { typed: pending, rest: "", ahead: "" };
-      let ahead = "";
-      let p = pos + o.len;
-      let doubled = o.doubled;
-      while (p < text.length && ahead.length < maxAhead) {
-        const n = constrain(options(text, p), doubled)[0];
-        if (!n) break;
-        ahead += n.seq;
-        p += n.len;
-        doubled = n.doubled;
-      }
-      return { typed: pending, rest: o.seq.slice(pending.length), ahead: ahead };
-    }
-
-    return {
-      press: press,
-      backspace: backspace,
-      guide: guide,
-      units: units,
-      get pos() { return pos; },
-      get pending() { return pending; },
-      done: function () { return pos >= text.length; }
-    };
-  }
-
   // ---- ローマ字の文字列をかなに直す（かな配列の割り当て表をローマ字で書いたときに使う） ----
 
   // ローマ字 → かな。上の表を逆に引く。表にない記号と、割り当て表で使われる書き方（txu = っ）も足す
@@ -241,5 +123,5 @@ const Romaji = (function () {
     return out;
   }
 
-  return { create: create, options: options, toKana: toKana };
+  return { options: options, toKana: toKana };
 })();

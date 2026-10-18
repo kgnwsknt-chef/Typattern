@@ -249,7 +249,7 @@
     finished = false;
     clearInterval(timerId);
 
-    typer = lang === "ja" ? Romaji.create(target) : null;
+    typer = lang === "ja" ? Typer.create(target, Romaji.options) : null;
     imeOn = false;
     input.value = "";
     input.maxLength = target.length;
@@ -417,7 +417,8 @@
       const caption = target.substr(u.pos, u.len);
       return {
         caption: caption,
-        keys: u.keyList.map(function (k) {
+        // 飛ばしたかな（打ち方がない）はキーがないので、空の列を1つ置く
+        keys: u.keyList.length === 0 ? [{ ch: "", v: null }] : u.keyList.map(function (k) {
           // 文字のないキー（JIS の「ろ」など）は ? で表す
           return { ch: k.ch === "\u0000" ? "?" : k.ch, v: k.prev === null ? null : k.time - k.prev };
         }),
@@ -560,12 +561,14 @@
     if (e.code === "Backspace") {
       if (!startTime) return; // まだ何も打っていない
       const pos = typer.pos;
-      const u = typer.backspace(now);
+      const removed = typer.backspace(now);
       pushKey(e.code, number, now, pos, null);
-      if (u) {
+      if (removed.length) {
         // 確定したかなを消したときだけ "-" の行を残す（打ちかけのキーを消したときは残さない）
-        events.push([round1(now - startTime), "-", target.substr(u.pos, u.len), u.pos, null]);
-        for (let i = u.pos; i < u.pos + u.len; i++) intervals[i] = null;
+        // 飛ばしたかなと一緒に消したときは、まとめて1行
+        const from = removed[0].pos;
+        events.push([round1(now - startTime), "-", target.slice(from, pos), from, null]);
+        for (let i = from; i < pos; i++) intervals[i] = null;
       }
       lastKeyTime = now;
       render();
@@ -592,7 +595,11 @@
         // 間隔：そのかなの最初のキーの直前のキーから、最後のキーまで。2文字まとめて打ったときの2文字目は 0
         intervals[i] = j > 0 ? 0 : (u.prevTime === null ? null : u.time - u.prevTime);
       }
-      if (!u.correct) {
+      if (u.skipped) {
+        // 打ち方がないので飛ばしたかな：ミスに数えるのは、その位置で1回だけ（打ち直して何度通っても増やさない）
+        if (!missed[u.pos]) misses++;
+        missed[u.pos] = true;
+      } else if (!u.correct) {
         misses++;
         missed[u.pos] = true;
       }
