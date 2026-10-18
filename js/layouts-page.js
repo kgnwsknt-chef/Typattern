@@ -286,12 +286,10 @@
       return;
     }
     const exists = layouts.some(function (l) { return l.id === name; });
+    // その配列で打った記録があっても上書きできる（記録は消さない。記録の keyLayout は配列名なので、上書き後の配列の記録として扱われる）
     Store.countSessionsWithLayout(name).then(function (n) {
-      if (exists && n > 0) {
-        layoutMsgEl.textContent = "「" + name + "」で打った記録が " + n + " 件あるため、上書きできません。別の名前で読み込み直してください。";
-        return;
-      }
-      if (exists && !confirm("「" + name + "」という配列がすでに保存されています。上書きしますか？")) return;
+      if (exists && !confirm("「" + name + "」という配列がすでに保存されています。上書きしますか？" +
+        (n > 0 ? "\nこの配列で打った記録が " + n + " 件あります。記録は残りますが、前の割り当て表で打ったものと区別できなくなります（区別したいときは、別の名前で保存してください）。" : ""))) return;
       // source は読み込んだ割り当て表の文字列（ローマ字で書いたままの形）。フォームに出し直すのに使う
       const record = { id: name, name: name, type: "kana", entries: layout.entries, source: layout.source, savedAt: new Date().toISOString() };
       return Store.saveLayout(record).then(function () {
