@@ -7,7 +7,9 @@
   const ngramSummaryEl = document.getElementById("ngram-summary");
   const bigramEl = document.getElementById("bigram");
   const trigramEl = document.getElementById("trigram");
-  const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"));
+  const hmCountEl = document.getElementById("hm-count"); // bigram の2次元ヒストグラム（回数）
+  const hmIkiEl = document.getElementById("hm-iki");     // 同じく平均 IKI
+  const bigramTable =NGram.create(2, "bigram", document.getElementById("bigram-dist"));
   const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"));
   const filters = Filters.init(update);
 
@@ -24,6 +26,8 @@
         ngramSummaryEl.textContent = "";
         bigramTable.renderRows(bigramEl, [], 0, "データなし");
         trigramTable.renderRows(trigramEl, [], 0, "データなし");
+        NGram.drawHeatmap(hmCountEl, [], "count", 0);
+        NGram.drawHeatmap(hmIkiEl, [], "iki", 0);
         return;
       }
 
@@ -51,6 +55,8 @@
         const tri = NGram.toRows(trigrams).filter(keep);
         bigramTable.renderRows(bigramEl, bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
+        NGram.drawHeatmap(hmCountEl, bi, "count", base);
+        NGram.drawHeatmap(hmIkiEl, bi, "iki", base);
         ngramSummaryEl.textContent = "bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
       });
     }).catch(function (err) {

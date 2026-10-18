@@ -57,7 +57,7 @@
 - `js/trend.js` … 推移のグラフ（平均 IKI と打/s、正確率（修正後）とミスも数えた正確率）
 - `docs/measurement.md` … 計測ルール（お題・正誤判定・平均 IKI・WPM・正確率・ミス・キーごとの間隔）
 - `docs/records.md` … 記録ページの決まり（レベルの達成度・データの絞り込み・推移・ランキング）
-- `docs/analysis.md` … n-gram の分析の決まり（bigram・trigram・分布）
+- `docs/analysis.md` … n-gram の分析の決まり（bigram・trigram・分布・bigram の2次元ヒストグラム）
 - `docs/layouts.md` … キー配列のページの決まり（配列図・シフト面・試し打ち・割り当て表の書き方・登録・保存）
 - `docs/levels.md` … レベルの決まり（基準の秒数を文字/秒に直した基準、レベル表、達成レベルと目標、表示）
 - `docs/storage.md` … 記録の保存形式。記録の形を変えるときは必ず一緒に直す

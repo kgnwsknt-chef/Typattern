@@ -14,6 +14,8 @@
   /* キー配列の配列図：前置シフト・後置シフトのキーの外形線の色 */
   --kb-prefix: #e07b00;
   --kb-postfix: #8a3fd1;
+  /* bigram の2次元ヒストグラム：データのないマスの色 */
+  --hm-none: #eeeeee;
   --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "Consolas", "Menlo", monospace;
 }
@@ -1070,6 +1072,49 @@ a.text-btn {
   fill: var(--sub);
   font-family: var(--mono);
   font-size: 10px;
+}
+
+/* bigram の2次元ヒストグラム（js/ngram.js の drawHeatmap） */
+.hm-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hm-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hm-svg .dist-label {
+  font-size: 12px;
+}
+
+.hm-cell {
+  stroke: var(--bg);
+  stroke-width: 0.5;
+}
+
+.hm-sep {
+  stroke: var(--sub);
+  stroke-width: 0.8;
+}
+
+.hm-frame {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.hm-empty {
+  margin: 0;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--sub);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 
 .bg-table td.bg-empty-cell {

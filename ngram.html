@@ -70,6 +70,21 @@
         </div>
       </div>
     </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">bigram の2次元ヒストグラム</h2>
+      <p class="rhythm-legend">横軸 = 1キー目、縦軸 = 2キー目（QWERTY の文字。キーボードの行の順で、行が変わるところに区切り線）。上の表と同じ bigram（「回数」の絞り込みも同じ）を、マスの色で表示 ／ マスにマウスを乗せると値を表示</p>
+      <div class="ngram-grid">
+        <div class="ngram-col">
+          <h3 class="hm-title">回数</h3>
+          <div id="hm-count" class="hm"></div>
+        </div>
+        <div class="ngram-col">
+          <h3 class="hm-title">平均 IKI（灰色 = なし）</h3>
+          <div id="hm-iki" class="hm"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->

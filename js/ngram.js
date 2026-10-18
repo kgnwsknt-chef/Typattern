@@ -204,6 +204,104 @@ const NGram = (function () {
     el.appendChild(svg);
   }
 
+  // 軸に並べるキーの順（QWERTY の物理的な並び。数字の行 → Q の行 → A の行 → Z の行）
+  const KEY_ROWS = ["`1234567890-=", "qwertyuiop[]\\", "asdfghjkl;'", "zxcvbnm,./"];
+  const KEY_ORDER = KEY_ROWS.join("");
+  function keyRow(ch) {
+    for (let i = 0; i < KEY_ROWS.length; i++) if (KEY_ROWS[i].indexOf(ch) >= 0) return i;
+    return KEY_ROWS.length;
+  }
+
+  // bigram の2次元ヒストグラム（ヒートマップ）。横軸 = 1キー目、縦軸 = 2キー目、マスの色 = 値
+  //   kind："count"（回数。0 回は白、一番多いマスが一番濃い。回数に比例）か "iki"（平均 IKI。表と同じ配色、baseAvg が基準）
+  //   rows：toRows の結果（bigram）。軸には rows に出てくるキーだけを並べる
+  function drawHeatmap(el, rows, kind, baseAvg) {
+    el.textContent = "";
+    if (rows.length === 0) {
+      const p = document.createElement("p");
+      p.className = "hm-empty";
+      p.textContent = "対象になる bigram がありません。";
+      el.appendChild(p);
+      return;
+    }
+    const cells = new Map();
+    const used = new Set();
+    rows.forEach(function (r) {
+      cells.set(r.gram, r);
+      used.add(r.gram[0]);
+      used.add(r.gram[1]);
+    });
+    const keys = Array.from(used).sort(function (a, b) {
+      const ia = KEY_ORDER.indexOf(a), ib = KEY_ORDER.indexOf(b);
+      return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || (a < b ? -1 : 1);
+    });
+    const maxCount = Math.max.apply(null, rows.map(function (r) { return r.count; }));
+
+    const C = 16;           // マスの大きさ
+    const L = 40, T = 34;   // 軸のラベルの場所
+    const LEG = 34;         // 下の凡例の場所
+    const n = keys.length;
+    const W = L + n * C + 6, H = T + n * C + LEG;
+    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "hm-svg", role: "img",
+      "aria-label": "bigram の" + (kind === "count" ? "回数" : "平均 IKI") + "の2次元ヒストグラム" });
+    svg.style.maxWidth = (W * 1.6) + "px";
+
+    // 軸のラベル（キーの QWERTY の文字）
+    keys.forEach(function (k, i) {
+      svg.appendChild(svgText(L + i * C + C / 2, T - 4, k, "middle"));
+      svg.appendChild(svgText(L - 4, T + i * C + C / 2 + 3.5, k, "end"));
+    });
+    svg.appendChild(svgText(L, 10, "1キー目 →", "start"));
+    const yTitle = svgText(12, T, "2キー目 →", "start");
+    yTitle.setAttribute("transform", "rotate(90 12 " + T + ")");
+    svg.appendChild(yTitle);
+
+    // マス
+    keys.forEach(function (first, xi) {
+      keys.forEach(function (second, yi) {
+        const r = cells.get(first + second);
+        let fill;
+        if (kind === "count") fill = r ? countColor(r.count / maxCount) : "var(--bg)";
+        else fill = r ? Rhythm.color(r.avg, baseAvg) : "var(--hm-none)";
+        const rect = svgEl("rect", { x: L + xi * C, y: T + yi * C, width: C, height: C, fill: fill, class: "hm-cell" });
+        const tip = svgEl("title", {});
+        tip.textContent = first + second + "：" + (r ? r.count + " 回・平均 " + Math.round(r.avg) + " ms" : "なし");
+        rect.appendChild(tip);
+        svg.appendChild(rect);
+      });
+    });
+
+    // キーボードの行が変わるところの区切り線
+    for (let i = 1; i < n; i++) {
+      if (keyRow(keys[i]) === keyRow(keys[i - 1])) continue;
+      svg.appendChild(svgEl("line", { x1: L + i * C, y1: T, x2: L + i * C, y2: T + n * C, class: "hm-sep" }));
+      svg.appendChild(svgEl("line", { x1: L, y1: T + i * C, x2: L + n * C, y2: T + i * C, class: "hm-sep" }));
+    }
+    svg.appendChild(svgEl("rect", { x: L, y: T, width: n * C, height: n * C, class: "hm-frame" }));
+
+    // 凡例（色の帯と目盛り）
+    const ly = T + n * C + 12, lw = Math.min(n * C, 260), lh = 8;
+    const steps = 20;
+    for (let i = 0; i < steps; i++) {
+      const f = (i + 0.5) / steps;
+      const fill = kind === "count" ? countColor(f) : Rhythm.color(f * 2 * baseAvg, baseAvg);
+      svg.appendChild(svgEl("rect", { x: L + (i * lw) / steps, y: ly, width: lw / steps + 0.5, height: lh, fill: fill }));
+    }
+    const labels = kind === "count"
+      ? ["0", String(Math.round(maxCount / 2)), maxCount + " 回"]
+      : ["0", "平均 " + Math.round(baseAvg), Math.round(baseAvg * 2) + " ms 以上"];
+    svg.appendChild(svgText(L, ly + lh + 11, labels[0], "start"));
+    svg.appendChild(svgText(L + lw / 2, ly + lh + 11, labels[1], "middle"));
+    svg.appendChild(svgText(L + lw, ly + lh + 11, labels[2], "end"));
+
+    el.appendChild(svg);
+  }
+
+  // 回数の色。f = 回数 ÷ 一番多い回数（0〜1）。白に近い青 → 濃い青
+  function countColor(f) {
+    return "hsl(215, 75%, " + Math.round(96 - f * 64) + "%)";
+  }
+
   function svgEl(name, attrs) {
     const el = document.createElementNS(SVG_NS, name);
     Object.keys(attrs).forEach(function (k) { el.setAttribute(k, attrs[k]); });
@@ -287,5 +385,5 @@ const NGram = (function () {
     return el;
   }
 
-  return { create: create, accumulate: accumulate, toRows: toRows };
+  return { create: create, accumulate: accumulate, toRows: toRows, drawHeatmap: drawHeatmap };
 })();
