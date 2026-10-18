@@ -96,7 +96,8 @@ const Romaji = (function () {
     let pendingStart = null; // 打ちかけの最初のキーの直前のキーの時刻
     let lastTime = null;   // 直前のキー（Backspace を含む）の時刻
     let lastPendingTime = null; // 打ちかけの最後のキーの時刻
-    const units = [];      // 確定したかなのまとまり { pos, len, keys, correct, doubled, time, prevTime }
+    let pendingKeys = [];  // 打ちかけのキー { ch, time, prev }（prev はその直前のキーの時刻）
+    const units = [];      // 確定したかなのまとまり { pos, len, keys, keyList, correct, doubled, time, prevTime }
 
     function current() {
       const prev = units[units.length - 1];
@@ -106,7 +107,8 @@ const Romaji = (function () {
 
     // 今のかなを確定する。time はそのかなの最後のキーの時刻
     function confirm(len, keys, correct, doubled, time) {
-      const u = { pos: pos, len: len, keys: keys, correct: correct, doubled: correct ? doubled : undefined, time: time, prevTime: pendingStart };
+      const u = { pos: pos, len: len, keys: keys, keyList: pendingKeys, correct: correct, doubled: correct ? doubled : undefined, time: time, prevTime: pendingStart };
+      pendingKeys = [];
       units.push(u);
       pos += len;
       pending = "";
@@ -129,12 +131,14 @@ const Romaji = (function () {
         }
       }
       const at = pos;
+      const key = { ch: ch, time: time, prev: lastTime };
       if (pending === "") pendingStart = lastTime;
       const s = pending + ch;
       let judge;
       if (opts.some(function (o) { return o.seq.indexOf(s) === 0; })) {
         judge = 1;
         pending = s;
+        pendingKeys.push(key);
         lastPendingTime = time;
         // 打ち方が完成し、それより長い打ち方の途中でもなければ確定する
         const exact = opts.filter(function (o) { return o.seq === s; })[0];
@@ -143,6 +147,7 @@ const Romaji = (function () {
       } else {
         // どの打ち方の続きにもならない：今のかな1文字を間違いとして確定する
         judge = 0;
+        pendingKeys.push(key);
         confirmed.push(confirm(1, s, false, null, time));
       }
       lastTime = time;
@@ -155,6 +160,8 @@ const Romaji = (function () {
       lastTime = time;
       if (pending) {
         pending = pending.slice(0, -1);
+        pendingKeys.pop();
+        lastPendingTime = pendingKeys.length ? pendingKeys[pendingKeys.length - 1].time : null;
         if (!pending) pendingStart = null;
         return null;
       }

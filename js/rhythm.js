@@ -5,11 +5,44 @@ const Rhythm = (function () {
   const BAR_MAX = 72; // 棒の最大の高さ(px)。style.css の .rh-track の高さに合わせる
   const CAP_RATIO = 3; // 平均のこの倍を超える間隔は頭打ちにする
 
-  // container にグラフを描き、平均間隔(ms, 整数)を返す。間隔が1つもなければ "-"
+  // 英語：お題の文字ごとにグラフを描き、平均間隔(ms, 整数)を返す。間隔が1つもなければ "-"
+  // 単語の途中で折り返さないよう、「単語＋後ろのスペース」をひとまとまり（rh-word）にする
   function render(container, target, intervals, missed) {
+    const words = [];
+    for (let i = 0; i < target.length; i++) {
+      if (i === 0 || target[i - 1] === " ") words.push({ groups: [{ cols: [] }] });
+      words[words.length - 1].groups[0].cols.push({ ch: target[i], v: intervals[i], missed: missed[i] });
+    }
+    return draw(container, words);
+  }
+
+  // 日本語：押したキーごとにグラフを描き、平均間隔(ms, 整数)を返す
+  //   kana：かなのまとまり [{ caption: かな, keys: [{ ch: キーの文字, v: 直前のキーからの間隔 }], missed, breakBefore, join }]
+  //   かなごとにキーの列をまとめ、下にかなを書く。どのかなの後でも折り返すが、join のもの（「、」など）は前のかなと離さない。
+  //   breakBefore のもの（「。」の次）は改行してから描く
+  function renderKeys(container, kana) {
+    const words = [];
+    kana.forEach(function (k) {
+      if (!k.join || words.length === 0) words.push({ breakBefore: k.breakBefore, groups: [] });
+      words[words.length - 1].groups.push({
+        caption: k.caption,
+        missed: k.missed,
+        cols: k.keys.map(function (key) { return { ch: key.ch, v: key.v, missed: k.missed }; })
+      });
+    });
+    return draw(container, words);
+  }
+
+  // words：折り返しの単位 [{ breakBefore, groups: [{ caption, missed, cols: [{ ch, v, missed }] }] }]
+  function draw(container, words) {
     container.textContent = "";
 
-    const values = intervals.filter(function (v) { return v !== null; });
+    const values = [];
+    words.forEach(function (w) {
+      w.groups.forEach(function (g) {
+        g.cols.forEach(function (c) { if (c.v !== null) values.push(c.v); });
+      });
+    });
     if (values.length === 0) return "-";
 
     const avg = values.reduce(function (a, b) { return a + b; }, 0) / values.length;
@@ -22,17 +55,36 @@ const Rhythm = (function () {
     const hue = readHue();
     const toColor = function (v) { return colorFor(v, avg, hue); };
 
-    // 単語の途中で折り返さないよう、「単語＋後ろのスペース」をひとまとまりにする
     const frag = document.createDocumentFragment();
-    let word = null;
-    for (let i = 0; i < target.length; i++) {
-      if (!word || target[i - 1] === " ") {
-        word = document.createElement("div");
-        word.className = "rh-word";
-        frag.appendChild(word);
+    words.forEach(function (w) {
+      if (w.breakBefore) {
+        const br = document.createElement("div");
+        br.className = "rh-break"; // 文の終わりで改行する
+        frag.appendChild(br);
       }
-      word.appendChild(column(target[i], intervals[i], missed[i], cap, toPx, toColor));
-    }
+      const word = document.createElement("div");
+      word.className = "rh-word";
+      w.groups.forEach(function (g) {
+        let parent = word;
+        if (g.caption !== undefined) {
+          // かなのまとまり：キーの列の下にかなを書く
+          const group = document.createElement("div");
+          group.className = "rh-group";
+          parent = document.createElement("div");
+          parent.className = "rh-cols";
+          const kanaEl = document.createElement("div");
+          kanaEl.className = "rh-kana" + (g.missed ? " missed" : "");
+          kanaEl.textContent = g.caption;
+          group.appendChild(parent);
+          group.appendChild(kanaEl);
+          word.appendChild(group);
+        }
+        g.cols.forEach(function (c) {
+          parent.appendChild(column(c.ch, c.v, c.missed, cap, toPx, toColor));
+        });
+      });
+      frag.appendChild(word);
+    });
     container.appendChild(frag);
 
     return Math.round(avg);
@@ -94,5 +146,5 @@ const Rhythm = (function () {
     return colorFor(v, avg, readHue());
   }
 
-  return { render: render, color: color };
+  return { render: render, renderKeys: renderKeys, color: color };
 })();

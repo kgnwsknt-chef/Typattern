@@ -321,6 +321,34 @@ body {
   display: flex;
 }
 
+/* 日本語：かなごとのキーの列と、その下のかな */
+.rh-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.rh-cols {
+  display: flex;
+}
+
+.rh-kana {
+  text-align: center;
+  font-size: 13px;
+  color: var(--sub);
+  margin-top: 2px;
+}
+
+.rh-kana.missed {
+  color: var(--error);
+  font-weight: 700;
+}
+
+/* 日本語：文の終わり（「。」の後）で改行する */
+.rh-break {
+  flex-basis: 100%;
+  height: 0;
+}
+
 .rh-col {
   width: 18px;
 }

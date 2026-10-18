@@ -55,6 +55,8 @@
   const romajiGuideEl = document.getElementById("romaji-guide");
   // 速さの単位（英語は WPM、日本語はかな/分）
   const speedUnitEls = Array.from(document.querySelectorAll(".speed-unit"));
+  const rhythmWhatEl = document.getElementById("rhythm-what");
+  const rhythmNoteEl = document.getElementById("rhythm-note");
 
   // 状態
   // 記録のモード（"normal" 文章 / "short" 短い文章 / "words" 単語）。ランキングはモードごとに分ける
@@ -254,6 +256,9 @@
     input.disabled = false;
     guideEl.textContent = lang === "ja" ? GUIDE_JA : GUIDE_EN;
     speedUnitEls.forEach(function (el) { el.textContent = lang === "ja" ? "かな/分" : "WPM"; });
+    // 「キーごとの間隔」の説明。日本語は押したキーごとの間隔（かなは下の段に書く）
+    rhythmWhatEl.textContent = lang === "ja" ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
+    rhythmNoteEl.textContent = "修正の時間を含まないので、結果の平均 IKI より小さくなる";
     resultEl.hidden = true;
     board.classList.remove("finished");
 
@@ -398,11 +403,29 @@
     res.miss.textContent = misses;
     res.uncorrected.textContent = r.uncorrected;
     // グラフは位置ごとの最後の打鍵の間隔を使う。その平均を点線と色の基準にする
-    const lastAvg = Rhythm.render(rhythmEl, target, intervals, missed);
+    const lastAvg = typer ? Rhythm.renderKeys(rhythmEl, keyColumns()) : Rhythm.render(rhythmEl, target, intervals, missed);
     rhythmAvgEl.textContent = lastAvg;
     resultEl.hidden = false;
 
     saveSession(r);
+  }
+
+  // 日本語の「キーごとの間隔」のグラフの元：最後に残ったかなごとに、そのかなを打ったキーと間隔
+  // 間隔は、そのキーを押した時刻と直前のキー（Backspace を含む）の時刻の差。最初のキーは null
+  function keyColumns() {
+    return typer.units.map(function (u) {
+      const caption = target.substr(u.pos, u.len);
+      return {
+        caption: caption,
+        keys: u.keyList.map(function (k) {
+          // 文字のないキー（JIS の「ろ」など）は ? で表す
+          return { ch: k.ch === "\u0000" ? "?" : k.ch, v: k.prev === null ? null : k.time - k.prev };
+        }),
+        missed: missed.slice(u.pos, u.pos + u.len).some(function (m) { return m; }),
+        breakBefore: u.pos > 0 && target[u.pos - 1] === "。",
+        join: /^[、。ーぁぃぅぇぉゃゅょっゎ]/.test(caption)
+      };
+    });
   }
 
   // ms を 0.1ms 単位に丸める（保存サイズを抑えるため）

@@ -33,6 +33,9 @@ const Trend = (function () {
       : "● 1回ごとの平均 IKI ／ ○ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満（ランキング対象外。移動平均に含めない）／ ━ 移動平均（直近 " +
         MA_WINDOW + " 回）";
     legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
+    // 平均 IKI は、英語は文字あたり、日本語はキーあたり。両方が混ざっているときは注意を出す
+    const langs = new Set(list.map(function (s) { return s.lang; }));
+    if (langs.size > 1) legendEl.textContent += " ／ ※英語と日本語が混ざっています（平均 IKI は英語が文字あたり、日本語がキーあたり）";
 
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "trend-svg", role: "img", "aria-label": "成績の推移" });
 
@@ -154,7 +157,7 @@ const Trend = (function () {
         accRaw: rawAccuracy(s),
         eligible: s.result.accuracy >= Store.RANK_MIN_ACCURACY,
         tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + s.textId + "\n平均 IKI " + s.result.avgIki.toFixed(1) +
-          " ms（" + (1000 / s.result.avgIki).toFixed(2) + " 打/s, " + Math.round(s.result.wpm) + " WPM）\n正確率 " +
+          " ms（" + (1000 / s.result.avgIki).toFixed(2) + " 打/s, " + speedText(s) + "）\n正確率 " +
           s.result.accuracy.toFixed(1) + "%（ミスも数えると " + rawAccuracy(s).toFixed(1) + "%）／ ミス " + s.result.misses +
           "（未修正 " + s.result.uncorrected + "）"
       };
@@ -202,6 +205,11 @@ const Trend = (function () {
   }
 
   // ---- 補助 ----
+
+  // 速さの表示。英語は WPM、日本語はかな/分（日本語の記録は wpm が null。docs/storage.md）
+  function speedText(s) {
+    return s.lang === "ja" ? Math.round(s.result.kanaPerMin) + " かな/分" : Math.round(s.result.wpm) + " WPM";
+  }
 
   // ミスも数えた正確率(%) = (打鍵数 - ミス) / 打鍵数。直したミスも含む（正確率は直したミスを含まない）
   function rawAccuracy(s) {

@@ -66,7 +66,7 @@
 - 平均 IKI・WPM・正確率・ミスの判定は @docs/measurement.md を参照（ここには書かない）。記録ページは docs/records.md、n-gram は docs/analysis.md。
 
 ## 今後
-- 日本語対応の続き：結果のグラフ・記録ページの日本語対応、月見草配列などのかな配列（設計は `docs/japanese-input.md`）。
+- 日本語対応の続き：月見草配列などのかな配列（設計は `docs/japanese-input.md`）。
   - 日本語のタイピングでも IME（かな漢字変換）は使わない。
     キーは keydown の `e.code` で受け取り、アプリ側でかなに変換して判定する（ローマ字は `js/romaji.js`）。
     記録には押した物理キーの番号（`"k"` の行）を残し、お題の何文字目（かな）を打っているかを別に持つ。
