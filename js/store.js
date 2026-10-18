@@ -14,13 +14,13 @@ const Store = (function () {
 
   let dbPromise = null;
 
-  // 平均 IKI(ms) = 経過時間 ÷ (お題の文字数 - 1)。修正にかかった時間も含む。定義は docs/scoring.md
+  // 平均 IKI(ms) = 経過時間 ÷ (お題の文字数 - 1)。修正にかかった時間も含む。定義は docs/measurement.md
   function avgIki(timeSec, textLength) {
     if (textLength < 2) return null;
     return Math.round((timeSec * 1000 / (textLength - 1)) * 10) / 10;
   }
 
-  // 正確率(%) = 最後にお題と合っていた文字の割合。直したミスは含めない。定義は docs/scoring.md
+  // 正確率(%) = 最後にお題と合っていた文字の割合。直したミスは含めない。定義は docs/measurement.md
   function accuracy(textLength, uncorrected) {
     if (textLength < 1) return 100;
     return Math.round(((textLength - uncorrected) / textLength) * 1000) / 10;

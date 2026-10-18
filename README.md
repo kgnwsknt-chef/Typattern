@@ -2,7 +2,7 @@
 
 **打ち方のパターンを見るタイピング練習アプリ**
 
-速さ（WPM）だけでなく、1文字ごとの打鍵の間隔（IKI: inter-key interval）や、bigram・trigram ごとの得意・不得意を記録して分析できます。ブラウザだけで動き、記録は自分のブラウザの中に保存されます。詳細は [docs/scoring.md](docs/scoring.md) を参照。
+速さ（WPM）だけでなく、1文字ごとの打鍵の間隔（IKI: inter-key interval）や、bigram・trigram ごとの得意・不得意を記録して分析できます。ブラウザだけで動き、記録は自分のブラウザの中に保存されます。詳細は [docs/measurement.md](docs/measurement.md) を参照。
 
 ▶ **https://kgnwsknt-chef.github.io/Typattern/**
 - 画面上部の「モード」で、文章（約300文字）・短い文章（約90文字）・単語（基本的な英単語1000語からランダムに約300文字）を選べる

@@ -43,7 +43,7 @@
 - `js/stats.js` … 推移・ランキングのページの処理
 - `js/ngram-page.js` … n-gram のページの処理
 - `js/trend.js` … 推移のグラフ（平均 IKI と打/s、正確率（修正後）とミスも数えた正確率）
-- `docs/scoring.md` … 計測ルール（お題・正誤判定・平均 IKI・WPM・正確率・ミス・キーごとの間隔）
+- `docs/measurement.md` … 計測ルール（お題・正誤判定・平均 IKI・WPM・正確率・ミス・キーごとの間隔）
 - `docs/records.md` … 記録ページの決まり（データの絞り込み・推移・ランキング）
 - `docs/analysis.md` … n-gram の分析の決まり（bigram・trigram・分布）
 - `docs/storage.md` … 記録の保存形式。記録の形を変えるときは必ず一緒に直す
@@ -55,7 +55,7 @@
 - お題は約300文字（短いお題は約90文字）。打ち始めた瞬間に計測開始、最後の文字まで打つと終了。制限時間なし。
 - Backspace で修正できる。ペースト不可。
 - Esc でやり直し。
-- 平均 IKI・WPM・正確率・ミスの判定は @docs/scoring.md を参照（ここには書かない）。記録ページは docs/records.md、n-gram は docs/analysis.md。
+- 平均 IKI・WPM・正確率・ミスの判定は @docs/measurement.md を参照（ここには書かない）。記録ページは docs/records.md、n-gram は docs/analysis.md。
 
 ## 今後
 - 日本語対応（ローマ字入力。「し」= shi / si など複数の打ち方を許す判定が必要）。

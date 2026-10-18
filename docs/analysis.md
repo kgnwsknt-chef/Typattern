@@ -1,6 +1,6 @@
 # 分析（n-gram）
 
-打鍵の間隔を、連続する文字の組（n-gram）ごとに分析する決まり。計測の決まりは `docs/scoring.md`、絞り込みは `docs/records.md`。ルールを変えるときは、このファイルとコードを一緒に直す。
+打鍵の間隔を、連続する文字の組（n-gram）ごとに分析する決まり。計測の決まりは `docs/measurement.md`、絞り込みは `docs/records.md`。ルールを変えるときは、このファイルとコードを一緒に直す。
 
 ## bigram・trigram
 

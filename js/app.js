@@ -265,7 +265,7 @@
   function calc() {
     const sec = elapsedSec();
     const wpm = sec > 0 ? (correctCount() / 5) / (sec / 60) : 0;
-    // 正確率：今の入力のうちお題と合っている文字の割合。直したミスは含めない（docs/scoring.md）
+    // 正確率：今の入力のうちお題と合っている文字の割合。直したミスは含めない（docs/measurement.md）
     const typed = input.value.length;
     const acc = typed > 0 ? (correctCount() / typed) * 100 : 100;
     return { sec: sec, wpm: wpm, acc: acc };
