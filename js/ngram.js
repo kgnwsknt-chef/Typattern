@@ -1,4 +1,4 @@
-// n-gram（連続する n 文字。2=bigram、3=trigram）ごとの打鍵間隔(IKI)を集計して一覧表にする
+// n-gram（連続して押した n 個のキー。2=bigram、3=trigram）ごとの打鍵間隔(IKI)を集計して一覧表にする
 // 行をクリックすると、その n-gram の IKI の分布（ヒストグラム）を表の下に出す
 const NGram = (function () {
   "use strict";
@@ -14,11 +14,6 @@ const NGram = (function () {
     let emptyMessage = ""; // 行がないときに表の中に出す文言
     let selected = null;   // 分布を表示中の n-gram
     let containerEl = null;
-
-    // 1回分のデータを集計して container に一覧表を描く。avg は色の基準にする全体の平均間隔(ms)
-    function render(container, target, intervals, missed, avg) {
-      return renderRows(container, toRows(accumulate(new Map(), n, target, intervals, missed)), avg);
-    }
 
     // 集計済みの行（toRows の結果。複数回分をまとめたものでもよい）を一覧表に描く
     // 行がないときは、見出しだけの表に emptyText（省略時は「対象になる … がありません。」）を出す
@@ -116,7 +111,7 @@ const NGram = (function () {
       }
     }
 
-    return { render: render, renderRows: renderRows, clear: clear };
+    return { renderRows: renderRows, clear: clear };
   }
 
   // 1つの n-gram の IKI の分布をヒストグラムで描く。平均を点線、1回ごとの値を軸の下の短い線で示す
@@ -221,25 +216,45 @@ const NGram = (function () {
     return t;
   }
 
-  // お題と位置ごとの間隔・ミスから、n-gram ごとの IKI を map に足し込む
+  // 生データの events から、押したキーの並び [{ t, label, ok }] を作る（Shift は並びに入れない）
+  //   ok：n-gram に使えるキーか。間違えたキー・Backspace・スペース・文字のないキー・Shift と同時に押したキーは false
+  function keySequence(events) {
+    const seq = [];
+    const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す）
+    // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
+    const hasUp = events.some(function (e) { return e[1] === "u"; });
+    events.forEach(function (e) {
+      if (e[1] === "u") {
+        shiftDown.delete(e[2]);
+      } else if (e[1] === "k") {
+        if (Keys.isShiftNumber(e[2])) {
+          shiftDown.add(e[2]);
+          return;
+        }
+        const label = Keys.label(e[2]);
+        const ok = e[4] === 1 && shiftDown.size === 0 && label !== null && e[2] !== Keys.SPACE && e[2] !== Keys.BACKSPACE;
+        seq.push({ t: e[0], label: label, ok: ok });
+        if (!hasUp) shiftDown.clear();
+      }
+    });
+    return seq;
+  }
+
+  // 生データの events から、連続する n 個のキーごとの IKI を map に足し込む
   // （複数回分を同じ map に足せば、全記録の集計になる）
-  // n-gram の IKI = 中の (n-1) 個の打鍵間隔の平均。ルールは docs/analysis.md を参照
-  function accumulate(map, n, target, intervals, missed) {
-    for (let end = n - 1; end < target.length; end++) {
+  // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis.md を参照
+  function accumulate(map, n, events) {
+    const seq = keySequence(events);
+    for (let end = n - 1; end < seq.length; end++) {
       const start = end - n + 1;
       let ok = true;
-      let sum = 0;
       for (let i = start; i <= end; i++) {
-        if (target[i] === " " || missed[i]) { ok = false; break; } // 単語の中だけ・ミスが絡んだものは除く
-        if (i > start) {
-          if (intervals[i] === null) { ok = false; break; }
-          sum += intervals[i];
-        }
+        if (!seq[i].ok) { ok = false; break; } // 使えないキーが絡んだものは除く
       }
       if (!ok) continue;
-      const key = target.slice(start, end + 1); // 大文字・小文字は区別する
+      const key = seq.slice(start, end + 1).map(function (k) { return k.label; }).join("");
       const e = map.get(key) || { values: [] };
-      e.values.push(sum / (n - 1)); // 1回ごとの値（分布・標準偏差に使う）
+      e.values.push((seq[end].t - seq[start].t) / (n - 1)); // 1回ごとの値（分布・標準偏差に使う）
       map.set(key, e);
     }
     return map;

@@ -30,24 +30,24 @@
       const ids = new Set(picked.map(function (s) { return s.id; }));
       const bigrams = new Map();
       const trigrams = new Map();
-      let ikiSum = 0;
-      let ikiCount = 0;
       ngramSummaryEl.textContent = "集計中…";
       return Store.eachRaw(ids, function (raw) {
-        const missed = new Array(raw.text.length).fill(false);
-        raw.missedPositions.forEach(function (i) { missed[i] = true; });
-        NGram.accumulate(bigrams, 2, raw.text, raw.intervals, missed);
-        NGram.accumulate(trigrams, 3, raw.text, raw.intervals, missed);
-        raw.intervals.forEach(function (v) {
-          if (v !== null) { ikiSum += v; ikiCount++; }
-        });
+        // 押したキーの記録（events の "k" の行）から数える。英語も日本語も同じ
+        NGram.accumulate(bigrams, 2, raw.events);
+        NGram.accumulate(trigrams, 3, raw.events);
       }).then(function () {
         if (myId !== loadId) return;
-        // 色の基準：選んだ記録の、各文字の最後の打鍵の間隔の平均（結果画面の点線と同じ考え方）
+        // 色の基準：選んだ記録の、n-gram に使えるキーの間隔（bigram の1回ごとの値）すべての平均
+        const allBi = NGram.toRows(bigrams);
+        let ikiSum = 0;
+        let ikiCount = 0;
+        allBi.forEach(function (r) {
+          r.values.forEach(function (v) { ikiSum += v; ikiCount++; });
+        });
         const base = ikiCount ? ikiSum / ikiCount : 0;
         const min = Number(minEl.value);
         const keep = function (r) { return r.count >= min; };
-        const bi = NGram.toRows(bigrams).filter(keep);
+        const bi = allBi.filter(keep);
         const tri = NGram.toRows(trigrams).filter(keep);
         bigramTable.renderRows(bigramEl, bi, base);
         trigramTable.renderRows(trigramEl, tri, base);

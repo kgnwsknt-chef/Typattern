@@ -644,7 +644,11 @@
       return;
     }
     const now = performance.now();
-    if (Keys.isShift(e.code)) heldShifts.add(e.code);
+    if (Keys.isShift(e.code)) {
+      // 押しっぱなしの Shift のキーリピートは記録しない（押した1回だけ残す）
+      if (heldShifts.has(e.code)) return;
+      heldShifts.add(e.code);
+    }
     if (typer) {
       handleJaKey(e, now);
       return;
@@ -652,8 +656,14 @@
     if (!Keys.isShift(e.code)) keyTime = now; // Shift だけでは入力欄は変わらない
     logKey(e, now);
   });
+  // Shift を離したときは "u" の行を残す（どのキーを Shift と同時に押したか分かるように。n-gram で使う）
+  //   [経過ms, "u", 物理キーの番号, 打っている位置, null]
   input.addEventListener("keyup", function (e) {
-    if (Keys.isShift(e.code)) heldShifts.delete(e.code);
+    if (!Keys.isShift(e.code)) return;
+    heldShifts.delete(e.code);
+    if (startTime && !finished) {
+      events.push([round1(performance.now() - startTime), "u", Keys.number(e.code), typer ? typer.pos : input.value.length, null]);
+    }
   });
   ["paste", "drop", "cut"].forEach(function (type) {
     input.addEventListener(type, function (e) { e.preventDefault(); });
@@ -663,7 +673,13 @@
   });
 
   input.addEventListener("focus", function () { board.classList.remove("blurred"); });
-  input.addEventListener("blur", function () { board.classList.add("blurred"); });
+  input.addEventListener("blur", function () {
+    board.classList.add("blurred");
+    // 入力欄の外で Shift を離すと keyup が来ないので、ここで離したことにする
+    heldShifts.forEach(function (code) {
+      input.dispatchEvent(new KeyboardEvent("keyup", { code: code, key: "Shift" }));
+    });
+  });
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {

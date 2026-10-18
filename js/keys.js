@@ -36,9 +36,16 @@ const Keys = (function () {
   ];
 
   const byCode = {};
+  const byNumber = {}; // 番号 → QWERTY の文字（同じ番号のキーは先に書いた方）
   TABLE.forEach(function (row) {
     byCode[row[0]] = { number: row[1], plain: row[2], shifted: row[3] };
+    if (!(row[1] in byNumber)) byNumber[row[1]] = row[2];
   });
+
+  // 番号のキーに US の QWERTY で割り当てられている文字（Shift なし）。文字のないキーは null
+  function label(number) {
+    return byNumber[number] === undefined ? null : byNumber[number];
+  }
 
   // 物理キーの番号（"11" など）。表にないキー（Ctrl・矢印など）は null
   function number(code) {
@@ -56,5 +63,9 @@ const Keys = (function () {
     return code === "ShiftLeft" || code === "ShiftRight";
   }
 
-  return { number: number, char: char, isShift: isShift, BACKSPACE: "0d" };
+  function isShiftNumber(n) {
+    return n === "30" || n === "3c";
+  }
+
+  return { number: number, char: char, label: label, isShift: isShift, isShiftNumber: isShiftNumber, BACKSPACE: "0d", SPACE: "45" };
 })();
