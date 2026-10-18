@@ -265,6 +265,19 @@ body {
   color: var(--sub);
 }
 
+/* 達成レベルと次の目標 */
+.level-status {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.level-status .level-up {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 /* キーごとの間隔グラフ */
 /* 結果のタブ */
 .tabs {

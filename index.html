@@ -63,7 +63,10 @@
         <div><span id="res-time" class="result-value"></span><span class="result-label">秒</span></div>
         <div><span id="res-miss" class="result-value"></span><span class="result-label">ミス（未修正 <span id="res-uncorrected"></span>）</span></div>
         <div><span id="res-rank" class="result-value">-</span><span id="res-rank-label" class="result-label"></span></div>
+        <div title="習熟度のレベル（文字/秒で決まる。docs/levels.md）"><span id="res-level" class="result-value">-</span><span id="res-level-label" class="result-label">レベル</span></div>
       </div>
+      <!-- 達成レベル（言語・モードごと）と、次の目標までの差 -->
+      <p id="level-status" class="level-status" aria-live="polite"></p>
       <p id="save-status" class="save-status" aria-live="polite"></p>
 
       <div class="tabs" role="tablist">
@@ -106,6 +109,7 @@
   <script src="js/page-footer.js?v=30"></script>
   <script src="js/rhythm.js?v=30"></script>
   <script src="js/ranking.js?v=30"></script>
+  <script src="js/levels.js?v=30"></script>
   <script src="js/app.js?v=30"></script>
 </body>
 </html>

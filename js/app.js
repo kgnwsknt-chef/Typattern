@@ -42,8 +42,11 @@
     iki: document.getElementById("res-iki"),
     uncorrected: document.getElementById("res-uncorrected"),
     rank: document.getElementById("res-rank"),
-    rankLabel: document.getElementById("res-rank-label")
+    rankLabel: document.getElementById("res-rank-label"),
+    level: document.getElementById("res-level"),
+    levelLabel: document.getElementById("res-level-label")
   };
+  const levelStatusEl = document.getElementById("level-status");
   const rankingEl = document.getElementById("ranking");
   const rankingTitleEl = document.getElementById("ranking-title");
   const keyLayoutEl = document.getElementById("key-layout");
@@ -440,6 +443,52 @@
     return v === null ? null : Math.round(v * 10) / 10;
   }
 
+  // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
+
+  const LANG_NAME = { en: "英語", ja: "日本語" };
+  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語" };
+
+  // 今回のレベルと文字/秒。正確率が基準未満なら「-」
+  function renderLevel(session) {
+    const level = Levels.ofSession(session);
+    const rate = Levels.rateOfSession(session) || 0;
+    res.level.textContent = level ? level.name : "-";
+    res.levelLabel.textContent = "レベル（" + rate.toFixed(2) + " 文字/秒）" +
+      (!level && session.result.accuracy < Store.RANK_MIN_ACCURACY ? "・正確率 " + Store.RANK_MIN_ACCURACY + "% 未満" : "");
+  }
+
+  // 達成レベル（この言語・モード）と、次の目標までの差。sessions は今回を含む全記録
+  function renderLevelStatus(session, sessions) {
+    const mode = Levels.targetMode(session.mode);
+    const others = sessions.filter(function (s) { return s.id !== session.id; });
+    const before = Levels.achieved(others, session.lang, mode);
+    const now = Levels.achieved(sessions, session.lang, mode);
+    const chars = Levels.charsFor(session.lang);
+    const target = Levels.next(now);
+    levelStatusEl.textContent = "";
+    const add = function (text, className) {
+      const span = document.createElement("span");
+      if (className) span.className = className;
+      span.textContent = text;
+      levelStatusEl.appendChild(span);
+    };
+    add(LANG_NAME[session.lang] + "・" + MODE_NAME[mode] + "の達成レベル：" + (now ? now.name : "なし"));
+    if (now && (!before || now.index > before.index) && session.mode === mode) {
+      add("（今回 " + (before ? before.name + " から " : "") + now.name + " に上がりました！）", "level-up");
+    }
+    if (session.mode !== mode) add("（短い文章は達成に数えません）");
+    if (!target) {
+      add(" ／ 一番上のレベルです");
+      return;
+    }
+    // 次の目標までの差（あと何文字/秒 速くすればよいか）
+    const need = Levels.minRate(target, chars);
+    const gap = need - (Levels.rateOfSession(session) || 0);
+    add(" ／ 次の目標 " + target.name + "（" + need.toFixed(2) + " 文字/秒より速く）" +
+      (gap >= 0 ? "まで あと " + Math.max(gap, 0.01).toFixed(2) + " 文字/秒" : "：今回の速さは届いています" +
+        (session.mode !== mode ? "（文章で打つと達成になります）" : "（正確率 " + Store.RANK_MIN_ACCURACY + "% 以上で達成になります）")));
+  }
+
   // この回を概要（sessions）と生データ（raws）の2つの記録にして保存し、順位を出す。形式は docs/storage.md
   function saveSession(r) {
     const id = crypto.randomUUID();
@@ -480,12 +529,15 @@
     saveStatusEl.textContent = "記録を保存中…";
     res.rank.textContent = "-";
     res.rankLabel.textContent = "";
+    renderLevel(session);
+    levelStatusEl.textContent = "";
     Store.save(session, raw)
       .then(function () {
         Store.persist();
-        return Promise.all([Store.rankOf(session), Store.top(session, RANK_TOP)]);
+        return Promise.all([Store.rankOf(session), Store.top(session, RANK_TOP), Store.getAllSessions()]);
       })
       .then(function (v) {
+        renderLevelStatus(session, v[2]);
         const info = v[0];
         if (info.eligible) {
           res.rank.textContent = info.rank;
