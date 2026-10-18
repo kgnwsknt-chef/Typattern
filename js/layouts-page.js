@@ -13,7 +13,7 @@
   const layoutEl = document.getElementById("layout");
   const shapeEl = document.getElementById("shape");
   const viewEl = document.getElementById("view");
-  const viewLabelEl = document.getElementById("view-label");
+  const viewLabelEl = document.getElementById("view-bar"); // シフト面の選択（配列図のすぐ上。かな配列のときだけ出す）
   const legendEl = document.getElementById("kb-legend");
   const viewNowEl = document.getElementById("view-now");
   const keyboardEl = document.getElementById("keyboard");
@@ -74,8 +74,9 @@
     // かな配列のシフト用のキー（前置・後置）。外形線の色を変えて示す
     const shifts = layout.type === "kana" ? layout.kana.shiftKeys(SHIFT_MIN) : { prefix: [], postfix: [] };
     keyboardEl.classList.toggle("kb-kana", layout.type === "kana");
-    viewNowEl.hidden = !view;
-    if (view) viewNowEl.textContent = "表示中のシフト面：" + view.label;
+    // 「自動」のときだけ、今どのシフト面を出しているかを選択の横に書く（ほかは選択に出ているので書かない）
+    viewNowEl.hidden = !view || viewEl.value !== "auto";
+    if (view) viewNowEl.textContent = "→ " + view.label;
     shape.keys.forEach(function (k) {
       const el = k.el;
       const pressed = el.classList.contains("pressed");

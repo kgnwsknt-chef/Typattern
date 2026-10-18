@@ -23,9 +23,6 @@
       <label class="filter">キーボードの形
         <select id="shape" class="layout-select" title="配列図に描くキーボードの物理的な形"></select>
       </label>
-      <label id="view-label" class="filter" hidden>シフト面
-        <select id="view" class="layout-select" title="配列図に出すかなのシフト面（どのキーと組み合わせたときか）"></select>
-      </label>
     </div>
     <div id="layout-actions" class="layout-actions">
       <button id="layout-save" class="text-btn" type="button" title="この配列をブラウザに保存する" hidden>この配列を保存する</button>
@@ -33,7 +30,13 @@
       <span id="layout-msg" class="trial-last"></span>
     </div>
     <p id="kb-legend" class="rhythm-legend"></p>
-    <p id="view-now" class="view-now" hidden></p>
+    <!-- かな配列のとき：配列図のすぐ上でシフト面を選ぶ。「自動」のときは、今どのシフト面を出しているかを横に書く -->
+    <div id="view-bar" class="view-bar" hidden>
+      <label class="filter">シフト面
+        <select id="view" class="layout-select" title="配列図に出すかなのシフト面（どのキーと組み合わせたときか）"></select>
+      </label>
+      <span id="view-now" class="view-now"></span>
+    </div>
     <div class="kb-scroll">
       <div id="keyboard" class="kb"></div>
     </div>

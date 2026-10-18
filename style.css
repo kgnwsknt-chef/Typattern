@@ -634,8 +634,19 @@ a.text-btn {
   margin-bottom: 6px;
 }
 
+.view-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 4px;
+}
+
+.view-bar[hidden] {
+  display: none;
+}
+
 .view-now {
-  margin: 0 0 4px;
   font-size: 13px;
   color: var(--accent);
 }
