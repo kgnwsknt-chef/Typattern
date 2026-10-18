@@ -37,9 +37,11 @@ const Keys = (function () {
 
   const byCode = {};
   const byNumber = {}; // 番号 → QWERTY の文字（同じ番号のキーは先に書いた方）
+  const rowByNumber = {}; // 番号 → TABLE の行（同じ番号のキーは先に書いた方）
   TABLE.forEach(function (row) {
     byCode[row[0]] = { number: row[1], plain: row[2], shifted: row[3] };
     if (!(row[1] in byNumber)) byNumber[row[1]] = row[2];
+    if (!(row[1] in rowByNumber)) rowByNumber[row[1]] = row;
   });
 
   // 番号のキーに US の QWERTY で割り当てられている文字（Shift なし）。文字のないキーは null
@@ -59,6 +61,13 @@ const Keys = (function () {
     return shift ? k.shifted : k.plain;
   }
 
+  // 番号のキーで入力される US キーボードの文字（記録の "k" の行から打った文字を求めるのに使う）。文字のないキーは null
+  function charOf(number, shift) {
+    const row = rowByNumber[number];
+    if (!row) return null;
+    return shift ? row[3] : row[2];
+  }
+
   function isShift(code) {
     return code === "ShiftLeft" || code === "ShiftRight";
   }
@@ -67,5 +76,5 @@ const Keys = (function () {
     return n === "30" || n === "3c";
   }
 
-  return { number: number, char: char, label: label, isShift: isShift, isShiftNumber: isShiftNumber, BACKSPACE: "0d", SPACE: "45" };
+  return { number: number, char: char, charOf: charOf, label: label, isShift: isShift, isShiftNumber: isShiftNumber, BACKSPACE: "0d", SPACE: "45" };
 })();

@@ -1274,3 +1274,18 @@ a.text-btn {
   color: var(--sub);
   font-size: 12px;
 }
+
+/* 記録のページ：ランキングの行をクリックしたときの、その回のキーごとの間隔 */
+.sv-title {
+  margin: 0;
+}
+
+.sv-note {
+  margin: 0 0 8px;
+  color: var(--error);
+  font-size: 13px;
+}
+
+.rk-table tr.bg-row {
+  cursor: pointer;
+}

@@ -11,6 +11,16 @@
   const rankingEl = document.getElementById("ranking");
   const rankingLegendEl = document.getElementById("ranking-legend");
   const levelsEl = document.getElementById("levels");
+  // ランキングの行をクリックしたときに出す、その回のキーごとの間隔
+  const svEl = document.getElementById("session-view");
+  const svSummaryEl = document.getElementById("sv-summary");
+  const svNoteEl = document.getElementById("sv-note");
+  const svWhatEl = document.getElementById("sv-what");
+  const svAvgEl = document.getElementById("sv-avg");
+  const svChartEl = document.getElementById("sv-chart");
+  let selectedId = null; // 表示中の回の id
+  let rankingRows = [];  // ランキングに出している回（順位を求めるのに使う）
+  let viewId = 0;        // 古い読み込みの結果で上書きしないための番号
   const filters = Filters.init(update);
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
@@ -89,9 +99,76 @@
     const catText = cats.size === 0 ? "" : "（" + (cats.size === 1 ? Array.from(cats)[0] : "区分が混ざっています") + "）";
     rankingLegendEl.textContent = "Top " + RANK_TOP + catText + " ／ 平均 IKI の小さい順、同じなら正確率の高い順 ／ 正確率 " +
       Store.RANK_MIN_ACCURACY + "% 未満は対象外 ／ 対象 " + rows.length + " 回";
-    Ranking.render(rankingEl, rows.slice(0, RANK_TOP), null, { category: cats.size > 1, emptyText: "データなし" });
+    rankingRows = rows.slice(0, RANK_TOP);
+    // 絞り込みを変えて、表示中の回がランキングから外れたら閉じる。残っていれば順位などを出し直す
+    const sel = rankingRows.find(function (s) { return s.id === selectedId; });
+    if (sel) showSession(sel, false);
+    else closeSession();
+    drawRanking(cats.size > 1);
   }
 
+  let rankingCategory = false;
+  function drawRanking(category) {
+    rankingCategory = category;
+    Ranking.render(rankingEl, rankingRows, null, {
+      category: category,
+      emptyText: "データなし",
+      selectedId: selectedId,
+      onSelect: function (s) {
+        // 同じ行をもう一度クリックすると閉じる
+        if (s.id === selectedId) closeSession();
+        else showSession(s, true);
+        drawRanking(rankingCategory);
+      }
+    });
+  }
+
+  // その回の生データを読み、結果画面と同じキーごとの間隔のグラフを描く。scroll なら、その区分までページをスクロールする
+  function showSession(session, scroll) {
+    selectedId = session.id;
+    const myId = ++viewId;
+    const rank = rankingRows.findIndex(function (s) { return Store.compare(s, session) === 0; }) + 1;
+    let raw = null;
+    Promise.all([
+      Store.eachRaw(new Set([session.id]), function (r) { raw = r; }),
+      Store.getAllLayouts()
+    ]).then(function (v) {
+      if (myId !== viewId) return;
+      svEl.hidden = false;
+      svSummaryEl.textContent = SessionView.summary(session, rank);
+      if (!raw) {
+        svNoteEl.hidden = false;
+        svNoteEl.textContent = "この回の生データが見つかりません。";
+        svChartEl.textContent = "";
+        svWhatEl.textContent = "-";
+        svAvgEl.textContent = "-";
+      } else {
+        const r = SessionView.render(svChartEl, session, raw, v[1]);
+        svWhatEl.textContent = r.what;
+        svAvgEl.textContent = r.avg;
+        svNoteEl.hidden = !r.note;
+        svNoteEl.textContent = r.note;
+      }
+      if (scroll) svEl.scrollIntoView({ block: "start", behavior: "smooth" });
+    }).catch(function (err) {
+      console.error(err);
+      svEl.hidden = false;
+      svNoteEl.hidden = false;
+      svNoteEl.textContent = "この回の記録を読み込めませんでした: " + err.message;
+    });
+  }
+
+  function closeSession() {
+    selectedId = null;
+    viewId++;
+    svEl.hidden = true;
+    svChartEl.textContent = "";
+  }
+
+  document.getElementById("sv-close").addEventListener("click", function () {
+    closeSession();
+    drawRanking(rankingCategory);
+  });
   groupEl.addEventListener("change", update);
   // バージョン表示と、記録の書き出し・読み込み（読み込んだら表示を更新する）
   PageFooter.init({ onImport: update });

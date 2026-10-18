@@ -18,6 +18,7 @@ const Ranking = (function () {
   // rows は平均 IKI の小さい順（同じなら正確率の高い順）の概要の記録。currentId の行を目立たせる
   // opts.category: true なら「区分」の列を出す（区分が混ざった一覧のとき）
   // opts.emptyText: 記録がないときの文言
+  // opts.onSelect(session, rank): 行をクリック（または Enter）したときに呼ぶ。opts.selectedId の行は選んだ印を付ける
   function render(container, rows, currentId, opts) {
     opts = opts || {};
     container.textContent = "";
@@ -54,6 +55,17 @@ const Ranking = (function () {
 
       const tr = document.createElement("tr");
       if (s.id === currentId) tr.className = "rk-current";
+      if (opts.onSelect) {
+        const r = rank;
+        tr.classList.add("bg-row");
+        if (s.id === opts.selectedId) tr.classList.add("bg-selected");
+        tr.tabIndex = 0;
+        tr.title = "クリックでこの回のキーごとの間隔を表示";
+        tr.addEventListener("click", function () { opts.onSelect(s, r); });
+        tr.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onSelect(s, r); }
+        });
+      }
       const cells = [
         rank,
         s.result.avgIki.toFixed(1),

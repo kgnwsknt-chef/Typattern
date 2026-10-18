@@ -33,6 +33,25 @@ const Rhythm = (function () {
     return draw(container, words);
   }
 
+  // 日本語の判定（js/typer.js）の確定したまとまり units から、renderKeys に渡すかなのまとまりを作る
+  //   target：打ったお題（読み）、missed：位置ごとのミスの有無（true/false の配列）
+  function kanaColumns(units, target, missed) {
+    return units.map(function (u) {
+      const caption = target.substr(u.pos, u.len);
+      return {
+        caption: caption === " " ? "_" : caption, // 単語の間のスペースは英語と同じく _ で出す
+        // 飛ばしたかな（打ち方がない）はキーがないので、空の列を1つ置く
+        keys: u.keyList.length === 0 ? [{ ch: "", v: null }] : u.keyList.map(function (k) {
+          // 文字のないキー（JIS の「ろ」など）は ? で表す
+          return { ch: k.ch === "\u0000" ? "?" : k.ch, v: k.prev === null ? null : k.time - k.prev };
+        }),
+        missed: missed.slice(u.pos, u.pos + u.len).some(function (m) { return m; }),
+        breakBefore: u.pos > 0 && target[u.pos - 1] === "。",
+        join: /^[、。ーぁぃぅぇぉゃゅょっゎ]/.test(caption)
+      };
+    });
+  }
+
   // words：折り返しの単位 [{ breakBefore, groups: [{ caption, missed, cols: [{ ch, v, missed }] }] }]
   function draw(container, words) {
     container.textContent = "";
@@ -146,5 +165,5 @@ const Rhythm = (function () {
     return colorFor(v, avg, readHue());
   }
 
-  return { render: render, renderKeys: renderKeys, color: color };
+  return { render: render, renderKeys: renderKeys, kanaColumns: kanaColumns, color: color };
 })();

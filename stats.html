@@ -71,6 +71,20 @@
       <p id="ranking-legend" class="rhythm-legend"></p>
       <div id="ranking" class="ranking-scroll"></div>
     </section>
+
+    <!-- ランキングの行をクリックしたとき：その回のキーごとの間隔（結果画面と同じグラフ） -->
+    <section id="session-view" class="stats-section" hidden>
+      <div class="dist-head">
+        <h2 class="stats-title sv-title">その回のキーごとの間隔</h2>
+        <button id="sv-close" type="button" class="dist-close" title="閉じる">×</button>
+      </div>
+      <p id="sv-summary" class="stats-summary"></p>
+      <p id="sv-note" class="sv-note" hidden></p>
+      <div class="rhythm">
+        <p class="rhythm-legend"><span id="sv-what"></span>。その平均 <span id="sv-avg" class="rhythm-avg"></span> ms（点線。修正の時間を含まないので、結果の平均 IKI より小さくなる）／ 速い<span class="rhythm-scale"></span>遅い ／ 赤い文字 = ミスあり</p>
+        <div id="sv-chart" class="rhythm-chart"></div>
+      </div>
+    </section>
   </main>
 
   <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->
@@ -92,10 +106,15 @@
   <script src="js/store.js?v=37"></script>
   <script src="js/page-footer.js?v=37"></script>
   <script src="js/rhythm.js?v=37"></script>
+  <script src="js/keys.js?v=37"></script>
+  <script src="js/romaji.js?v=37"></script>
+  <script src="js/typer.js?v=37"></script>
+  <script src="js/kana-layout.js?v=37"></script>
   <script src="js/ranking.js?v=37"></script>
   <script src="js/levels.js?v=37"></script>
   <script src="js/filters.js?v=37"></script>
   <script src="js/trend.js?v=37"></script>
+  <script src="js/session-view.js?v=37"></script>
   <script src="js/stats.js?v=37"></script>
 </body>
 </html>

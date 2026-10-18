@@ -456,20 +456,7 @@
   // 日本語の「キーごとの間隔」のグラフの元：最後に残ったかなごとに、そのかなを打ったキーと間隔
   // 間隔は、そのキーを押した時刻と直前のキー（Backspace を含む）の時刻の差。最初のキーは null
   function keyColumns() {
-    return typer.units.map(function (u) {
-      const caption = target.substr(u.pos, u.len);
-      return {
-        caption: caption === " " ? "_" : caption, // 単語の間のスペースは英語と同じく _ で出す
-        // 飛ばしたかな（打ち方がない）はキーがないので、空の列を1つ置く
-        keys: u.keyList.length === 0 ? [{ ch: "", v: null }] : u.keyList.map(function (k) {
-          // 文字のないキー（JIS の「ろ」など）は ? で表す
-          return { ch: k.ch === "\u0000" ? "?" : k.ch, v: k.prev === null ? null : k.time - k.prev };
-        }),
-        missed: missed.slice(u.pos, u.pos + u.len).some(function (m) { return m; }),
-        breakBefore: u.pos > 0 && target[u.pos - 1] === "。",
-        join: /^[、。ーぁぃぅぇぉゃゅょっゎ]/.test(caption)
-      };
-    });
+    return Rhythm.kanaColumns(typer.units, target, missed);
   }
 
   // ms を 0.1ms 単位に丸める（保存サイズを抑えるため）
