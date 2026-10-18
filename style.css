@@ -505,6 +505,153 @@ a.text-btn {
   text-decoration: none;
 }
 
+/* ---- 配列のページ（layouts.html） ---- */
+
+/* 配列図。狭い画面では横にスクロールする */
+.kb-scroll {
+  overflow-x: auto;
+  padding: 4px 0 12px;
+}
+
+.kb {
+  position: relative;
+  margin: 0 auto;
+}
+
+.kb-key {
+  position: absolute;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  font-family: var(--mono);
+  transition: background 0.05s;
+}
+
+/* 物理キーの番号（左上） */
+.kb-num {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  color: var(--sub);
+}
+
+/* Shift なしの文字（中央） */
+.kb-main {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5px;
+  text-align: center;
+  font-size: 17px;
+}
+
+/* Shift ありの文字（右上） */
+.kb-shift {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 11px;
+  color: var(--sub);
+}
+
+/* 文字のないキー（Tab・Shift など） */
+.kb-func {
+  background: #f4f4f4;
+}
+
+.kb-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  text-align: center;
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--sub);
+}
+
+/* Shift を押している間は、Shift ありの文字を目立たせる */
+.kb.shift-on .kb-shift {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.kb.shift-on .kb-main {
+  color: var(--typed);
+}
+
+/* 英字は Shift を押している間、大文字で表示する */
+.kb.shift-on .kb-main.kb-letter {
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* 試し打ちで押しているキー */
+.kb-key.pressed {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.kb-key.pressed span {
+  color: #ffffff;
+}
+
+/* 試し打ちの枠 */
+.trial {
+  position: relative;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 20px;
+  line-height: 1.5;
+  cursor: text;
+}
+
+.trial:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(26, 111, 216, 0.2);
+}
+
+.trial-output {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.trial-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.trial-hint[hidden] {
+  display: none;
+}
+
+.trial-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.trial-warn {
+  color: var(--error);
+}
+
 .stats-main {
   max-width: 900px;
 }

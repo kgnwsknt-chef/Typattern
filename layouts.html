@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typattern キー配列</title>
+  <link rel="stylesheet" href="style.css?v=29">
+</head>
+<body>
+  <header class="header page-header">
+    <div class="logo">Typattern<span id="version" class="version"></span></div>
+    <h1 class="page-title">キー配列</h1>
+  </header>
+
+  <main class="main stats-main">
+    <h2 class="stats-title">配列図</h2>
+    <div class="filters stats-filters">
+      <label class="filter">配列
+        <select id="layout" class="layout-select" title="表示するキー配列">
+          <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
+      <label class="filter">キーボードの形
+        <select id="shape" class="layout-select" title="配列図に描くキーボードの物理的な形"></select>
+      </label>
+    </div>
+    <p class="rhythm-legend">左上の小さな数字は物理キーの番号（行＋列。列は16進数）。大きい文字は Shift なし、上の小さい文字は Shift を押したときの文字。</p>
+    <div class="kb-scroll">
+      <div id="keyboard" class="kb"></div>
+    </div>
+
+    <h2 class="stats-title">試し打ち</h2>
+    <p class="rhythm-legend">下の枠をクリックしてからキーを押すと、配列図のそのキーの色が変わり、打った文字が出ます。IME はオフにしてください。記録には残りません。</p>
+    <div id="trial" class="trial" tabindex="0" aria-label="試し打ち">
+      <div id="trial-output" class="trial-output"></div>
+      <div id="trial-hint" class="trial-hint">ここをクリックして打ってください</div>
+    </div>
+    <div class="trial-bar">
+      <span id="trial-last" class="trial-last"></span>
+      <button id="trial-clear" class="text-btn" type="button">消す</button>
+    </div>
+  </main>
+
+  <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->
+  <footer class="footer page-footer">
+    <nav class="footer-links" aria-label="ページ">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="成績の推移とランキング">推移・ランキング</a>
+      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+      <a class="text-btn" href="layouts.html" aria-current="page" title="キー配列の確認と試し打ち">キー配列</a>
+    </nav>
+    <div class="footer-actions">
+      <button id="export-btn" class="text-btn" type="button" title="全記録を JSON ファイルに保存">記録を書き出す</button>
+      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録を追加">記録を読み込む</button>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+    </div>
+  </footer>
+
+  <script src="js/store.js?v=29"></script>
+  <script src="js/keys.js?v=29"></script>
+  <script src="js/keyboard-shapes.js?v=29"></script>
+  <script src="js/page-footer.js?v=29"></script>
+  <script src="js/layouts-page.js?v=29"></script>
+</body>
+</html>
