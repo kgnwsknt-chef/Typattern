@@ -56,6 +56,8 @@ const Romaji = (function () {
     const res = [];
     const k = text[pos];
     if (k === undefined) return res;
+    // 単語モードの単語の間のスペースは、スペースキーで打つ（「ん」の次がスペースなら n 1つでもよい）
+    if (k === " ") return [{ seq: " ", len: 1 }];
     const two = text.substr(pos, 2);
     if (two.length === 2 && TABLE[two]) {
       TABLE[two].forEach(function (seq) { res.push({ seq: seq, len: 2 }); });

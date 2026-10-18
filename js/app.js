@@ -9,6 +9,8 @@
   function wordlistDir() { return "wordlists/" + lang + "/"; }
   // 単語モードのお題の長さ（文字数）の目安
   const WORDS_TARGET_LENGTH = 300;
+  // 日本語の単語モードで、画面の1行に並べる読みの文字数の目安
+  const JA_LINE_LENGTH = 40;
   // ランキングに表示する件数
   const RANK_TOP = 30;
   // 選んだキー配列・モードを覚えておく localStorage のキー
@@ -156,7 +158,13 @@
           return fetchText(wordlistDir() + name + ".txt").then(function (t) {
             const words = t.split(/\r?\n/)
               .map(function (w) { return w.trim(); })
-              .filter(function (w) { return w && w[0] !== "#"; });
+              .filter(function (w) { return w && w[0] !== "#"; })
+              .map(function (w) {
+                if (lang !== "ja") return w;
+                // 日本語は「表示する語<タブ>読み」。かなだけの語は読みを省いてよい
+                const cols = w.split("\t");
+                return { display: cols[0].trim(), reading: (cols[1] || cols[0]).trim() };
+              });
             return { name: name, words: words };
           });
         }));
@@ -168,23 +176,52 @@
   }
 
   // 単語リストから重ならないように単語を選んでランダムに並べ、約 WORDS_TARGET_LENGTH 文字のお題にする
+  // 単語の間はスペース（日本語も打つ）。返り値 { text, lines }。日本語は lines（表示する語の行と読みの行）も作る
   function makeWordText(words) {
     const pool = words.slice();
     for (let i = pool.length - 1; i > 0; i--) { // シャッフル（Fisher-Yates）
       const j = Math.floor(Math.random() * (i + 1));
       const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
     }
-    let text = "";
+    const reading = function (w) { return typeof w === "string" ? w : w.reading; };
+    let picked = [];
+    let length = 0; // 読みをスペースでつないだ長さ
     for (let i = 0; i < pool.length; i++) {
-      const next = text ? text + " " + pool[i] : pool[i];
-      if (next.length > WORDS_TARGET_LENGTH) {
+      const next = length ? length + 1 + reading(pool[i]).length : reading(pool[i]).length;
+      if (next > WORDS_TARGET_LENGTH) {
         // 次の語を足すと超えるときは、足した方と足さない方のうち目安に近い方にする
-        if (next.length - WORDS_TARGET_LENGTH < WORDS_TARGET_LENGTH - text.length) text = next;
+        if (next - WORDS_TARGET_LENGTH < WORDS_TARGET_LENGTH - length) picked.push(pool[i]);
         break;
       }
-      text = next;
+      picked.push(pool[i]);
+      length = next;
     }
-    return text;
+    const text = picked.map(reading).join(" ");
+    if (typeof picked[0] === "string") return { text: text };
+    // 日本語：画面では JA_LINE_LENGTH 文字ほどで行を分け、表示する語と読みを1行ずつ並べる。
+    // 行の終わりのスペースは読みの行に残す（行をつなぐとお題 text になる）
+    const lines = [];
+    let line = [];
+    let lineLength = 0;
+    picked.forEach(function (w, i) {
+      if (line.length && lineLength + 1 + w.reading.length > JA_LINE_LENGTH) {
+        lines.push(line);
+        line = [];
+        lineLength = 0;
+      }
+      lineLength += (line.length ? 1 : 0) + w.reading.length;
+      line.push(w);
+    });
+    if (line.length) lines.push(line);
+    return {
+      text: text,
+      lines: lines.map(function (ws, i) {
+        return {
+          display: ws.map(function (w) { return w.display; }).join(" "),
+          reading: ws.map(function (w) { return w.reading; }).join(" ") + (i < lines.length - 1 ? " " : "")
+        };
+      })
+    };
   }
 
   function showLoadError(err) {
@@ -201,7 +238,8 @@
     if (mode === "words") {
       // 単語モードは毎回新しく作る
       const list = sources[Math.floor(Math.random() * sources.length)];
-      current = { name: list.name, text: makeWordText(list.words) };
+      const made = makeWordText(list.words);
+      current = { name: list.name, text: made.text, lines: made.lines };
     } else {
       let i;
       do {
@@ -215,10 +253,6 @@
 
   // モードを切り替えて、そのモードのお題を読み込み直す
   function setMode(newMode) {
-    // 日本語の単語リストはまだないので、日本語では単語モードを選べない
-    const wordsOption = modeEl.querySelector('option[value="words"]');
-    wordsOption.disabled = lang === "ja";
-    if (lang === "ja" && newMode === "words") newMode = "normal";
     mode = newMode;
     modeEl.value = mode;
     sources = [];
@@ -350,7 +384,7 @@
     [["rg-typed", g.typed], ["rg-rest", g.rest], ["rg-ahead", g.ahead]].forEach(function (p) {
       const span = document.createElement("span");
       span.className = p[0];
-      span.textContent = p[1];
+      span.textContent = p[1].replace(/ /g, "␣"); // 単語の間のスペースは見えるように␣で出す
       romajiGuideEl.appendChild(span);
     });
   }
@@ -425,7 +459,7 @@
     return typer.units.map(function (u) {
       const caption = target.substr(u.pos, u.len);
       return {
-        caption: caption,
+        caption: caption === " " ? "_" : caption, // 単語の間のスペースは英語と同じく _ で出す
         // 飛ばしたかな（打ち方がない）はキーがないので、空の列を1つ置く
         keys: u.keyList.length === 0 ? [{ ch: "", v: null }] : u.keyList.map(function (k) {
           // 文字のないキー（JIS の「ろ」など）は ? で表す

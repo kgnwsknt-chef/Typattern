@@ -74,6 +74,8 @@ const KanaLayout = (function () {
     // 「ぴゃ」のように複数のかなを1つの並びで打てるときは、長い方を先にする。表にないかなは空
     function options(text, pos) {
       const res = [];
+      // 単語モードの単語の間のスペースは、表になくてもスペースキーで打てる
+      if (text[pos] === " " && !byKana.has(" ")) return [{ seq: " ", len: 1 }];
       for (let len = Math.min(maxKana, text.length - pos); len > 0; len--) {
         const list = byKana.get(text.substr(pos, len));
         if (list) list.forEach(function (seq) { res.push({ seq: seq, len: len }); });
