@@ -1,6 +1,6 @@
 // 推移・ランキングのページの「推移」グラフ。上段に平均 IKI（左軸 ms・右軸 打/s）、
 // 下段に正確率（修正後）とミスも数えた正確率を描く
-// 決まりは docs/scoring.md の「成績の推移」を参照
+// 決まりは docs/records.md の「推移」を参照
 const Trend = (function () {
   "use strict";
 

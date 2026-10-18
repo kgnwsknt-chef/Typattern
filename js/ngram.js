@@ -223,7 +223,7 @@ const NGram = (function () {
 
   // お題と位置ごとの間隔・ミスから、n-gram ごとの IKI を map に足し込む
   // （複数回分を同じ map に足せば、全記録の集計になる）
-  // n-gram の IKI = 中の (n-1) 個の打鍵間隔の平均。ルールは docs/scoring.md を参照
+  // n-gram の IKI = 中の (n-1) 個の打鍵間隔の平均。ルールは docs/analysis.md を参照
   function accumulate(map, n, target, intervals, missed) {
     for (let end = n - 1; end < target.length; end++) {
       const start = end - n + 1;
