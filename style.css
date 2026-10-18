@@ -1246,3 +1246,11 @@ a.text-btn {
     max-height: 320px;
   }
 }
+
+/* ページ下部の「記録を書き出す」の左：保存しているデータの大きさ */
+.data-size {
+  align-self: center;
+  margin-right: 4px;
+  color: var(--sub);
+  font-size: 12px;
+}

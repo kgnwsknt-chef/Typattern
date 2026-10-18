@@ -11,6 +11,8 @@ const PageFooter = (function () {
     // 表示は「v0.番号」（?v=28 なら v0.28）
     document.getElementById("version").textContent = ASSET_VERSION ? "v0." + ASSET_VERSION : "";
 
+    refreshSize();
+
     const importFileEl = document.getElementById("import-file");
     document.getElementById("export-btn").addEventListener("click", function () {
       Store.exportFile()
@@ -30,11 +32,33 @@ const PageFooter = (function () {
           alert(r.added + " 件の記録を読み込みました。" + (r.skipped ? "（" + r.skipped + " 件はすでにあるため飛ばしました）" : "") +
             (r.layoutsAdded ? "\nキー配列を " + r.layoutsAdded + " 件読み込みました。" : "") +
             (r.layoutConflicts.length ? "\n同じ名前で中身の違うキー配列があるため、次の配列は読み込まず今のものを残しました：" + r.layoutConflicts.join("、") : ""));
-          if ((r.added || r.layoutsAdded) && opts.onImport) opts.onImport();
+          if (r.added || r.layoutsAdded) {
+            refreshSize();
+            if (opts.onImport) opts.onImport();
+          }
         })
         .catch(function (err) { alert("読み込めませんでした: " + err.message); });
     });
   }
 
-  return { init: init };
+  // 「記録を書き出す」の左に、保存しているデータの大きさを出す（記録やキー配列を保存・削除したときも呼ぶ）
+  function refreshSize() {
+    const el = document.getElementById("data-size");
+    if (!el) return;
+    Store.dataSize()
+      .then(function (bytes) { el.textContent = "保存データ " + formatSize(bytes); })
+      .catch(function (err) {
+        console.error(err);
+        el.textContent = "";
+      });
+  }
+
+  // バイト数を KB・MB で表す（1 KB = 1024 バイト）
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1024 / 1024).toFixed(2) + " MB";
+  }
+
+  return { init: init, refreshSize: refreshSize };
 })();

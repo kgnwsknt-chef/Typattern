@@ -568,6 +568,7 @@
     Store.save(session, raw)
       .then(function () {
         Store.persist();
+        PageFooter.refreshSize();
         return Promise.all([Store.rankOf(session), Store.top(session, RANK_TOP), Store.getAllSessions()]);
       })
       .then(function (v) {

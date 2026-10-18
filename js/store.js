@@ -196,6 +196,16 @@ const Store = (function () {
     });
   }
 
+  // 保存している記録とキー配列の大きさ（バイト）。書き出すファイルの中身（JSON）と同じ形で数える
+  // （navigator.storage.estimate は、github.io の同じ利用者の他のサイトの分も含むため使わない）
+  function dataSize() {
+    return Promise.all([getAllSessions(), getAllRaws(), getAllLayouts()]).then(function (all) {
+      const data = { app: EXPORT_APP, schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString(),
+        sessions: all[0], raws: all[1], layouts: all[2] };
+      return new Blob([JSON.stringify(data)]).size;
+    });
+  }
+
   // 全記録と登録したキー配列を JSON ファイルとしてダウンロードさせる。返り値 { sessions, layouts }（件数）
   function exportFile() {
     return Promise.all([getAllSessions(), getAllRaws(), getAllLayouts()]).then(function (all) {
@@ -309,6 +319,7 @@ const Store = (function () {
     deleteLayout: deleteLayout,
     countSessionsWithLayout: countSessionsWithLayout,
     exportFile: exportFile,
+    dataSize: dataSize,
     importFile: importFile,
     persist: persist
   };

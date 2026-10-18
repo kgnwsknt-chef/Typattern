@@ -299,6 +299,7 @@
         layoutEl.value = name;
         changeLayout();
         layoutMsgEl.textContent = "「" + name + "」を保存しました。";
+        PageFooter.refreshSize();
       });
     }).catch(function (err) {
       console.error(err);
@@ -318,6 +319,7 @@
         layoutEl.value = "qwerty";
         changeLayout();
         layoutMsgEl.textContent = "「" + layout.name + "」を削除しました。";
+        PageFooter.refreshSize();
       });
     }).catch(function (err) {
       console.error(err);
