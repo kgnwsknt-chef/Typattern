@@ -14,7 +14,7 @@ const Trend = (function () {
   const T2 = T + PH1 + GAP; // 下段の上端
 
   // sessions：絞り込んだ概要の記録（古い順）。group："run"（1回ごと）か "day"（日ごと）
-  // opts.levelUps：達成レベルが上がった回（Levels.levelUps の結果）。その点に「SB達成」のように書く
+  // opts.levelUps：達成レベルが上がった回（Levels.levelUps の結果）。その点に「英語・単語 SB達成」のように書く
   function render(container, legendEl, sessions, group, opts) {
     const ups = (opts && opts.levelUps) || new Map();
     container.textContent = "";
@@ -34,7 +34,7 @@ const Trend = (function () {
         Store.RANK_MIN_ACCURACY + "% 以上の回がない（全回の平均）／ 下段はその日の正確率の平均"
       : "● 1回ごとの平均 IKI ／ ○ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満（ランキング対象外。移動平均に含めない）／ ━ 移動平均（直近 " +
         MA_WINDOW + " 回）";
-    legendEl.textContent += " ／ 「SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
+    legendEl.textContent += " ／ 「英語・単語 SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
     legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
     // 平均 IKI は、英語は文字あたり、日本語はキーあたり。両方が混ざっているときは注意を出す
     const langs = new Set(list.map(function (s) { return s.lang; }));
@@ -103,15 +103,17 @@ const Trend = (function () {
       const c = svgEl("circle", { cx: X(p.x), cy: YI(p.iki), r: 3.5, class: "trend-point" + (p.eligible ? "" : " out") });
       c.appendChild(title(p.tip));
       svg.appendChild(c);
-      // 達成レベルが上がった点：輪で囲み、上に「SB達成」と書く
-      if (p.levelUp) {
+      // 達成レベルが上がった点：輪で囲み、上に「英語・単語 SB達成」と書く（日ごとで複数あるときは上へ重ねる）
+      if (p.levelUp.length) {
         svg.appendChild(svgEl("circle", { cx: X(p.x), cy: YI(p.iki), r: 7, class: "trend-levelup-ring" }));
         // 端の点では、文字が枠からはみ出さないよう寄せる
         const lx = X(p.x);
-        const anchor = lx > L + PW - 30 ? "end" : lx < L + 30 ? "start" : "middle";
-        const label = text(lx, YI(p.iki) - 11, p.levelUp, anchor, "trend-levelup");
-        label.appendChild(title(p.tip));
-        svg.appendChild(label);
+        const anchor = lx > L + PW - 60 ? "end" : lx < L + 60 ? "start" : "middle";
+        p.levelUp.forEach(function (s, k) {
+          const label = text(lx, YI(p.iki) - 11 - k * 12, s, anchor, "trend-levelup");
+          label.appendChild(title(p.tip));
+          svg.appendChild(label);
+        });
       }
     });
 
@@ -170,7 +172,7 @@ const Trend = (function () {
         acc: s.result.accuracy,
         accRaw: rawAccuracy(s),
         eligible: s.result.accuracy >= Store.RANK_MIN_ACCURACY,
-        levelUp: up ? up.level.name + "達成" : "",
+        levelUp: up ? [upLabel(up)] : [],
         tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + s.textId + "\n平均 IKI " + s.result.avgIki.toFixed(1) +
           " ms（" + (1000 / s.result.avgIki).toFixed(2) + " 打/s, " + speedText(s) + "）\n正確率 " +
           s.result.accuracy.toFixed(1) + "%（ミスも数えると " + rawAccuracy(s).toFixed(1) + "%）／ ミス " + s.result.misses +
@@ -217,7 +219,7 @@ const Trend = (function () {
         acc: acc,
         accRaw: accRaw,
         eligible: ok.length > 0,
-        levelUp: upList.map(function (u) { return u.level.name; }).join("・") + (upList.length ? "達成" : ""),
+        levelUp: upList.map(upLabel),
         tip: fmtDay(day) + " ／ " + ss.length + " 回（うち正確率 " + Store.RANK_MIN_ACCURACY + "% 以上 " + ok.length + " 回）\n平均 IKI " +
           iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%（ミスも数えると " + accRaw.toFixed(1) + "%）" +
           upList.map(function (u) { return "\n" + upText(u); }).join("")
@@ -238,6 +240,11 @@ const Trend = (function () {
     const level = Levels.ofSession(s);
     const rate = Levels.rateOfSession(s);
     return "レベル " + (level ? level.name : "なし") + (rate !== null ? "（" + rate.toFixed(2) + " 文字/秒）" : "");
+  }
+
+  // グラフの点の上に書く文字（例「英語・単語 SB達成」）
+  function upLabel(up) {
+    return LANG_NAME[up.lang] + "・" + MODE_NAME[up.mode] + " " + up.level.name + "達成";
   }
 
   // 達成レベルが上がったことの説明（例「日本語・文章で SB を達成」）
