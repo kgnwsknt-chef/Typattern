@@ -17,14 +17,18 @@
     <div class="filters stats-filters">
       <label class="filter">配列
         <select id="layout" class="layout-select" title="表示するキー配列">
-          <option value="qwerty">QWERTY</option>
+        
         </select>
       </label>
       <label class="filter">キーボードの形
         <select id="shape" class="layout-select" title="配列図に描くキーボードの物理的な形"></select>
       </label>
+      <label id="view-label" class="filter" hidden>段
+        <select id="view" class="layout-select" title="配列図に出すかなの段（どのキーと組み合わせたときか）"></select>
+      </label>
     </div>
-    <p class="rhythm-legend">左上の小さな数字は物理キーの番号（行＋列。列は16進数）。大きい文字は Shift なし、上の小さい文字は Shift を押したときの文字。</p>
+    <p id="kb-legend" class="rhythm-legend"></p>
+    <p id="view-now" class="view-now" hidden></p>
     <div class="kb-scroll">
       <div id="keyboard" class="kb"></div>
     </div>
@@ -38,6 +42,30 @@
     <div class="trial-bar">
       <span id="trial-last" class="trial-last"></span>
       <button id="trial-clear" class="text-btn" type="button">消す</button>
+    </div>
+
+    <details class="entries-box" hidden>
+      <summary>割り当て表の一覧（<span id="entries-count"></span> 行）</summary>
+      <div id="entries" class="entries"></div>
+    </details>
+
+    <h2 class="stats-title">かな配列の読み込み</h2>
+    <p class="rhythm-legend">割り当て表（キーの並び → かな）を読み込むと、配列図と試し打ちで確かめられます。1行に1つ、<code>{"j'", "ぴ"},</code> の形か、<code>j' ぴ</code> のようにキーの並びとかなを空白（タブ・スペース。いくつ続いてもよい）で区切った形で書きます。キーは US キーボードの QWERTY の文字で書きます。</p>
+    <div class="import-form">
+      <label class="filter">配列名
+        <input id="import-name" class="layout-select import-name" type="text" placeholder="例：tsukimisou-v2">
+      </label>
+      <label class="filter">割り当て表のファイル
+        <input id="import-table-file" type="file" accept=".txt,.tsv,.csv,.json,text/plain">
+      </label>
+    </div>
+    <textarea id="import-table-text" class="import-text" spellcheck="false" placeholder='ファイルを選ぶか、ここに貼り付けてください。例：
+{"j", "っ"},
+{"j&apos;", "ぴ"},
+{"j&apos;e", "ぴゃ"},'></textarea>
+    <div class="trial-bar">
+      <span id="import-msg" class="trial-last"></span>
+      <button id="import-show" class="text-btn" type="button">読み込んで表示する</button>
     </div>
   </main>
 
@@ -59,6 +87,7 @@
   <script src="js/store.js?v=29"></script>
   <script src="js/keys.js?v=29"></script>
   <script src="js/keyboard-shapes.js?v=29"></script>
+  <script src="js/kana-layout.js?v=29"></script>
   <script src="js/page-footer.js?v=29"></script>
   <script src="js/layouts-page.js?v=29"></script>
 </body>

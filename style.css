@@ -589,6 +589,32 @@ a.text-btn {
   color: var(--accent);
 }
 
+/* かな配列：かなは大きく中央に、QWERTY の文字は右下に小さく */
+.kb.kb-kana .kb-main {
+  bottom: 9px;
+  font-family: var(--font);
+  font-size: 16px;
+}
+
+.kb-qwerty {
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  font-size: 9px;
+  color: var(--typed);
+}
+
+/* かながないキー */
+.kb-key.kb-empty {
+  background: #fafafa;
+}
+
+.view-now {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
 /* 試し打ちで押しているキー */
 .kb-key.pressed {
   background: var(--accent);
@@ -650,6 +676,61 @@ a.text-btn {
 
 .trial-warn {
   color: var(--error);
+}
+
+/* 試し打ち：打ちかけの並び（まだ確定していない） */
+.trial-pending {
+  color: var(--typed);
+  text-decoration: underline dotted;
+}
+
+/* 割り当て表の一覧 */
+.entries-box {
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.entries-box summary {
+  cursor: pointer;
+  color: var(--sub);
+}
+
+.entries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.entry-keys {
+  font-family: var(--mono);
+  color: var(--sub);
+  margin-right: 4px;
+}
+
+/* かな配列の読み込み */
+.import-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 8px;
+}
+
+.import-name {
+  width: 180px;
+}
+
+.import-text {
+  width: 100%;
+  min-height: 120px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 13px;
+  resize: vertical;
 }
 
 .stats-main {
