@@ -157,22 +157,20 @@ const NGram = (function () {
     head.appendChild(close);
     el.appendChild(head);
 
-    // 横軸は基本 0〜500 ms（区間の幅 20 ms）。500 ms を超える値があるときだけ、
-    // その値が入るところまで 100 ms 単位で広げ、区間が25個以内になる切りのよい幅にする
-    const AXIS_MAX = 500;
-    const upper = max < AXIS_MAX ? AXIS_MAX : Math.floor(max / 100) * 100 + 100;
-    const steps = [20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
-    const bw = steps.find(function (s) { return upper / s <= 25; }) || 10000;
+    // 横軸は 0〜2000 ms で固定し、区間の幅は 20 ms。2000 ms 以上の値は一番右の区間に入れる
+    const upper = 2000;
+    const bw = 20;
     const start = 0;
-    const nb = Math.ceil(upper / bw);
+    const nb = upper / bw;
     const counts = new Array(nb).fill(0);
     values.forEach(function (v) { counts[Math.min(nb - 1, Math.floor((v - start) / bw))]++; });
     const maxCount = Math.max.apply(null, counts);
 
     // 描画領域
-    const W = 360, H = 176, L = 32, R = 10, T = 18, B = 34;
+    const W = 360, H = 176, L = 32, R = 18, T = 18, B = 34;
     const pw = W - L - R, ph = H - T - B;
-    const x = function (v) { return L + ((v - start) / (nb * bw)) * pw; };
+    // 2000 ms を超える値（1回ごとの値・平均の線）は右端に描く
+    const x = function (v) { return L + ((Math.min(v, upper) - start) / (nb * bw)) * pw; };
     const y = function (c) { return T + ph - (c / maxCount) * ph; };
 
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg", role: "img",
@@ -182,10 +180,12 @@ const NGram = (function () {
     counts.forEach(function (c, i) {
       if (c === 0) return;
       const x0 = x(start + i * bw), x1 = x(start + (i + 1) * bw);
-      const bar = svgEl("rect", { x: x0 + 1, y: y(c), width: Math.max(1, x1 - x0 - 2), height: T + ph - y(c),
-        fill: Rhythm.color(start + (i + 0.5) * bw, baseAvg), rx: 1 });
+      // 区間が細いので、棒の間はあけない
+      const bar = svgEl("rect", { x: x0, y: y(c), width: x1 - x0, height: T + ph - y(c),
+        fill: Rhythm.color(start + (i + 0.5) * bw, baseAvg) });
       const tip = svgEl("title", {});
-      tip.textContent = (start + i * bw) + "〜" + (start + (i + 1) * bw) + " ms：" + c + " 回";
+      tip.textContent = (i === nb - 1 ? (start + i * bw) + " ms 以上" : (start + i * bw) + "〜" + (start + (i + 1) * bw) + " ms") +
+        "：" + c + " 回";
       bar.appendChild(tip);
       svg.appendChild(bar);
     });
@@ -194,8 +194,8 @@ const NGram = (function () {
     svg.appendChild(svgEl("line", { x1: L, y1: T + ph, x2: L + pw, y2: T + ph, class: "dist-axis" }));
     svg.appendChild(svgEl("line", { x1: L, y1: T, x2: L, y2: T + ph, class: "dist-axis" }));
 
-    // 横軸の目盛りは切りのよい間隔（0〜500 ms なら 100 ms ごと）で6本程度
-    const tick = [100, 200, 250, 500, 1000, 2000, 5000, 10000].find(function (s) { return upper / s <= 6; }) || 20000;
+    // 横軸の目盛りは 500 ms ごと
+    const tick = 500;
     for (let v = start; v <= start + nb * bw; v += tick) {
       svg.appendChild(svgEl("line", { x1: x(v), y1: T + ph, x2: x(v), y2: T + ph + 3, class: "dist-axis" }));
       svg.appendChild(svgText(x(v), T + ph + 22, String(v), "middle"));
