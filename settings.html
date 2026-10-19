@@ -7,8 +7,21 @@
   <link rel="stylesheet" href="style.css?v=42">
 </head>
 <body>
+  <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
+  <nav class="top-nav" aria-label="ページ">
+    <div class="brand">
+      <div class="logo">Typattern<span id="version" class="version"></span></div>
+    </div>
+    <div class="nav-links">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
+      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+      <a class="text-btn" href="layouts.html" title="キー配列の確認と試し打ち">キー配列</a>
+      <a class="text-btn" href="settings.html" aria-current="page" title="グラフの範囲・ランキングの基準・記録の書き出しと読み込み">設定</a>
+    </div>
+  </nav>
+
   <header class="header page-header">
-    <div class="logo">Typattern<span id="version" class="version"></span></div>
     <h1 class="page-title">設定</h1>
   </header>
 
@@ -50,24 +63,24 @@
       <span id="settings-msg" class="trial-last" aria-live="polite"></span>
       <button id="settings-reset" class="text-btn" type="button">初期値に戻す</button>
     </div>
-  </main>
 
-  <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->
-  <footer class="footer page-footer">
-    <nav class="footer-links" aria-label="ページ">
-      <a class="text-btn" href="index.html">タイピング</a>
-      <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
-      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
-      <a class="text-btn" href="layouts.html" title="キー配列の確認と試し打ち">キー配列</a>
-      <a class="text-btn" href="settings.html" aria-current="page" title="グラフの範囲などの設定">設定</a>
-    </nav>
-    <div class="footer-actions">
-      <span id="data-size" class="data-size" title="ブラウザに保存している記録と登録したキー配列の大きさ（書き出すファイルとほぼ同じ）"></span>
-      <button id="export-btn" class="text-btn" type="button" title="全記録と登録したキー配列を JSON ファイルに保存">記録を書き出す</button>
-      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録とキー配列を追加">記録を読み込む</button>
-      <input id="import-file" type="file" accept=".json,application/json" hidden>
-    </div>
-  </footer>
+    <section class="stats-section settings-section">
+      <h2 class="stats-title">データ</h2>
+      <div class="setting">
+        <span class="setting-label">保存データ</span>
+        <span id="data-size" class="setting-input" data-bare title="書き出すファイルとほぼ同じ大きさ"></span>
+        <p class="setting-help">このブラウザに保存している記録と、登録したキー配列の大きさ（書き出すファイルとほぼ同じ）。</p>
+      </div>
+      <div class="setting">
+        <div class="data-actions">
+          <button id="export-btn" class="text-btn" type="button" title="全記録と登録したキー配列を JSON ファイルに保存">記録を書き出す</button>
+          <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録とキー配列を追加">記録を読み込む</button>
+          <input id="import-file" type="file" accept=".json,application/json" hidden>
+        </div>
+        <p class="setting-help">書き出すと、全部の記録と登録したキー配列を1つの JSON ファイルに保存します。読み込むと、そのファイルの記録とキー配列を今のものに足します（同じ記録は飛ばします）。この設定は書き出しに含めません。</p>
+      </div>
+    </section>
+  </main>
 
   <script src="js/store.js?v=42"></script>
   <script src="js/settings.js?v=42"></script>

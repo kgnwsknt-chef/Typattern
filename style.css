@@ -1205,38 +1205,35 @@ a.text-btn {
   font-size: 13px;
 }
 
-.footer {
-  padding: 0;
-}
-
-/* 全ページ共通の下部：左にページへのリンク、右に記録の操作（書き出し・読み込み） */
-.page-footer {
+/* 全ページ共通の一番上：左にロゴ（とバージョン、タイピング画面では保存データ）、右にページへのリンク */
+.top-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px 16px;
-  margin-top: 32px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
 }
 
-.footer-links,
-.footer-actions {
+.nav-links {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.footer-actions {
   margin-left: auto;
 }
 
 /* 今いるページのリンク */
-.footer-links a[aria-current="page"] {
+.nav-links a[aria-current="page"] {
   border-color: var(--accent);
   color: var(--accent);
   font-weight: 600;
+}
+
+/* タイピング画面：ページのリンクの下に、言語・モードなどを1行あけて中央に並べる */
+.top-nav + .header:not(.page-header) {
+  margin-top: 14px;
+  justify-content: center;
 }
 
 /* 左上のロゴのすぐ横のバージョン表示（?v= の番号） */
@@ -1248,7 +1245,7 @@ a.text-btn {
   font-weight: normal;
 }
 
-/* 推移・ランキング／n-gram のページ：左にロゴ、上部中央にページ名 */
+/* 記録／n-gram／キー配列／設定のページ：ページのリンクの下の中央にページ名 */
 .page-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -1281,12 +1278,18 @@ a.text-btn {
   }
 }
 
-/* ページ下部の「記録を書き出す」の左：保存しているデータの大きさ */
+/* タイピング画面のロゴの下：保存しているデータの大きさ */
 .data-size {
-  align-self: center;
-  margin-right: 4px;
+  margin-top: 2px;
   color: var(--sub);
-  font-size: 12px;
+  font-size: 11px;
+}
+
+/* 設定のページ：記録の書き出し・読み込み */
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 /* 記録のページ：ランキングの行をクリックしたときの、その回のキーごとの間隔 */

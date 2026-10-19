@@ -1,4 +1,5 @@
-// 全ページ共通：左上のバージョン表示と、ページ下部の操作（記録の書き出し・読み込み）
+// 全ページ共通：左上のバージョン表示と保存データの大きさ。記録の書き出し・読み込みのボタンがあるページ（設定のページ）ではその操作も
+// （名前は、操作がページ下部にあったころのまま）
 const PageFooter = (function () {
   "use strict";
 
@@ -14,6 +15,7 @@ const PageFooter = (function () {
     refreshSize();
 
     const importFileEl = document.getElementById("import-file");
+    if (!importFileEl) return; // 書き出し・読み込みのボタンがないページ
     document.getElementById("export-btn").addEventListener("click", function () {
       Store.exportFile()
         .then(function (n) { if (n.sessions === 0 && n.layouts === 0) alert("まだ記録も登録したキー配列もありません。"); })
@@ -41,12 +43,13 @@ const PageFooter = (function () {
     });
   }
 
-  // 「記録を書き出す」の左に、保存しているデータの大きさを出す（記録やキー配列を保存・削除したときも呼ぶ）
+  // 保存しているデータの大きさを出す（タイピング画面のロゴの下と設定のページ。記録やキー配列を保存・削除したときも呼ぶ）
   function refreshSize() {
     const el = document.getElementById("data-size");
     if (!el) return;
     Store.dataSize()
-      .then(function (bytes) { el.textContent = "保存データ " + formatSize(bytes); })
+      // data-bare の欄（設定のページ。見出しが別にある）は大きさだけを出す
+      .then(function (bytes) { el.textContent = (el.hasAttribute("data-bare") ? "" : "保存データ ") + formatSize(bytes); })
       .catch(function (err) {
         console.error(err);
         el.textContent = "";
