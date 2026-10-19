@@ -1,6 +1,8 @@
 :root {
-  --bg: #ffffff;
+  --bg: #f7f5f0; /* ページの背景。真っ白より目に優しい生成り（グラフの下地にも使う） */
   --text: #111111;
+  --head-bg: #ece8de; /* 表の見出しの背景。ページの背景（生成り）を少し濃くした色 */
+  --field-bg: #fdfcf9; /* 入力欄・選択欄・試し打ちの枠の背景。白より少しだけ落ち着いた色で、ページの背景と区別する */
   --typed: #9a9a9a;
   --sub: #666666;
   --border: #cccccc;
@@ -14,7 +16,11 @@
   /* キー配列の配列図：前置シフト・後置シフトのキーの外形線の色 */
   --kb-prefix: #e07b00;
   --kb-postfix: #8a3fd1;
-  /* bigram の2次元ヒストグラム：データのないマスの色 */
+  /* キー配列の配列図：文字キー（白より少しだけ暗い）・その枠・機能キー（Shift・Tab など） */
+  --kb-key: #fbfaf6;
+  --kb-key-border: #b9b3a6;
+  --kb-func: #e4dfd3;
+  /* bigram の2次元ヒストグラム：データのないマス（回数 0・平均 IKI なし）の色 */
   --hm-none: #ffffff;
   /* 推移のグラフ：移動平均（薄い紺）・日ごとの最高（濃い紺）・ミスも数えた正確率（灰色）・レベル達成（赤） */
   --trend-ma: #7d97c4;
@@ -26,6 +32,8 @@
   --rank-1: #d93036;
   --rank-2: #e07b00;
   --rank-3: #1f9d55;
+  /* 記録のページ：ランキングで選んだ回を、推移のグラフで示す縦線 */
+  --trend-selected: #3ddc84;
   --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "Consolas", "Menlo", monospace;
 }
@@ -42,6 +50,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
+  accent-color: var(--accent); /* チェックボックスなどの色を、ほかの青（--accent）にそろえる */
 }
 
 .header {
@@ -58,8 +67,8 @@ body {
 }
 
 .text-btn {
-  background: none;
-  border: 1px solid var(--border);
+  background: var(--field-bg); /* 入力欄と同じ明るい下地で、生成りの背景から浮かせる */
+  border: 1px solid var(--kb-key-border);
   border-radius: 4px;
   color: var(--text);
   padding: 4px 10px;
@@ -83,6 +92,7 @@ body {
 
 .text-btn:hover {
   border-color: var(--accent);
+  color: var(--accent);
 }
 
 .main {
@@ -570,9 +580,9 @@ a.text-btn {
 
 .kb-key {
   position: absolute;
-  border: 1px solid var(--border);
+  border: 1px solid var(--kb-key-border);
   border-radius: 5px;
-  background: var(--bg);
+  background: var(--kb-key);
   font-family: var(--mono);
   transition: background 0.05s;
 }
@@ -607,7 +617,7 @@ a.text-btn {
 
 /* 文字のないキー（Tab・Shift など） */
 .kb-func {
-  background: #f4f4f4;
+  background: var(--kb-func);
 }
 
 .kb-name {
@@ -670,7 +680,7 @@ a.text-btn {
 
 /* かながないキー */
 .kb-key.kb-empty {
-  background: #fafafa;
+  background: var(--bg); /* 割り当てのないキーはページと同じ生成り（キーがないように見せる） */
 }
 
 .layout-actions {
@@ -714,6 +724,7 @@ a.text-btn {
   min-height: 64px;
   padding: 12px 14px;
   border: 1px solid var(--border);
+  background: var(--field-bg);
   border-radius: 6px;
   font-family: var(--mono);
   font-size: 20px;
@@ -819,6 +830,8 @@ a.text-btn {
   min-height: 120px;
   padding: 8px;
   border: 1px solid var(--border);
+  background: var(--field-bg);
+  color: var(--text);
   border-radius: 6px;
   font-family: var(--mono);
   font-size: 13px;
@@ -882,7 +895,7 @@ a.text-btn {
   font-size: 13px;
   font-weight: 600;
   color: var(--sub);
-  background: #f7f7f7;
+  background: var(--head-bg);
 }
 
 .level-table tbody th {
@@ -1214,7 +1227,7 @@ a.text-btn {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 3px 6px;
-  background: var(--bg);
+  background: var(--field-bg);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -1373,4 +1386,11 @@ a.text-btn {
   margin-top: 20px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+
+/* 推移：ランキングで選んだ回の位置の緑の縦線（上段と下段） */
+.trend-selected-line {
+  stroke: var(--trend-selected);
+  stroke-width: 1;
+  opacity: 0.5;
 }

@@ -15,8 +15,10 @@ const Trend = (function () {
 
   // sessions：絞り込んだ概要の記録（古い順）。group："run"（1回ごと）か "day"（日ごと）
   // opts.levelUps：達成レベルが上がった回（Levels.levelUps の結果）。その点に「英語・単語 SB達成」のように書く
+  // opts.selectedId：記録のページのランキングで選んだ回の id。1回ごとのときだけ、上段と下段のその回の位置に緑の縦線を引く（日ごとでは引かない）
   function render(container, legendEl, sessions, group, opts) {
     const ups = (opts && opts.levelUps) || new Map();
+    const selectedId = group === "day" ? null : (opts && opts.selectedId) || null;
     container.textContent = "";
     const list = sessions.filter(function (s) { return s.result.avgIki !== null; });
     if (list.length === 0) {
@@ -35,6 +37,7 @@ const Trend = (function () {
       : "● 1回ごとの平均 IKI ／ ○ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満（ランキング対象外。移動平均に含めない）／ ━ 移動平均（直近 " +
         MA_WINDOW + " 回）";
     legendEl.textContent += " ／ 「英語・単語 SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
+    if (selectedId) legendEl.textContent += " ／ 緑の縦線：ランキングで選んだ回";
     legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
     // 平均 IKI は、英語は文字あたり、日本語はキーあたり。両方が混ざっているときは注意を出す
     const langs = new Set(list.map(function (s) { return s.lang; }));
@@ -92,6 +95,16 @@ const Trend = (function () {
       svg.appendChild(svgEl("polyline", { points: data.points.map(function (p) { return X(p.x) + "," + YI(p.iki); }).join(" "), class: "trend-line" }));
     }
 
+    // ランキングで選んだ回：上段と下段に、その回の位置の縦線を引く（点より下に描く）
+    const selPoint = selectedId ? data.points.find(function (p) { return p.ids.indexOf(selectedId) !== -1; }) : null;
+    function selectedLine(top, height) {
+      if (!selPoint) return;
+      const v = line(X(selPoint.x), top, X(selPoint.x), top + height, "trend-selected-line");
+      v.appendChild(title("ランキングで選んだ回\n" + selPoint.tip));
+      svg.appendChild(v);
+    }
+    selectedLine(T, PH1);
+
     // 上段：点
     data.points.forEach(function (p) {
       if (p.best !== undefined) {
@@ -128,6 +141,7 @@ const Trend = (function () {
     svg.appendChild(text(L - 6, T2 - 8, "正確率 (%)", "end", "trend-axis-title"));
     // ランキング対象の基準
     svg.appendChild(line(L, YA(Store.RANK_MIN_ACCURACY), L + PW, YA(Store.RANK_MIN_ACCURACY), "trend-threshold"));
+    selectedLine(T2, PH2);
     if (data.points.length > 1) {
       svg.appendChild(svgEl("polyline", { points: data.points.map(function (p) { return X(p.x) + "," + YA(p.acc); }).join(" "), class: "trend-acc-line" }));
     }
@@ -167,6 +181,7 @@ const Trend = (function () {
     const points = list.map(function (s, i) {
       const up = ups.get(s.id);
       return {
+        ids: [s.id],
         x: i + 1,
         iki: s.result.avgIki,
         acc: s.result.accuracy,
@@ -214,6 +229,7 @@ const Trend = (function () {
       });
       const upList = Array.from(dayUps.values());
       const p = {
+        ids: ss.map(function (s) { return s.id; }),
         x: day,
         iki: iki,
         acc: acc,

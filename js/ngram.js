@@ -300,7 +300,7 @@ const NGram = (function () {
       keys.forEach(function (second, yi) {
         const r = cells.get(first + second);
         let fill;
-        if (kind === "count") fill = r ? countColor(r.count / maxCount) : "var(--bg)";
+        if (kind === "count") fill = r ? countColor(r.count / maxCount) : "var(--hm-none)";
         else fill = r ? Rhythm.color(r.avg, baseAvg) : "var(--hm-none)";
         const rect = svgEl("rect", { x: L + xi * C, y: T + yi * C, width: C, height: C, fill: fill, class: "hm-cell" });
         const tip = svgEl("title", {});

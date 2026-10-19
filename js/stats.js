@@ -19,6 +19,7 @@
   const svAvgEl = document.getElementById("sv-avg");
   const svChartEl = document.getElementById("sv-chart");
   let selectedId = null; // 表示中の回の id
+  let trendData = null;  // 推移のグラフに描く記録と、達成レベルが上がった回（選んだ回が変わったら描き直す）
   let rankingRows = [];  // ランキングに出している回（順位を求めるのに使う）
   let viewId = 0;        // 古い読み込みの結果で上書きしないための番号
   const filters = Filters.init(update);
@@ -35,14 +36,21 @@
       summaryEl.textContent = Filters.summary(picked);
       // レベルの達成度と、達成レベルが上がった回は、絞り込まずに全部の記録から出す
       renderLevels(sessions);
-      Trend.render(trendEl, trendLegendEl, picked, groupEl.value, { levelUps: Levels.levelUps(sessions) });
+      trendData = { picked: picked, levelUps: Levels.levelUps(sessions) };
       updateRanking(picked);
+      drawTrend(); // ランキングで選んだ回が絞り込みで外れたら閉じるので、ランキングの後に描く
     }).catch(function (err) {
       console.error(err);
       summaryEl.textContent = "記録を読み込めませんでした: " + err.message;
     });
   }
 
+
+  // 推移のグラフ。ランキングで選んだ回（selectedId）の位置に緑の縦線を引く（1回ごとのときだけ）
+  function drawTrend() {
+    if (!trendData) return;
+    Trend.render(trendEl, trendLegendEl, trendData.picked, groupEl.value, { levelUps: trendData.levelUps, selectedId: selectedId });
+  }
   // レベルの達成度の表（行：言語、列：モード（文章・単語））。決まりは docs/levels.md
   const LANGS = [["en", "英語"], ["ja", "日本語"]];
   const MODES = [["normal", "文章"], ["words", "単語"]];
@@ -126,6 +134,7 @@
   // その回の生データを読み、結果画面と同じキーごとの間隔のグラフを描く。scroll なら、その区分までページをスクロールする
   function showSession(session, scroll) {
     selectedId = session.id;
+    drawTrend();
     const myId = ++viewId;
     const rank = rankingRows.findIndex(function (s) { return Store.compare(s, session) === 0; }) + 1;
     let raw = null;
@@ -163,6 +172,7 @@
     viewId++;
     svEl.hidden = true;
     svChartEl.textContent = "";
+    drawTrend();
   }
 
   document.getElementById("sv-close").addEventListener("click", function () {
