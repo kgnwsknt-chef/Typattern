@@ -16,6 +16,11 @@
   --kb-postfix: #8a3fd1;
   /* bigram の2次元ヒストグラム：データのないマスの色 */
   --hm-none: #eeeeee;
+  /* 推移のグラフ：移動平均（薄い紺）・日ごとの最高（濃い紺）・ミスも数えた正確率（灰色）・レベル達成（赤） */
+  --trend-ma: #7d97c4;
+  --trend-sub: #1d3f7a;
+  --trend-raw: #8a8a8a;
+  --trend-levelup: #d93036;
   --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "Consolas", "Menlo", monospace;
 }
@@ -943,7 +948,7 @@ a.text-btn {
 
 .trend-ma {
   fill: none;
-  stroke: #e08a00;
+  stroke: var(--trend-ma);
   stroke-width: 2.5;
   stroke-linejoin: round;
 }
@@ -959,25 +964,25 @@ a.text-btn {
 /* 下段：ミスも数えた正確率 */
 .trend-raw-line {
   fill: none;
-  stroke: #e08a00;
+  stroke: var(--trend-raw);
   stroke-width: 1.5;
   opacity: 0.6;
 }
 
 .trend-raw-point {
-  fill: #e08a00;
+  fill: var(--trend-raw);
 }
 
 .trend-best {
   fill: var(--bg);
-  stroke: #e08a00;
+  stroke: var(--trend-sub);
   stroke-width: 1.5;
 }
 
 /* 推移：達成レベルが上がった点の輪と「SB達成」の文字 */
 .trend-levelup-ring {
   fill: none;
-  stroke: #d4a017;
+  stroke: var(--trend-levelup);
   stroke-width: 2;
   pointer-events: none;
 }
@@ -985,7 +990,7 @@ a.text-btn {
 .trend-levelup {
   font-size: 11px;
   font-weight: 700;
-  fill: #b8860b;
+  fill: var(--trend-levelup);
   paint-order: stroke;
   stroke: var(--bg);
   stroke-width: 3px;
