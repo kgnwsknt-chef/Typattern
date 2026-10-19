@@ -43,16 +43,20 @@ const PageFooter = (function () {
     });
   }
 
-  // 保存しているデータの大きさを出す（タイピング画面のロゴの下と設定のページ。記録やキー配列を保存・削除したときも呼ぶ）
+  // 保存しているデータの大きさを出す（全ページのバージョンの右と設定のページ。記録やキー配列を保存・削除したときも呼ぶ）
   function refreshSize() {
-    const el = document.getElementById("data-size");
-    if (!el) return;
+    const el = document.getElementById("data-size");               // 全ページ：バージョンの右
+    const detailEl = document.getElementById("data-size-detail");  // 設定のページの「データ」（見出しが別にあるので大きさだけ）
+    if (!el && !detailEl) return;
     Store.dataSize()
-      // data-bare の欄（設定のページ。見出しが別にある）は大きさだけを出す
-      .then(function (bytes) { el.textContent = (el.hasAttribute("data-bare") ? "" : "保存データ ") + formatSize(bytes); })
+      .then(function (bytes) {
+        if (el) el.textContent = "保存データ " + formatSize(bytes);
+        if (detailEl) detailEl.textContent = formatSize(bytes);
+      })
       .catch(function (err) {
         console.error(err);
-        el.textContent = "";
+        if (el) el.textContent = "";
+        if (detailEl) detailEl.textContent = "";
       });
   }
 
