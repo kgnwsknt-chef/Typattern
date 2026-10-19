@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typattern 設定</title>
+  <link rel="stylesheet" href="style.css?v=39">
+</head>
+<body>
+  <header class="header page-header">
+    <div class="logo">Typattern<span id="version" class="version"></span></div>
+    <h1 class="page-title">設定</h1>
+  </header>
+
+  <main class="main stats-main">
+    <p class="rhythm-legend">変えるとすぐこのブラウザに保存し、ほかのページを開いたとき（開き直したとき）から使います。記録の書き出しには含めません。</p>
+
+    <section class="stats-section settings-section">
+      <h2 class="stats-title">グラフ</h2>
+      <div class="setting">
+        <label class="setting-label" for="s-rhythm">キーごとの間隔の棒の最大</label>
+        <span class="setting-input"><input id="s-rhythm" class="layout-select setting-number" type="number" data-setting="rhythmMaxMs"> ms</span>
+        <p class="setting-help">結果画面と記録のページの「キーごとの間隔」で、棒の一番上にあたる間隔。これを超える間隔は頭打ちにします。<span class="setting-range"></span></p>
+      </div>
+      <div class="setting">
+        <label class="setting-label" for="s-ngram">n-gram の分布の横軸の最大</label>
+        <span class="setting-input"><input id="s-ngram" class="layout-select setting-number" type="number" data-setting="ngramMaxMs"> ms</span>
+        <p class="setting-help">n-gram のページで行をクリックしたときに出す IKI の分布。横軸は 0 からこの値までで、50 個の区間に分けます（区間の幅 = この値 ÷ 50）。これ以上の値は一番右の区間に入れます。<span class="setting-range"></span></p>
+      </div>
+    </section>
+
+    <section class="stats-section settings-section">
+      <h2 class="stats-title">タイピング</h2>
+      <div class="setting">
+        <label class="setting-label setting-check"><input id="s-indicator" type="checkbox" data-setting="indicator"> インジケーターを表示する（準備中）</label>
+        <p class="setting-help">タイピング中に目標との差を示すインジケーター。まだできていないので、今は設定を保存するだけです。初期値は ON。</p>
+      </div>
+    </section>
+
+    <div class="trial-bar settings-bar">
+      <span id="settings-msg" class="trial-last" aria-live="polite"></span>
+      <button id="settings-reset" class="text-btn" type="button">初期値に戻す</button>
+    </div>
+  </main>
+
+  <!-- 全ページ共通：左はページへのリンク、右は記録の操作 -->
+  <footer class="footer page-footer">
+    <nav class="footer-links" aria-label="ページ">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
+      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+      <a class="text-btn" href="layouts.html" title="キー配列の確認と試し打ち">キー配列</a>
+      <a class="text-btn" href="settings.html" aria-current="page" title="グラフの範囲などの設定">設定</a>
+    </nav>
+    <div class="footer-actions">
+      <span id="data-size" class="data-size" title="ブラウザに保存している記録と登録したキー配列の大きさ（書き出すファイルとほぼ同じ）"></span>
+      <button id="export-btn" class="text-btn" type="button" title="全記録と登録したキー配列を JSON ファイルに保存">記録を書き出す</button>
+      <button id="import-btn" class="text-btn" type="button" title="書き出した JSON ファイルから記録とキー配列を追加">記録を読み込む</button>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+    </div>
+  </footer>
+
+  <script src="js/store.js?v=39"></script>
+  <script src="js/settings.js?v=39"></script>
+  <script src="js/page-footer.js?v=39"></script>
+  <script src="js/settings-page.js?v=39"></script>
+</body>
+</html>

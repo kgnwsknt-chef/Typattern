@@ -157,11 +157,11 @@ const NGram = (function () {
     head.appendChild(close);
     el.appendChild(head);
 
-    // 横軸は 0〜2000 ms で固定し、区間の幅は 20 ms。2000 ms 以上の値は一番右の区間に入れる
-    const upper = 2000;
-    const bw = 20;
+    // 横軸は 0〜設定の最大（js/settings.js の ngramMaxMs。初期値 2000 ms）で、50 個の区間に分ける。最大以上の値は一番右の区間に入れる
+    const upper = Settings.get("ngramMaxMs");
+    const nb = 50;
+    const bw = upper / nb; // 最大は 50 ms 刻みなので、幅は整数の ms になる
     const start = 0;
-    const nb = upper / bw;
     const counts = new Array(nb).fill(0);
     values.forEach(function (v) { counts[Math.min(nb - 1, Math.floor((v - start) / bw))]++; });
     const maxCount = Math.max.apply(null, counts);
@@ -169,7 +169,7 @@ const NGram = (function () {
     // 描画領域
     const W = 360, H = 176, L = 32, R = 18, T = 18, B = 34;
     const pw = W - L - R, ph = H - T - B;
-    // 2000 ms を超える値（1回ごとの値・平均の線）は右端に描く
+    // 最大を超える値（1回ごとの値・平均の線）は右端に描く
     const x = function (v) { return L + ((Math.min(v, upper) - start) / (nb * bw)) * pw; };
     const y = function (c) { return T + ph - (c / maxCount) * ph; };
 
@@ -194,8 +194,8 @@ const NGram = (function () {
     svg.appendChild(svgEl("line", { x1: L, y1: T + ph, x2: L + pw, y2: T + ph, class: "dist-axis" }));
     svg.appendChild(svgEl("line", { x1: L, y1: T, x2: L, y2: T + ph, class: "dist-axis" }));
 
-    // 横軸の目盛りは 500 ms ごと
-    const tick = 500;
+    // 横軸の目盛りは切りのよい間隔で6本程度
+    const tick = [10, 20, 25, 50, 100, 200, 250, 500, 1000].find(function (s) { return upper / s <= 6; }) || 2000;
     for (let v = start; v <= start + nb * bw; v += tick) {
       svg.appendChild(svgEl("line", { x1: x(v), y1: T + ph, x2: x(v), y2: T + ph + 3, class: "dist-axis" }));
       svg.appendChild(svgText(x(v), T + ph + 22, String(v), "middle"));

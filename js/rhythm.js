@@ -3,7 +3,7 @@ const Rhythm = (function () {
   "use strict";
 
   const BAR_MAX = 72; // 棒の最大の高さ(px)。style.css の .rh-track の高さに合わせる
-  const CAP_MS = 600; // 棒の高さの最大(ms)。これを超える間隔は頭打ちにする（どの回も同じ尺度で比べられるよう固定）
+  // 棒の高さの最大(ms)は設定（js/settings.js の rhythmMaxMs。初期値 600）。これを超える間隔は頭打ちにする（どの回も同じ尺度）
 
   // 英語：お題の文字ごとにグラフを描き、平均間隔(ms, 整数)を返す。間隔が1つもなければ "-"
   // 単語の途中で折り返さないよう、「単語＋後ろのスペース」をひとまとまり（rh-word）にする
@@ -65,8 +65,8 @@ const Rhythm = (function () {
     if (values.length === 0) return "-";
 
     const avg = values.reduce(function (a, b) { return a + b; }, 0) / values.length;
-    const cap = CAP_MS;
-    const scaleMax = CAP_MS; // 棒の一番上 = CAP_MS
+    const cap = Settings.get("rhythmMaxMs");
+    const scaleMax = cap; // 棒の一番上 = 設定の最大
     const toPx = function (v) { return Math.round((Math.min(v, cap) / scaleMax) * BAR_MAX); };
 
     container.style.setProperty("--rh-avg", toPx(avg) + "px");

@@ -1289,3 +1289,42 @@ a.text-btn {
 .rk-table tr.bg-row {
   cursor: pointer;
 }
+
+/* 設定のページ */
+.setting {
+  margin: 10px 0 18px;
+}
+
+.setting-label {
+  display: inline-block;
+  min-width: 15em;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.setting-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.setting-input {
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.setting-number {
+  width: 6.5em;
+  text-align: right;
+}
+
+.setting-help {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.settings-bar {
+  margin-top: 8px;
+}
