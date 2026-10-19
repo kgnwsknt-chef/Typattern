@@ -227,7 +227,9 @@ const Store = (function () {
       const d = new Date();
       const pad = function (n) { return String(n).padStart(2, "0"); };
       a.href = URL.createObjectURL(blob);
-      a.download = "typattern-records-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".json";
+      // ファイル名は書き出した日時（このPCの時刻。例 typattern-records-20261019-153042.json）
+      a.download = "typattern-records-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "-" +
+        pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + ".json";
       document.body.appendChild(a);
       a.click();
       a.remove();
