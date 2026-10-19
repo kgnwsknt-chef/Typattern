@@ -15,7 +15,7 @@
   --kb-prefix: #e07b00;
   --kb-postfix: #8a3fd1;
   /* bigram の2次元ヒストグラム：データのないマスの色 */
-  --hm-none: #eeeeee;
+  --hm-none: #ffffff;
   /* 推移のグラフ：移動平均（薄い紺）・日ごとの最高（濃い紺）・ミスも数えた正確率（灰色）・レベル達成（赤） */
   --trend-ma: #7d97c4;
   --trend-sub: #1d3f7a;
@@ -1101,8 +1101,10 @@ a.text-btn {
   height: auto;
 }
 
+/* 軸のラベル（キーの文字など）は本文の色で見やすく */
 .hm-svg .dist-label {
   font-size: 12px;
+  fill: var(--text);
 }
 
 .hm-cell {
