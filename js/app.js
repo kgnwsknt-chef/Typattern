@@ -475,7 +475,7 @@
     const rate = Levels.rateOfSession(session) || 0;
     res.level.textContent = level ? level.name : "-";
     res.levelLabel.textContent = "レベル（" + rate.toFixed(2) + " 文字/秒）" +
-      (!level && session.result.accuracy < Store.RANK_MIN_ACCURACY ? "・正確率 " + Store.RANK_MIN_ACCURACY + "% 未満" : "");
+      (!level && session.result.accuracy < Levels.MIN_ACCURACY ? "・正確率 " + Levels.MIN_ACCURACY + "% 未満" : "");
   }
 
   // 達成レベル（この言語・モード）と、次の目標までの差。sessions は今回を含む全記録
@@ -507,7 +507,7 @@
     const gap = need - (Levels.rateOfSession(session) || 0);
     add(" ／ 次の目標 " + target.name + "（" + need.toFixed(2) + " 文字/秒より速く）" +
       (gap >= 0 ? "まで あと " + Math.max(gap, 0.01).toFixed(2) + " 文字/秒" : "：今回の速さは届いています" +
-        (session.mode !== mode ? "（文章で打つと達成になります）" : "（正確率 " + Store.RANK_MIN_ACCURACY + "% 以上で達成になります）")));
+        (session.mode !== mode ? "（文章で打つと達成になります）" : "（正確率 " + Levels.MIN_ACCURACY + "% 以上で達成になります）")));
   }
 
   // この回を概要（sessions）と生データ（raws）の2つの記録にして保存し、順位を出す。形式は docs/storage.md
@@ -569,6 +569,7 @@
           res.rankLabel.textContent = "ランキング対象外（正確率 " + Store.RANK_MIN_ACCURACY + "% 未満）";
         }
         rankingTitleEl.textContent = Ranking.categoryLabel(session);
+        document.getElementById("ranking-min").textContent = Store.RANK_MIN_ACCURACY;
         Ranking.render(rankingEl, v[1], id);
         saveStatusEl.textContent = "記録を保存しました。";
       })

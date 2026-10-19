@@ -19,6 +19,9 @@ const Levels = (function () {
   // 達成レベルに数えるモード（短い文章は短くて速く出やすいので数えない。その回のレベルは出す）
   const COUNTED_MODES = ["normal", "words"];
 
+  // レベルを出す正確率の下限(%)。ランキングの基準（設定で変えられる）とは別に、95% で固定する
+  const MIN_ACCURACY = 95;
+
   // 基準の量（1回分の文字数）。英語は 400文字、日本語は 280文字（かな。配列によらない）
   function charsFor(lang) {
     return lang === "ja" ? 280 : 400;
@@ -49,9 +52,9 @@ const Levels = (function () {
     return rateOf(s.textLength, s.result.timeSec);
   }
 
-  // 記録（概要）のレベル。正確率がランキングの基準（95%）未満なら null
+  // 記録（概要）のレベル。正確率が MIN_ACCURACY（95%）未満なら null
   function ofSession(s) {
-    if (s.result.accuracy < Store.RANK_MIN_ACCURACY) return null;
+    if (s.result.accuracy < MIN_ACCURACY) return null;
     return fromRate(rateOfSession(s), charsFor(s.lang));
   }
 
@@ -85,7 +88,7 @@ const Levels = (function () {
     sessions.forEach(function (s) {
       if (s.lang !== lang || s.mode !== mode) return;
       count++;
-      if (s.result.accuracy < Store.RANK_MIN_ACCURACY) return;
+      if (s.result.accuracy < MIN_ACCURACY) return;
       const rate = rateOfSession(s);
       if (rate !== null && (bestRate === null || rate > bestRate)) bestRate = rate;
       const l = fromRate(rate, chars);
@@ -125,6 +128,7 @@ const Levels = (function () {
   return {
     TABLE: TABLE,
     COUNTED_MODES: COUNTED_MODES,
+    MIN_ACCURACY: MIN_ACCURACY,
     charsFor: charsFor,
     minRate: minRate,
     rateOf: rateOf,

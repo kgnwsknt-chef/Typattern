@@ -23,7 +23,7 @@
       el.step = item.step;
       // 説明の後ろに範囲と初期値を書く
       const range = el.closest(".setting").querySelector(".setting-range");
-      if (range) range.textContent = "（" + item.min + "〜" + item.max + " ms、" + item.step + " ms 刻み。初期値 " + item.def + " ms）";
+      if (range) range.textContent = "（" + item.min + "〜" + item.max + " " + item.unit + "、" + item.step + " " + item.unit + " 刻み。初期値 " + item.def + " " + item.unit + "）";
     }
     // 数値は打ち終えたとき（change）に保存する。範囲の外なら端に直して出し直す
     el.addEventListener("change", function () {

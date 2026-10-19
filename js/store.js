@@ -10,7 +10,10 @@ const Store = (function () {
   const SCHEMA_VERSION = 4; // 記録1件の形式の版（4：events にキーの行 "k" を足し、"+" の時刻を「その文字を生んだ最後のキーの時刻」にした）
   const EXPORT_APP = "typattern"; // 書き出しファイルの app 欄
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
-  const RANK_MIN_ACCURACY = 95; // 正確率がこれ未満の記録はランキングに載せない（記録は残す）
+  // 正確率がこれ未満の記録はランキングに載せない（記録は残す）。設定のページで変えられる（js/settings.js の rankMinAccuracy。初期値 95）
+  function rankMinAccuracy() {
+    return Settings.get("rankMinAccuracy");
+  }
 
   let dbPromise = null;
 
@@ -100,9 +103,9 @@ const Store = (function () {
     );
   }
 
-  // ランキングに載せる記録か（正確率 RANK_MIN_ACCURACY% 以上）
+  // ランキングに載せる記録か（正確率が設定の基準 rankMinAccuracy% 以上）
   function eligible(s) {
-    return s.result.avgIki !== null && s.result.accuracy >= RANK_MIN_ACCURACY;
+    return s.result.avgIki !== null && s.result.accuracy >= rankMinAccuracy();
   }
 
   // a が b より上位か。平均 IKI の小さい順、同じなら正確率の高い順
@@ -302,7 +305,8 @@ const Store = (function () {
 
   return {
     SCHEMA_VERSION: SCHEMA_VERSION,
-    RANK_MIN_ACCURACY: RANK_MIN_ACCURACY,
+    // 読むたびに設定から取り出す
+    get RANK_MIN_ACCURACY() { return rankMinAccuracy(); },
     avgIki: avgIki,
     accuracy: accuracy,
     eligible: eligible,

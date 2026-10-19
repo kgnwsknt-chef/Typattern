@@ -30,6 +30,15 @@
     </section>
 
     <section class="stats-section settings-section">
+      <h2 class="stats-title">ランキング</h2>
+      <div class="setting">
+        <label class="setting-label" for="s-rank-acc">ランキングに載せる正確率</label>
+        <span class="setting-input"><input id="s-rank-acc" class="layout-select setting-number" type="number" data-setting="rankMinAccuracy"> % 以上</span>
+        <p class="setting-help">正確率がこれ未満の回はランキングに載せません（記録は残ります）。推移のグラフの ○（対象外）・移動平均・赤い点線にも使います。レベルの基準（正確率 95% 以上）は変わりません。<span class="setting-range"></span></p>
+      </div>
+    </section>
+
+    <section class="stats-section settings-section">
       <h2 class="stats-title">タイピング</h2>
       <div class="setting">
         <label class="setting-label setting-check"><input id="s-indicator" type="checkbox" data-setting="indicator"> インジケーターを表示する（準備中）</label>

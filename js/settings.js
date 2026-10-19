@@ -7,8 +7,9 @@ const Settings = (function () {
 
   // 項目ごとの初期値と範囲。数値は min〜max に直し、step の倍数に丸める
   const ITEMS = {
-    ngramMaxMs: { type: "number", def: 2000, min: 100, max: 5000, step: 50 },  // n-gram の分布の横軸の最大(ms)
-    rhythmMaxMs: { type: "number", def: 600, min: 100, max: 5000, step: 50 },  // キーごとの間隔の棒の最大(ms)
+    ngramMaxMs: { type: "number", def: 2000, min: 100, max: 5000, step: 50, unit: "ms" },  // n-gram の分布の横軸の最大(ms)
+    rhythmMaxMs: { type: "number", def: 600, min: 100, max: 5000, step: 50, unit: "ms" },  // キーごとの間隔の棒の最大(ms)
+    rankMinAccuracy: { type: "number", def: 95, min: 50, max: 100, step: 1, unit: "%" },   // ランキングに載せる正確率の下限(%)
     indicator: { type: "boolean", def: true }                                   // インジケーター（準備中）
   };
 

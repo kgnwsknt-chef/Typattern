@@ -67,7 +67,7 @@
           td.appendChild(line("level-name", sum.level ? sum.level.name : "なし"));
           if (sum.level) td.appendChild(line("level-sub", "達成 " + Filters.localDate(sum.achievedAt).replace(/-/g, "/")));
           td.appendChild(line("level-sub", sum.bestRate === null
-            ? "正確率 " + Store.RANK_MIN_ACCURACY + "% 以上の回がありません"
+            ? "正確率 " + Levels.MIN_ACCURACY + "% 以上の回がありません"
             : "最高 " + sum.bestRate.toFixed(2) + " 文字/秒"));
           td.appendChild(line("level-target", !sum.target ? "一番上のレベルです"
             : "次の目標 " + sum.target.name + (sum.gap !== null && sum.gap >= 0 ? " まで あと " + Math.max(sum.gap, 0.01).toFixed(2) + " 文字/秒" : "")));
