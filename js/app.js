@@ -801,6 +801,10 @@
     if (e.key === "Escape") {
       e.preventDefault();
       reset(false);
+    } else if (e.key === "Enter" && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && !e.isComposing) {
+      // Shift + Enter で次のお題（打っている途中でも。Enter だけでは何もしない）
+      e.preventDefault();
+      reset(true);
     }
   });
   // 結果のタブ切り替え。選んだタブはやり直しても維持する
