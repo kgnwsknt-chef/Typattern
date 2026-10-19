@@ -496,6 +496,7 @@
     add(LANG_NAME[session.lang] + "・" + MODE_NAME[mode] + "の達成レベル：" + (now ? now.name : "なし"));
     if (now && (!before || now.index > before.index) && session.mode === mode) {
       add("（今回 " + (before ? before.name + " から " : "") + now.name + " に上がりました！）", "level-up");
+      res.level.classList.add("level-up"); // 結果のレベルの値も、達成した色にする
     }
     if (session.mode !== mode) add("（短い文章は達成に数えません）");
     if (!target) {
@@ -549,6 +550,8 @@
 
     saveStatusEl.textContent = "記録を保存中…";
     res.rank.textContent = "-";
+    res.rank.classList.remove("rank-1", "rank-2", "rank-3");
+    res.level.classList.remove("level-up");
     res.rankLabel.textContent = "";
     renderLevel(session);
     levelStatusEl.textContent = "";
@@ -563,6 +566,8 @@
         const info = v[0];
         if (info.eligible) {
           res.rank.textContent = info.rank;
+          // 1〜3位は順位ごとの色で目立たせる（style.css の --rank-1〜3）
+          if (info.rank <= 3) res.rank.classList.add("rank-" + info.rank);
           res.rankLabel.textContent = "位 / " + info.total + " 回";
         } else {
           res.rank.textContent = "-";
