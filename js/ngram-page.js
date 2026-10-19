@@ -35,12 +35,14 @@
 
       const ids = new Set(picked.map(function (s) { return s.id; }));
       const bigrams = new Map();
+      let strokes = 0; // 総打鍵数：選んだ記録の、押したキー（events の "k" の行）の数。Shift・Backspace・間違えたキーも数える
       const trigrams = new Map();
       ngramSummaryEl.textContent = "集計中…";
       return Store.eachRaw(ids, function (raw) {
         // 押したキーの記録（events の "k" の行）から数える。英語も日本語も同じ
         NGram.accumulate(bigrams, 2, raw.events);
         NGram.accumulate(trigrams, 3, raw.events);
+        raw.events.forEach(function (e) { if (e[1] === "k") strokes++; });
       }).then(function () {
         if (myId !== loadId) return;
         // 色の基準：選んだ記録の、n-gram に使えるキーの間隔（bigram の1回ごとの値）すべての平均
@@ -58,7 +60,7 @@
         bigramTable.renderRows(bigramEl, bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
         drawHeatmaps(bi, base);
-        ngramSummaryEl.textContent = "bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
+        ngramSummaryEl.textContent = "総打鍵数 " + strokes.toLocaleString() + " ／ bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
       });
     }).catch(function (err) {
       console.error(err);
