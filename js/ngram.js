@@ -157,10 +157,11 @@ const NGram = (function () {
     head.appendChild(close);
     el.appendChild(head);
 
-    // 横軸は 0〜設定の最大（js/settings.js の ngramMaxMs。初期値 2000 ms）で、50 個の区間に分ける。最大以上の値は一番右の区間に入れる
+    // 横軸は 0〜設定の最大（js/settings.js の ngramMaxMs。初期値 2000 ms）で、100 個の区間に分ける。最大以上の値は一番右の区間に入れる
     const upper = Settings.get("ngramMaxMs");
-    const nb = 50;
-    const bw = upper / nb; // 最大は 50 ms 刻みなので、幅は整数の ms になる
+    const nb = 100;
+    const bw = upper / nb; // 最大は 50 ms 刻みなので、幅は 0.5 ms 刻み（表示は fmt で小数第1位まで）
+    const fmt = function (v) { return String(Math.round(v * 10) / 10); };
     const start = 0;
     const counts = new Array(nb).fill(0);
     values.forEach(function (v) { counts[Math.min(nb - 1, Math.floor((v - start) / bw))]++; });
@@ -184,7 +185,7 @@ const NGram = (function () {
       const bar = svgEl("rect", { x: x0, y: y(c), width: x1 - x0, height: T + ph - y(c),
         fill: Rhythm.color(start + (i + 0.5) * bw, baseAvg) });
       const tip = svgEl("title", {});
-      tip.textContent = (i === nb - 1 ? (start + i * bw) + " ms 以上" : (start + i * bw) + "〜" + (start + (i + 1) * bw) + " ms") +
+      tip.textContent = (i === nb - 1 ? fmt(start + i * bw) + " ms 以上" : fmt(start + i * bw) + "〜" + fmt(start + (i + 1) * bw) + " ms") +
         "：" + c + " 回";
       bar.appendChild(tip);
       svg.appendChild(bar);
