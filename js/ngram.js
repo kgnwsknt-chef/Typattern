@@ -10,7 +10,8 @@ const NGram = (function () {
   // onSelect(gram) を渡すと、分布を出す n-gram が変わったときに呼ぶ（閉じたときは null）
   function create(n, label, distEl, onSelect) {
     let rows = [];     // 集計結果 { gram, avg, sd, count, values }
-    let order = "asc"; // 平均 IKI の並び順
+    let sortKey = "avg"; // 並べ替えに使う列："gram"（n-gram の文字）・"avg"（平均 IKI）・"count"（回数）
+    let order = "asc";   // その列の並び順
     let baseAvg = 0;   // 色の基準にする全体の平均間隔
     let emptyMessage = ""; // 行がないときに表の中に出す文言
     let selected = null;   // 分布を表示中の n-gram
@@ -46,11 +47,43 @@ const NGram = (function () {
       draw();
     }
 
+    // 並べ替えのボタンを入れた見出し。今の列ならクリックで昇順・降順を切り替え、別の列なら firstOrder で並べる
+    //   names：[昇順の名前, 降順の名前]（ボタンの説明に使う）
+    function sortHeader(key, text, firstOrder, names) {
+      const cell = th("");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "bg-sort" + (key === sortKey ? " active" : "");
+      const now = order === "asc" ? 0 : 1;
+      if (key === sortKey) {
+        btn.textContent = text + " " + (order === "asc" ? "▲" : "▼");
+        btn.title = names[now] + "（クリックで" + names[1 - now] + "）";
+        cell.setAttribute("aria-sort", order === "asc" ? "ascending" : "descending");
+      } else {
+        btn.textContent = text;
+        btn.title = "クリックで" + names[firstOrder === "asc" ? 0 : 1] + "に並べる";
+      }
+      btn.addEventListener("click", function () {
+        if (key === sortKey) order = order === "asc" ? "desc" : "asc";
+        else {
+          sortKey = key;
+          order = firstOrder;
+        }
+        draw();
+      });
+      cell.appendChild(btn);
+      return cell;
+    }
+
     function draw() {
       containerEl.textContent = "";
       const sign = order === "asc" ? 1 : -1;
+      const byGram = function (x, y) { return x.gram < y.gram ? -1 : x.gram > y.gram ? 1 : 0; };
       rows.sort(function (x, y) {
-        return sign * (x.avg - y.avg) || y.count - x.count || (x.gram < y.gram ? -1 : 1);
+        // 選んだ列で並べ、同じなら 回数の多い順 → 速い順 → 文字の順
+        if (sortKey === "gram") return sign * byGram(x, y);
+        if (sortKey === "count") return sign * (x.count - y.count) || x.avg - y.avg || byGram(x, y);
+        return sign * (x.avg - y.avg) || y.count - x.count || byGram(x, y);
       });
 
       const table = document.createElement("table");
@@ -58,24 +91,12 @@ const NGram = (function () {
 
       const head = document.createElement("thead");
       const hr = document.createElement("tr");
-      hr.appendChild(th(label));
-      const sortTh = th("");
-      const sortBtn = document.createElement("button");
-      sortBtn.type = "button";
-      sortBtn.className = "bg-sort";
-      sortBtn.textContent = "IKI(ms/打) " + (order === "asc" ? "▲" : "▼");
-      sortBtn.title = order === "asc" ? "速い順（クリックで遅い順）" : "遅い順（クリックで速い順）";
-      sortBtn.addEventListener("click", function () {
-        order = order === "asc" ? "desc" : "asc";
-        draw();
-      });
-      sortTh.setAttribute("aria-sort", order === "asc" ? "ascending" : "descending");
-      sortTh.appendChild(sortBtn);
-      hr.appendChild(sortTh);
+      hr.appendChild(sortHeader("gram", label, "asc", ["文字の順", "文字の逆順"]));
+      hr.appendChild(sortHeader("avg", "IKI(ms/打)", "asc", ["速い順", "遅い順"]));
       const sdTh = th("SD(ms)");
       sdTh.title = "IKI の標準偏差（標本標準偏差）。1回しか出ないものは -";
       hr.appendChild(sdTh);
-      hr.appendChild(th("回数"));
+      hr.appendChild(sortHeader("count", "回数", "desc", ["少ない順", "多い順"]));
       head.appendChild(hr);
       table.appendChild(head);
 

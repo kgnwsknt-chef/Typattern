@@ -501,6 +501,15 @@ body {
   cursor: pointer;
 }
 
+/* 並べ替えに使っていない列の見出しは、ふつうの文字色（クリックで並べ替えられる） */
+.bg-sort:not(.active) {
+  color: inherit;
+}
+
+.bg-sort:not(.active):hover {
+  color: var(--accent);
+}
+
 .bg-name {
   font-family: var(--mono);
   font-size: 16px;
