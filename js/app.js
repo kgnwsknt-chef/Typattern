@@ -511,10 +511,13 @@
       span.textContent = text;
       levelStatusEl.appendChild(span);
     };
-    add(LANG_NAME[session.lang] + "・" + MODE_NAME[mode] + "の達成レベル：" + (now ? now.name : "なし"));
+    const label = LANG_NAME[session.lang] + "・" + MODE_NAME[mode];
     if (now && (!before || now.index > before.index) && session.mode === mode) {
-      add("（今回 " + (before ? before.name + " から " : "") + now.name + " に上がりました！）", "level-up");
+      // 今回で達成レベルが上がった：「日本語・文章レベル D を達成！」を目立たせる
+      add(label + "レベル " + now.name + " を達成！", "level-up");
       res.level.classList.add("level-up"); // 結果のレベルの値も、達成した色にする
+    } else {
+      add(label + "の達成レベル：" + (now ? now.name : "なし"));
     }
     if (session.mode !== mode) add("（短い文章は達成に数えません）");
     if (!target) {
