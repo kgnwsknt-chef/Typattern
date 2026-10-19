@@ -1130,9 +1130,10 @@ a.text-btn {
 }
 
 
+/* キーボードの行が変わるところの区切り線。色の付いたマスの上でも見えるよう、本文の色で太めに引く */
 .hm-sep {
-  stroke: var(--sub);
-  stroke-width: 0.8;
+  stroke: var(--text);
+  stroke-width: 1.4;
 }
 
 .hm-frame {
