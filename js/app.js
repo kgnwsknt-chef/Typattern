@@ -91,6 +91,7 @@
   let imeOn = false;   // IME がオンのまま打たれたか（日本語のとき、注意を出す）
   let timerId = 0;
   let finished = false;
+  let lastActivity = 0; // 最後にキーを押した時刻（入力がないまま止めるのに使う。docs/measurement.md の「入力がないときの停止」）
 
   // 英語の1文字の正誤判定。日本語は js/romaji.js で、お題のかなに合う打ち方かを判定する
   function isCorrect(typed, expected) {
@@ -287,6 +288,8 @@
     rankingEl.textContent = "";
     rankingTitleEl.textContent = "";
     finished = false;
+    lastActivity = 0;
+    guideEl.classList.remove("idle-stopped");
     clearInterval(timerId);
 
     // 日本語：QWERTY ならローマ字、かな配列ならその割り当て表で判定する
@@ -415,6 +418,11 @@
   }
 
   function updateStats() {
+    // 打ち始めてから、設定の秒数のあいだキーを押さなかったら止める（記録しない）
+    if (startTime && !finished && lastActivity && performance.now() - lastActivity >= Settings.get("idleStopSec") * 1000) {
+      stopIdle();
+      return;
+    }
     const r = calc();
     // 打ち始め直後は値が極端に跳ねるので、2秒経つまで平均 IKI と WPM は出さない
     const show = finished || r.sec >= 2;
@@ -425,6 +433,16 @@
     stat.acc.textContent = Math.floor(r.acc);
     stat.time.textContent = r.sec.toFixed(1);
     stat.miss.textContent = misses;
+  }
+
+  // 入力がないまま止める。続きからは打てない（もう一度か次のお題を選ぶ）。記録は保存しない
+  function stopIdle() {
+    finished = true;
+    clearInterval(timerId);
+    input.disabled = true;
+    board.classList.add("finished");
+    guideEl.classList.add("idle-stopped");
+    guideEl.textContent = Settings.get("idleStopSec") + " 秒間入力がなかったので停止しました（記録はしません）。もう一度（Esc）か次のお題（Shift+Enter）を選んでください。";
   }
 
   function finish() {
@@ -755,6 +773,7 @@
   // キャレットは常に末尾。矢印キー等での移動とペーストを禁止
   const blockedKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Enter", "Tab"];
   input.addEventListener("keydown", function (e) {
+    lastActivity = performance.now(); // どのキーでも「入力あり」とみなす
     if (blockedKeys.indexOf(e.key) !== -1) {
       e.preventDefault();
       return;

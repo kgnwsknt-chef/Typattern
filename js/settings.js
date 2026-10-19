@@ -10,6 +10,7 @@ const Settings = (function () {
     ngramMaxMs: { type: "number", def: 2000, min: 100, max: 5000, step: 50, unit: "ms" },  // n-gram の分布の横軸の最大(ms)
     rhythmMaxMs: { type: "number", def: 600, min: 100, max: 5000, step: 50, unit: "ms" },  // キーごとの間隔の棒の最大(ms)
     rankMinAccuracy: { type: "number", def: 95, min: 50, max: 100, step: 1, unit: "%" },   // ランキングに載せる正確率の下限(%)
+    idleStopSec: { type: "number", def: 60, min: 30, max: 600, step: 10, unit: "秒" },    // タイピング中、入力がないまま止めるまでの秒数
     indicator: { type: "boolean", def: true }                                   // インジケーター（準備中）
   };
 

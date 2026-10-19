@@ -28,34 +28,40 @@
   <main class="main stats-main">
     <p class="rhythm-legend">変えるとすぐこのブラウザに保存し、ほかのページを開いたとき（開き直したとき）から使います。記録の書き出しには含めません。</p>
 
-    <section class="stats-section settings-section">
-      <h2 class="stats-title">グラフ</h2>
-      <div class="setting">
-        <label class="setting-label" for="s-rhythm">キーごとの間隔の棒の最大</label>
-        <span class="setting-input"><input id="s-rhythm" class="layout-select setting-number" type="number" data-setting="rhythmMaxMs"> ms</span>
-        <p class="setting-help">結果画面と記録のページの「キーごとの間隔」で、棒の一番上にあたる間隔。これを超える間隔は頭打ちにします。<span class="setting-range"></span></p>
-      </div>
-      <div class="setting">
-        <label class="setting-label" for="s-ngram">n-gram の分布の横軸の最大</label>
-        <span class="setting-input"><input id="s-ngram" class="layout-select setting-number" type="number" data-setting="ngramMaxMs"> ms</span>
-        <p class="setting-help">n-gram のページで行をクリックしたときに出す IKI の分布。横軸は 0 からこの値までで、100 個の区間に分けます（区間の幅 = この値 ÷ 100）。これ以上の値は一番右の区間に入れます。<span class="setting-range"></span></p>
-      </div>
-    </section>
-
-    <section class="stats-section settings-section">
-      <h2 class="stats-title">ランキング</h2>
-      <div class="setting">
-        <label class="setting-label" for="s-rank-acc">ランキングに載せる正確率</label>
-        <span class="setting-input"><input id="s-rank-acc" class="layout-select setting-number" type="number" data-setting="rankMinAccuracy"> % 以上</span>
-        <p class="setting-help">正確率がこれ未満の回はランキングに載せません（記録は残ります）。推移のグラフの ○（対象外）・移動平均・赤い点線にも使います。レベルの基準（正確率 95% 以上）は変わりません。<span class="setting-range"></span></p>
-      </div>
-    </section>
-
+    <!-- 並びはページの順（タイピング・記録・n-gram）、最後にデータ。項目はそれを使うページのところに置く -->
     <section class="stats-section settings-section">
       <h2 class="stats-title">タイピング</h2>
       <div class="setting">
+        <label class="setting-label" for="s-idle">入力がないときに止めるまで</label>
+        <span class="setting-input"><input id="s-idle" class="layout-select setting-number" type="number" data-setting="idleStopSec"> 秒</span>
+        <p class="setting-help">打ち始めてから、この秒数のあいだ何もキーを押さなかったら停止します。停止した回は記録せず、続きからは打てません（もう一度（Esc）か次のお題（Shift+Enter）を選びます）。<span class="setting-range"></span></p>
+      </div>
+      <div class="setting">
         <label class="setting-label setting-check"><input id="s-indicator" type="checkbox" data-setting="indicator"> インジケーターを表示する（準備中）</label>
         <p class="setting-help">タイピング中に目標との差を示すインジケーター。まだできていないので、今は設定を保存するだけです。初期値は ON。</p>
+      </div>
+      <div class="setting">
+        <label class="setting-label" for="s-rhythm">キーごとの間隔の棒の最大</label>
+        <span class="setting-input"><input id="s-rhythm" class="layout-select setting-number" type="number" data-setting="rhythmMaxMs"> ms</span>
+        <p class="setting-help">結果画面の「キーごとの間隔」で、棒の一番上にあたる間隔。これを超える間隔は頭打ちにします。記録のページでランキングの行から出すグラフも同じです。<span class="setting-range"></span></p>
+      </div>
+    </section>
+
+    <section class="stats-section settings-section">
+      <h2 class="stats-title">記録</h2>
+      <div class="setting">
+        <label class="setting-label" for="s-rank-acc">ランキングに載せる正確率</label>
+        <span class="setting-input"><input id="s-rank-acc" class="layout-select setting-number" type="number" data-setting="rankMinAccuracy"> % 以上</span>
+        <p class="setting-help">正確率がこれ未満の回はランキングに載せません（記録は残ります）。結果画面の順位とランキング、推移のグラフの ○（対象外）・移動平均・赤い点線に使います。レベルの基準（正確率 95% 以上）は変わりません。<span class="setting-range"></span></p>
+      </div>
+    </section>
+
+    <section class="stats-section settings-section">
+      <h2 class="stats-title">n-gram</h2>
+      <div class="setting">
+        <label class="setting-label" for="s-ngram">分布の横軸の最大</label>
+        <span class="setting-input"><input id="s-ngram" class="layout-select setting-number" type="number" data-setting="ngramMaxMs"> ms</span>
+        <p class="setting-help">n-gram のページで行（または2次元ヒストグラムのマス）をクリックしたときに出す IKI の分布。横軸は 0 からこの値までで、100 個の区間に分けます（区間の幅 = この値 ÷ 100）。これ以上の値は一番右の区間に入れます。<span class="setting-range"></span></p>
       </div>
     </section>
 
@@ -64,7 +70,7 @@
       <button id="settings-reset" class="text-btn" type="button">初期値に戻す</button>
     </div>
 
-    <section class="stats-section settings-section">
+    <section class="stats-section settings-section data-section">
       <h2 class="stats-title">データ</h2>
       <div class="setting">
         <span class="setting-label">保存データ</span>

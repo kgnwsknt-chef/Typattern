@@ -100,6 +100,12 @@ body {
   color: var(--sub);
 }
 
+/* 入力がないまま止めたときのお知らせ */
+.guide.idle-stopped {
+  color: var(--error);
+  font-weight: 600;
+}
+
 .stats {
   display: flex;
   justify-content: center;
@@ -1360,4 +1366,11 @@ a.text-btn {
 
 .settings-bar {
   margin-top: 8px;
+}
+
+/* 設定のページ：「初期値に戻す」と「データ」の間の横線（データは設定の項目ではないため分ける） */
+.data-section {
+  margin-top: 20px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
