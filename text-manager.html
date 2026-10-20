@@ -16,16 +16,21 @@
       <a class="text-btn" href="index.html">タイピング</a>
       <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
       <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
-      <a class="text-btn" href="layouts.html" title="キー配列の確認と試し打ち">キー配列</a>
-      <a class="text-btn" href="text-manager.html" aria-current="page" title="お題（文章・単語リスト）の追加">お題</a>
-      <a class="text-btn" href="settings.html" title="グラフの範囲・ランキングの基準・記録の書き出しと読み込み">設定</a>
+      <a class="text-btn" href="settings.html" aria-current="page" title="キー配列・お題の登録、グラフの範囲・ランキングの基準、記録の書き出しと読み込み">設定</a>
     </div>
   </nav>
 
   <main class="main stats-main">
+    <!-- 設定のページから開くページ。どこにいるか分かるよう、設定への戻り道を出す -->
+    <p class="crumbs"><a href="settings.html">設定</a> › お題</p>
     <section class="stats-section tm-section">
-      <h2 class="stats-title">お題の追加</h2>
+      <h2 id="tm-form-title" class="stats-title">お題の追加</h2>
       <p class="rhythm-legend">自分の文章や単語リストをお題に足せます。ファイルを選ぶか、下の枠に貼り付けて「読み込んで確かめる」を押し、内容を確かめてから保存します。文章は長さで使うモードが決まります（文章 240〜360文字、短い文章 70〜110文字、それ以外は「その他」。日本語は読みのかなの数で数えます）。単語リストは単語モードで使います。最初から入っているお題と一緒に出てきます。</p>
+      <!-- 一覧の「閲覧・編集」「閲覧」で開いたとき：何を出しているかと、やめるボタン -->
+      <div id="tm-editing" class="tm-editing" hidden>
+        <span id="tm-editing-text"></span>
+        <button id="tm-edit-cancel" class="text-btn small-btn" type="button">編集をやめる</button>
+      </div>
       <div class="import-form">
         <label class="filter">言語
           <select id="tm-lang" class="layout-select">
@@ -51,6 +56,10 @@
       <div class="trial-bar">
         <span id="tm-msg" class="trial-last" aria-live="polite"></span>
         <button id="tm-check" class="text-btn" type="button">読み込んで確かめる</button>
+        <!-- 文章で、長さから文章・短い文章に当たるときだけ：そのモードか「その他」かを選ぶ -->
+        <label id="tm-mode-box" class="filter" hidden>使うモード
+          <select id="tm-mode" class="layout-select" title="長さから決まったモードで使うか、「その他」で使うか"></select>
+        </label>
         <button id="tm-save" class="text-btn" type="button" disabled>保存する</button>
       </div>
       <ul id="tm-errors" class="import-errors" hidden></ul>
@@ -60,6 +69,13 @@
     <section class="stats-section tm-section">
       <h2 class="stats-title">追加したお題</h2>
       <div id="tm-list" class="ranking-scroll"></div>
+    </section>
+
+    <!-- 最初からアプリに入っているお題（texts/・wordlists/ のファイル）。閲覧だけで、編集・削除はできない -->
+    <section class="stats-section tm-section">
+      <h2 class="stats-title">最初から入っているお題</h2>
+      <p class="rhythm-legend">アプリに最初から入っているお題です。「閲覧」で上のフォームに出せます（編集・保存・削除はできません）。</p>
+      <div id="tm-builtin" class="ranking-scroll"></div>
     </section>
   </main>
 

@@ -16,16 +16,14 @@
       <a class="text-btn" href="index.html">タイピング</a>
       <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
       <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
-      <a class="text-btn" href="layouts.html" title="キー配列の確認と試し打ち">キー配列</a>
-      <a class="text-btn" href="text-manager.html" title="お題（文章・単語リスト）の追加">お題</a>
-      <a class="text-btn" href="settings.html" aria-current="page" title="グラフの範囲・ランキングの基準・記録の書き出しと読み込み">設定</a>
+      <a class="text-btn" href="settings.html" aria-current="page" title="キー配列・お題の登録、グラフの範囲・ランキングの基準、記録の書き出しと読み込み">設定</a>
     </div>
   </nav>
 
   <main class="main stats-main">
-    <p class="rhythm-legend">変えるとすぐこのブラウザに保存し、ほかのページを開いたとき（開き直したとき）から使います。記録の書き出しには含めません。</p>
+    <p class="rhythm-legend">設定は、変えるとすぐこのブラウザに保存し、ほかのページを開いたとき（開き直したとき）から使います。記録の書き出しには含めません。</p>
 
-    <!-- 並びはページの順（タイピング・記録・n-gram）、最後にデータ。項目はそれを使うページのところに置く -->
+    <!-- 並びはページの順（タイピング・記録・n-gram）。その下に「初期値に戻す」、横線を引いて「登録」と「データ」（設定の項目ではないもの）。項目はそれを使うページのところに置く -->
     <section class="stats-section settings-section">
       <h2 class="stats-title">タイピング</h2>
       <div class="setting">
@@ -67,7 +65,20 @@
       <button id="settings-reset" class="text-btn" type="button">初期値に戻す</button>
     </div>
 
+    <!-- 別のページで行う登録（上部のリンクには出さず、ここから開く） -->
     <section class="stats-section settings-section data-section">
+      <h2 class="stats-title">登録</h2>
+      <div class="setting">
+        <a class="text-btn" href="layouts.html">キー配列</a>
+        <p class="setting-help">かな配列の割り当て表を読み込んで登録します。配列図と試し打ちで確かめられます。登録した配列は、タイピング画面の「配列」で選べます。</p>
+      </div>
+      <div class="setting">
+        <a class="text-btn" href="text-manager.html">お題</a>
+        <p class="setting-help">自分の文章や単語リストをファイルから追加します。追加したお題の閲覧・編集・削除と、最初から入っているお題の閲覧もここでできます。</p>
+      </div>
+    </section>
+
+    <section class="stats-section settings-section">
       <h2 class="stats-title">データ</h2>
       <div class="setting">
         <span class="setting-label">保存データ</span>

@@ -38,6 +38,11 @@
   --mono: "Consolas", "Menlo", monospace;
 }
 
+/* hidden 属性の付いた要素は、display を指定したクラスがあっても隠す */
+[hidden] {
+  display: none !important;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1445,4 +1450,89 @@ a.text-btn {
 
 .tm-table td.tm-ops .text-btn + .text-btn {
   margin-left: 4px;
+}
+
+/* 設定のページから開くページ（キー配列・お題）の、設定への戻り道 */
+.crumbs {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.crumbs a {
+  color: var(--accent);
+}
+
+/* 設定のページ：キー配列・お題のページへのボタン */
+.settings-pages {
+  margin-top: 0;
+}
+
+/* お題のページ：編集中の表示・閲覧・削除の2回押し */
+.tm-editing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--field-bg);
+  font-size: 13px;
+}
+
+.tm-view {
+  max-height: 420px;
+}
+
+.tm-view .dist-head {
+  margin-bottom: 6px;
+}
+
+.tm-view .dist-head .text-btn {
+  margin-left: auto;
+}
+
+.text-btn.tm-danger {
+  border-color: var(--error);
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* お題のページ：閲覧（読み込むときの書き方のまま） */
+.tm-source {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* お題のページ：最初から入っているお題の閲覧中（編集できない枠） */
+.import-text.tm-readonly,
+.layout-select.tm-readonly {
+  background: var(--head-bg);
+  color: var(--sub);
+}
+
+/* お題のページ：長さが当たらずに「その他」になるときのメッセージ（強調） */
+.trial-last.tm-warn {
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* お題のページ：メッセージが長くてもボタンを詰めない（足りなければ折り返す） */
+.tm-section .trial-bar {
+  flex-wrap: wrap;
+}
+
+.tm-section .trial-bar .trial-last {
+  flex: 1 1 300px;
+}
+
+.tm-section .trial-bar .text-btn,
+.tm-section .trial-bar .filter {
+  white-space: nowrap;
 }
