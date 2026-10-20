@@ -1377,3 +1377,30 @@ a.text-btn {
 .ngram-dists .ngram-dist:not(:empty) {
   margin: 0 0 12px;
 }
+
+/* タイピング画面：初めての人向けの使い方（ふだんは閉じておく） */
+.howto {
+  margin: 0 auto 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.howto summary {
+  width: fit-content;
+  margin: 0 auto;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.howto[open] summary {
+  margin-bottom: 6px;
+}
+
+.howto ul {
+  margin: 0;
+  padding: 10px 14px 10px 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--field-bg);
+  line-height: 1.7;
+}
