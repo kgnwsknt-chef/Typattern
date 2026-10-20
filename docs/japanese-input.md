@@ -9,7 +9,7 @@
 | 記録の形（`events` の各行・`raws`・`layouts`・書き出しファイル・版の決まり） | [storage.md](storage.md) |
 | n-gram（押したキーの組で数える・Shift と同時に押したキーは除く） | [analysis.md](analysis.md) |
 | レベル（日本語は 280 かなが基準） | [levels.md](levels.md) |
-| お題・単語リストのファイルの書き方 | [CLAUDE.md](../CLAUDE.md) の「構成」、README の「お題を追加する」 |
+| お題・単語リストの書き方（最初から入っているファイルは CLAUDE.md の「構成」、お題のページで追加するものは text-manager.md） | [CLAUDE.md](../CLAUDE.md)、[text-manager.md](text-manager.md) |
 
 このファイルにだけ書いてあるのは、[2. 物理キーの番号](#2-物理キーの番号) と [3. 日本語での events の使い方](#3-日本語での-events-の使い方)（ほかの文書とコードから参照している）、[5. 日本語の単語リスト](#5-日本語の単語リスト) の選び方、[6. まだ決まっていないこと](#6-まだ決まっていないこと)。
 
