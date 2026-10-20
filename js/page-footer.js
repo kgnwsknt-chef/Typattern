@@ -18,7 +18,7 @@ const PageFooter = (function () {
     if (!importFileEl) return; // 書き出し・読み込みのボタンがないページ
     document.getElementById("export-btn").addEventListener("click", function () {
       Store.exportFile()
-        .then(function (n) { if (n.sessions === 0 && n.layouts === 0) alert("まだ記録も登録したキー配列もありません。"); })
+        .then(function (n) { if (n.sessions === 0 && n.layouts === 0 && n.texts === 0) alert("まだ記録も、登録したキー配列も、追加したお題もありません。"); })
         .catch(function (err) { alert("書き出せませんでした: " + err.message); });
     });
     document.getElementById("import-btn").addEventListener("click", function () {
@@ -33,8 +33,10 @@ const PageFooter = (function () {
         .then(function (r) {
           alert(r.added + " 件の記録を読み込みました。" + (r.skipped ? "（" + r.skipped + " 件はすでにあるため飛ばしました）" : "") +
             (r.layoutsAdded ? "\nキー配列を " + r.layoutsAdded + " 件読み込みました。" : "") +
-            (r.layoutConflicts.length ? "\n同じ名前で中身の違うキー配列があるため、次の配列は読み込まず今のものを残しました：" + r.layoutConflicts.join("、") : ""));
-          if (r.added || r.layoutsAdded) {
+            (r.layoutConflicts.length ? "\n同じ名前で中身の違うキー配列があるため、次の配列は読み込まず今のものを残しました：" + r.layoutConflicts.join("、") : "") +
+            (r.textsAdded ? "\nお題を " + r.textsAdded + " 件読み込みました。" : "") +
+            (r.textConflicts.length ? "\n同じ名前で中身の違うお題があるため、次のお題は読み込まず今のものを残しました：" + r.textConflicts.join("、") : ""));
+          if (r.added || r.layoutsAdded || r.textsAdded) {
             refreshSize();
             if (opts.onImport) opts.onImport();
           }

@@ -3,7 +3,7 @@ const Ranking = (function () {
   "use strict";
 
   const LANG_LABEL = { en: "英語", ja: "日本語" };
-  const MODE_LABEL = { normal: "文章", short: "短い文章", words: "単語" };
+  const MODE_LABEL = { normal: "文章", short: "短い文章", words: "単語", other: "その他" };
 
   // 区分（言語・モード・配列）の表示名（例: 英語・文章・QWERTY、日本語・文章・tsukimisou-v2）
   // 登録したかな配列は、利用者が付けた配列名のまま出す

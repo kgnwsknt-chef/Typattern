@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typattern お題</title>
+  <link rel="stylesheet" href="style.css?v=52">
+</head>
+<body>
+  <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
+  <nav class="top-nav" aria-label="ページ">
+    <div class="brand">
+      <div class="logo">Typattern<span id="version" class="version"></span><span id="data-size" class="data-size" title="ブラウザに保存している記録と登録したキー配列の大きさ（書き出すファイルとほぼ同じ）。書き出し・読み込みは設定のページ"></span></div>
+    </div>
+    <div class="nav-links">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
+      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+      <a class="text-btn" href="layouts.html" title="キー配列の確認と試し打ち">キー配列</a>
+      <a class="text-btn" href="text-manager.html" aria-current="page" title="お題（文章・単語リスト）の追加">お題</a>
+      <a class="text-btn" href="settings.html" title="グラフの範囲・ランキングの基準・記録の書き出しと読み込み">設定</a>
+    </div>
+  </nav>
+
+  <main class="main stats-main">
+    <section class="stats-section tm-section">
+      <h2 class="stats-title">お題の追加</h2>
+      <p class="rhythm-legend">自分の文章や単語リストをお題に足せます。ファイルを選ぶか、下の枠に貼り付けて「読み込んで確かめる」を押し、内容を確かめてから保存します。文章は長さで使うモードが決まります（文章 240〜360文字、短い文章 70〜110文字、それ以外は「その他」。日本語は読みのかなの数で数えます）。単語リストは単語モードで使います。最初から入っているお題と一緒に出てきます。</p>
+      <div class="import-form">
+        <label class="filter">言語
+          <select id="tm-lang" class="layout-select">
+            <option value="en">英語</option>
+            <option value="ja">日本語</option>
+          </select>
+        </label>
+        <label class="filter">種類
+          <select id="tm-kind" class="layout-select">
+            <option value="text">文章</option>
+            <option value="words">単語リスト</option>
+          </select>
+        </label>
+        <label class="filter">名前
+          <input id="tm-name" class="layout-select import-name" type="text" placeholder="例：my-essay">
+        </label>
+        <label class="filter">ファイル
+          <input id="tm-file" type="file" accept=".txt,.tsv,text/plain">
+        </label>
+      </div>
+      <p id="tm-format" class="rhythm-legend tm-format"></p>
+      <textarea id="tm-source" class="import-text" spellcheck="false"></textarea>
+      <div class="trial-bar">
+        <span id="tm-msg" class="trial-last" aria-live="polite"></span>
+        <button id="tm-check" class="text-btn" type="button">読み込んで確かめる</button>
+        <button id="tm-save" class="text-btn" type="button" disabled>保存する</button>
+      </div>
+      <ul id="tm-errors" class="import-errors" hidden></ul>
+      <div id="tm-preview" class="tm-preview" hidden></div>
+    </section>
+
+    <section class="stats-section tm-section">
+      <h2 class="stats-title">追加したお題</h2>
+      <div id="tm-list" class="ranking-scroll"></div>
+    </section>
+  </main>
+
+  <script src="js/store.js?v=52"></script>
+  <script src="js/settings.js?v=52"></script>
+  <script src="js/page-footer.js?v=52"></script>
+  <script src="js/romaji.js?v=52"></script>
+  <script src="js/custom-texts.js?v=52"></script>
+  <script src="js/text-manager.js?v=52"></script>
+</body>
+</html>

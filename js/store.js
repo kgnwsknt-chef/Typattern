@@ -6,7 +6,7 @@ const Store = (function () {
 
   // schemaVersion 3 以前の記録（旧データベース "typing-records"・"typing-test"）は扱わない。旧データベースは消さずにそのまま残す
   const DB_NAME = "typattern-records";
-  const DB_VERSION = 2; // 入れ物（保存場所・索引）の構造の版（2：キー配列の保存場所 layouts を追加）
+  const DB_VERSION = 3; // 入れ物（保存場所・索引）の構造の版（2：キー配列の保存場所 layouts、3：追加したお題の保存場所 texts を追加）
   const SCHEMA_VERSION = 4; // 記録1件の形式の版（4：events にキーの行 "k" を足し、"+" の時刻を「その文字を生んだ最後のキーの時刻」にした）
   const EXPORT_APP = "typattern"; // 書き出しファイルの app 欄
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
@@ -48,6 +48,10 @@ const Store = (function () {
           if (e.oldVersion < 2) {
             // 版1 → 2：登録したキー配列の保存場所を足す（記録は変えない）
             db.createObjectStore("layouts", { keyPath: "id" });
+          }
+          if (e.oldVersion < 3) {
+            // 版2 → 3：お題のページで追加したお題（文章・単語リスト）の保存場所を足す（記録は変えない）
+            db.createObjectStore("texts", { keyPath: "id" });
           }
         };
         req.onsuccess = function () {
@@ -199,29 +203,48 @@ const Store = (function () {
     });
   }
 
-  // 保存している記録とキー配列の大きさ（バイト）。書き出すファイルの中身（JSON）と同じ形で数える
-  // （navigator.storage.estimate は、github.io の同じ利用者の他のサイトの分も含むため使わない）
-  function dataSize() {
-    return Promise.all([getAllSessions(), getAllRaws(), getAllLayouts()]).then(function (all) {
-      const data = { app: EXPORT_APP, schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString(),
-        sessions: all[0], raws: all[1], layouts: all[2] };
-      return new Blob([JSON.stringify(data)]).size;
-    });
+  // ---- お題のページで追加したお題（texts） ----
+  // 1件 { id: "言語/名前", name, lang, kind: "text"|"words", mode, length, text, lines, words, source, savedAt }。形式は docs/storage.md
+
+  function getAllTexts() {
+    return tx("texts", "readonly", function (t) { return t.objectStore("texts").getAll(); });
   }
 
-  // 全記録と登録したキー配列を JSON ファイルとしてダウンロードさせる。返り値 { sessions, layouts }（件数）
-  function exportFile() {
-    return Promise.all([getAllSessions(), getAllRaws(), getAllLayouts()]).then(function (all) {
-      const data = {
+  // 同じ id があれば上書きする（上書きしてよいかは呼ぶ側で確かめる）
+  function saveText(text) {
+    return tx("texts", "readwrite", function (t) { t.objectStore("texts").put(text); });
+  }
+
+  function deleteText(id) {
+    return tx("texts", "readwrite", function (t) { t.objectStore("texts").delete(id); });
+  }
+
+  // 書き出すファイルの中身（記録・登録したキー配列・追加したお題）
+  function exportData() {
+    return Promise.all([getAllSessions(), getAllRaws(), getAllLayouts(), getAllTexts()]).then(function (all) {
+      return {
         app: EXPORT_APP,
         schemaVersion: SCHEMA_VERSION,
         exportedAt: new Date().toISOString(),
         sessions: all[0],
         raws: all[1],
-        layouts: all[2]
+        layouts: all[2],
+        texts: all[3]
       };
-      const counts = { sessions: data.sessions.length, layouts: data.layouts.length };
-      if (counts.sessions === 0 && counts.layouts === 0) return counts;
+    });
+  }
+
+  // 保存している記録・キー配列・追加したお題の大きさ（バイト）。書き出すファイルの中身（JSON）と同じ形で数える
+  // （navigator.storage.estimate は、github.io の同じ利用者の他のサイトの分も含むため使わない）
+  function dataSize() {
+    return exportData().then(function (data) { return new Blob([JSON.stringify(data)]).size; });
+  }
+
+  // 全記録・登録したキー配列・追加したお題を JSON ファイルとしてダウンロードさせる。返り値 { sessions, layouts, texts }（件数）
+  function exportFile() {
+    return exportData().then(function (data) {
+      const counts = { sessions: data.sessions.length, layouts: data.layouts.length, texts: data.texts.length };
+      if (counts.sessions === 0 && counts.layouts === 0 && counts.texts === 0) return counts;
       const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
       const a = document.createElement("a");
       const d = new Date();
@@ -241,7 +264,8 @@ const Store = (function () {
   // 書き出しファイル（JSON 文字列）を読み込んで追加する。
   // 同じ id の記録と、概要・生データが揃っていない記録は飛ばす。
   // キー配列は、同じ名前のものがなければ足す。同じ名前で中身も同じなら飛ばし、中身が違えば今のものを残す（conflicts に数える）
-  // 返り値 { added, skipped, layoutsAdded, layoutConflicts: [配列名, …] }
+  // 追加したお題も同じ（同じ id で中身 source が違えば今のものを残す）
+  // 返り値 { added, skipped, layoutsAdded, layoutConflicts: [配列名, …], textsAdded, textConflicts: [名前, …] }
   function importFile(text) {
     let data;
     try {
@@ -264,9 +288,14 @@ const Store = (function () {
     const layouts = Array.isArray(data.layouts) ? data.layouts.filter(function (l) {
       return l && typeof l.id === "string" && Array.isArray(l.entries);
     }) : [];
+    // texts がないファイル（お題を追加できるようになる前の書き出し）も読める
+    const texts = Array.isArray(data.texts) ? data.texts.filter(function (x) {
+      return x && typeof x.id === "string" && typeof x.source === "string";
+    }) : [];
     return Promise.all([
       tx("sessions", "readonly", function (t) { return t.objectStore("sessions").getAllKeys(); }),
-      getAllLayouts()
+      getAllLayouts(),
+      getAllTexts()
     ]).then(function (have) {
       const haveIds = new Set(have[0]);
       const fresh = data.sessions.filter(function (s) {
@@ -280,18 +309,29 @@ const Store = (function () {
         if (JSON.stringify(mine.entries) !== JSON.stringify(l.entries)) conflicts.push(l.id);
         return false;
       });
-      return tx(["sessions", "raws", "layouts"], "readwrite", function (t) {
+      const haveTexts = new Map(have[2].map(function (x) { return [x.id, x]; }));
+      const textConflicts = [];
+      const freshTexts = texts.filter(function (x) {
+        const mine = haveTexts.get(x.id);
+        if (!mine) return true;
+        if (mine.source !== x.source) textConflicts.push(x.name || x.id);
+        return false;
+      });
+      return tx(["sessions", "raws", "layouts", "texts"], "readwrite", function (t) {
         fresh.forEach(function (s) {
           t.objectStore("sessions").add(s);
           t.objectStore("raws").add(raws.get(s.id));
         });
         freshLayouts.forEach(function (l) { t.objectStore("layouts").add(l); });
+        freshTexts.forEach(function (x) { t.objectStore("texts").add(x); });
       }).then(function () {
         return {
           added: fresh.length,
           skipped: data.sessions.length - fresh.length,
           layoutsAdded: freshLayouts.length,
-          layoutConflicts: conflicts
+          layoutConflicts: conflicts,
+          textsAdded: freshTexts.length,
+          textConflicts: textConflicts
         };
       });
     });
@@ -324,6 +364,9 @@ const Store = (function () {
     saveLayout: saveLayout,
     deleteLayout: deleteLayout,
     countSessionsWithLayout: countSessionsWithLayout,
+    getAllTexts: getAllTexts,
+    saveText: saveText,
+    deleteText: deleteText,
     exportFile: exportFile,
     dataSize: dataSize,
     importFile: importFile,

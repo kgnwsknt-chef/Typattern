@@ -65,7 +65,7 @@
   const rhythmNoteEl = document.getElementById("rhythm-note");
 
   // 状態
-  // 記録のモード（"normal" 文章 / "short" 短い文章 / "words" 単語）。ランキングはモードごとに分ける
+  // 記録のモード（"normal" 文章 / "short" 短い文章 / "words" 単語 / "other" その他＝追加したお題で長さが文章・短い文章に当たらないもの）。ランキングはモードごとに分ける
   let mode = "normal";
   let sources = []; // 今のモードのお題の元。文章は { name, text }、単語は { name, words }
   let current = null; // 今のお題 { name, text }。やり直しでは同じものを使う
@@ -105,9 +105,33 @@
     });
   }
 
-  // 今のモードのお題の元を読み込む
+  // 今のモードのお題の元を読み込む。最初から入っているお題に、お題のページで追加したお題（docs/text-manager.md）を足す
   function loadSources() {
-    return mode === "words" ? loadWordlists() : loadTexts(mode === "short" ? "_short.txt" : ".txt");
+    const builtin = mode === "words" ? loadWordlists()
+      : mode === "other" ? Promise.resolve([]) // 「その他」は追加したお題だけ
+      : loadTexts(mode === "short" ? "_short.txt" : ".txt");
+    return Promise.all([builtin, loadCustomTexts()]).then(function (v) {
+      sources = v[0].concat(v[1]);
+      if (sources.length === 0) {
+        throw new Error(mode === "other" ? "NO_OTHER" : "no texts for mode " + mode + " in " + (mode === "words" ? wordlistDir() : textDir()));
+      }
+    });
+  }
+
+  // お題のページで追加したお題のうち、今の言語・モードのもの（文章は { name, text, lines }、単語は { name, words }）
+  function loadCustomTexts() {
+    return Store.getAllTexts()
+      .catch(function (err) {
+        console.warn(err); // 追加したお題が読めなくても、最初から入っているお題は使う
+        return [];
+      })
+      .then(function (all) {
+        return all
+          .filter(function (x) { return x.lang === lang && x.mode === mode; })
+          .map(function (x) {
+            return x.kind === "words" ? { name: x.name, words: x.words } : { name: x.name, text: x.text, lines: x.lines };
+          });
+      });
   }
 
   // texts/index.json に書かれた題材のお題をすべて読み込む
@@ -129,8 +153,7 @@
         }));
       })
       .then(function (loaded) {
-        sources = loaded.filter(function (t) { return t.text.length > 0; });
-        if (sources.length === 0) throw new Error("no texts in " + dir + " (*" + suffix + ")");
+        return loaded.filter(function (t) { return t.text.length > 0; });
       });
   }
 
@@ -171,8 +194,7 @@
         }));
       })
       .then(function (loaded) {
-        sources = loaded.filter(function (l) { return l.words.length > 0; });
-        if (sources.length === 0) throw new Error("no word lists in " + wordlistDir());
+        return loaded.filter(function (l) { return l.words.length > 0; });
       });
   }
 
@@ -226,6 +248,12 @@
   }
 
   function showLoadError(err) {
+    if (err && err.message === "NO_OTHER") {
+      // 「その他」は追加したお題だけなので、まだなければ追加のしかたを案内する
+      textEl.textContent = (lang === "ja" ? "日本語" : "英語") + "の「その他」のお題はまだありません。「お題」のページで、文章（240〜360文字、70〜110文字のどちらにも入らない長さ）を追加すると、ここで打てます。";
+      input.disabled = true;
+      return;
+    }
     console.error(err);
     textEl.textContent = location.protocol === "file:"
       ? "お題を読み込めませんでした。index.html を直接開くと読み込めないため、サーバー経由（例: http://localhost:8000）で開いてください。"
@@ -485,7 +513,7 @@
   // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語" };
+  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他" };
 
   // 今回のレベルと文字/秒。正確率が基準未満なら「-」
   function renderLevel(session) {
@@ -519,7 +547,7 @@
     } else {
       add(label + "の達成レベル：" + (now ? now.name : "なし"));
     }
-    if (session.mode !== mode) add("（短い文章は達成に数えません）");
+    if (session.mode !== mode) add("（" + MODE_NAME[session.mode] + "は達成に数えません）");
     if (!target) {
       add(" ／ 一番上のレベルです");
       return;
