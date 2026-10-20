@@ -1,6 +1,6 @@
 // かな配列の割り当て表（「キーの並び → かな」）の読み込みと、最長一致での変換
 // 表の中のキーは US キーボードの QWERTY の文字として読む（Shift ありの文字は Shift ＋ そのキー）。
-// 決まりは docs/japanese-input.md
+// 決まりは docs/layouts.md の「割り当て表の書き方」（理由は docs/japanese-input.md の「4. かな配列」）
 const KanaLayout = (function () {
   "use strict";
 
