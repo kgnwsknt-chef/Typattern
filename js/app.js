@@ -240,7 +240,7 @@
       text: text,
       lines: lines.map(function (ws, i) {
         return {
-          display: ws.map(function (w) { return w.display; }).join(" "),
+          display: ws.map(function (w) { return w.display; }).join("　"), // 画面では全角スペースで区切る
           reading: ws.map(function (w) { return w.reading; }).join(" ") + (i < lines.length - 1 ? " " : "")
         };
       })
@@ -341,10 +341,11 @@
     textEl.classList.toggle("ja", lang === "ja");
     const frag = document.createDocumentFragment();
     charEls = [];
-    function addChars(parent, str) {
+    function addChars(parent, str, wide) {
       Array.from(str).forEach(function (ch) {
         const span = document.createElement("span");
-        span.textContent = ch;
+        // 日本語の単語の間のスペースは、かなの幅に合わせて全角で見せる（打つのは半角スペース）
+        span.textContent = wide && ch === " " ? "　" : ch;
         parent.appendChild(span);
         charEls.push(span);
       });
@@ -356,7 +357,7 @@
         display.textContent = l.display;
         const reading = document.createElement("div");
         reading.className = "ja-reading";
-        addChars(reading, l.reading);
+        addChars(reading, l.reading, true);
         frag.appendChild(display);
         frag.appendChild(reading);
       });
