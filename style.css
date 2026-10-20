@@ -1080,15 +1080,6 @@ a.text-btn {
   color: var(--sub);
 }
 
-.dist-close {
-  margin-left: auto;
-  border: 0;
-  background: none;
-  color: var(--sub);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
 
 .dist-svg {
   display: block;
@@ -1265,7 +1256,7 @@ a.text-btn {
 }
 
 /* タイピング画面：ページのリンクの下に、言語・モードなどを1行あけて中央に並べる */
-.top-nav + .header:not(.page-header) {
+.top-nav + .header {
   margin-top: 14px;
   justify-content: center;
 }
@@ -1279,20 +1270,7 @@ a.text-btn {
   font-weight: normal;
 }
 
-/* 記録／n-gram／キー配列／設定のページ：ページのリンクの下の中央にページ名 */
-.page-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 8px;
-}
 
-.page-title {
-  grid-column: 2;
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  text-align: center;
-}
 
 @media (max-width: 600px) {
   .text {
@@ -1393,4 +1371,9 @@ a.text-btn {
   stroke: var(--trend-selected);
   stroke-width: 1;
   opacity: 0.5;
+}
+
+/* n-gram のページ：表の上に出す分布（出ていないときは場所を取らない） */
+.ngram-dists .ngram-dist:not(:empty) {
+  margin: 0 0 12px;
 }
