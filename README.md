@@ -45,3 +45,7 @@
 - お題追加のUI
 - かな配列まわりの未決事項（[docs/japanese-input.md](docs/japanese-input.md)）
 - 英語での QWERTY 以外のキー配列、ロースタッガード以外のキーボードの形
+
+## ライセンス
+
+[MIT License](LICENSE)（Copyright (c) 2026 @kgnwsknt_chef）。プログラムだけでなく、お題（`texts/`）・単語リスト（`wordlists/`）・文書（`docs/`）を含む、このリポジトリのすべてに適用します。お題と単語リストは Claude Code で作成したものです。
