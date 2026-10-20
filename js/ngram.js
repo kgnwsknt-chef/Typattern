@@ -7,7 +7,7 @@ const NGram = (function () {
 
   // n 文字ごとの一覧表を1つ作る。並び順は表ごとに持ち、やり直しても維持する
   // distEl を渡すと、行のクリックで分布のグラフをそこに描く
-  // onSelect(gram) を渡すと、分布を出す n-gram が変わったときに呼ぶ（閉じたときは null）
+  // onSelect(gram) を渡すと、分布を出す n-gram が変わったときに呼ぶ（行がないときは null）
   function create(n, label, distEl, onSelect) {
     let rows = [];     // 集計結果 { gram, avg, sd, count, values }
     let sortKey = "avg"; // 並べ替えに使う列："gram"（n-gram の文字）・"avg"（平均 IKI）・"count"（回数）
@@ -24,10 +24,14 @@ const NGram = (function () {
       rows = newRows;
       baseAvg = avg;
       emptyMessage = emptyText || "対象になる " + label + " がありません。";
-      // 表示中の n-gram が新しいデータにもあれば、分布を出し続ける
-      if (selected && !rows.some(function (r) { return r.gram === selected; })) {
-        selected = null;
-        if (onSelect) onSelect(null);
+      // 表示中の n-gram が新しいデータにもあれば、分布を出し続ける。なければ一番速い（平均 IKI が小さい）ものを出す
+      // （分布はいつも出しておく。行がなければ出さない）
+      if (!selected || !rows.some(function (r) { return r.gram === selected; })) {
+        const fastest = rows.slice().sort(function (x, y) {
+          return x.avg - y.avg || y.count - x.count || (x.gram < y.gram ? -1 : 1);
+        })[0];
+        selected = fastest ? fastest.gram : null;
+        if (onSelect) onSelect(selected);
       }
       draw();
       return rows.length;
@@ -42,7 +46,7 @@ const NGram = (function () {
     }
 
     function select(gram) {
-      selected = selected === gram ? null : gram; // 同じ行をもう一度クリックすると閉じる
+      selected = gram; // 分布はいつも出しておく（同じ行をもう一度クリックしても閉じない）
       if (onSelect) onSelect(selected);
       draw();
     }
@@ -120,9 +124,9 @@ const NGram = (function () {
           tr.className = "bg-row" + (r.gram === selected ? " bg-selected" : "");
           tr.tabIndex = 0;
           tr.title = "クリックで IKI の分布を表示";
-          tr.addEventListener("click", function () { select(r.gram); });
+          tr.addEventListener("click", function () { show(r.gram); }); // 分布は表の上に出るので、見えるところまでスクロールする
           tr.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.gram); }
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(r.gram); }
           });
         }
         body.appendChild(tr);
@@ -132,12 +136,12 @@ const NGram = (function () {
 
       if (distEl) {
         const row = rows.find(function (r) { return r.gram === selected; });
-        if (row) drawDistribution(distEl, row, label, baseAvg, function () { select(row.gram); });
+        if (row) drawDistribution(distEl, row, label, baseAvg);
         else distEl.textContent = "";
       }
     }
 
-    // 表の外（bigram の2次元ヒストグラムのマス）から選ぶ。行のクリックと同じく、同じものをもう一度選ぶと閉じる
+    // 表の行や、表の外（bigram の2次元ヒストグラムのマス）から選ぶ（同じものをもう一度選んでも閉じない）
     // 選んだときは、表の中をその行までスクロールし、分布が見えるところまでページをスクロールする
     function show(gram) {
       select(gram);
@@ -151,13 +155,14 @@ const NGram = (function () {
   }
 
   // 1つの n-gram の IKI の分布をヒストグラムで描く。平均を点線、1回ごとの値を軸の下の短い線で示す
-  function drawDistribution(el, row, label, baseAvg, onClose) {
+  // 分布はいつも出しておくので、閉じるボタンは付けない
+  function drawDistribution(el, row, label, baseAvg) {
     el.textContent = "";
     const values = row.values;
     const min = Math.min.apply(null, values);
     const max = Math.max.apply(null, values);
 
-    // 見出しと閉じるボタン
+    // 見出し
     const head = document.createElement("div");
     head.className = "dist-head";
     const title = document.createElement("span");
@@ -167,15 +172,8 @@ const NGram = (function () {
     info.className = "dist-info";
     info.textContent = row.count + " 回 ／ 平均 " + Math.round(row.avg) + " ms ／ SD " +
       (row.sd === null ? "-" : Math.round(row.sd) + " ms") + " ／ 最小 " + Math.round(min) + " ／ 最大 " + Math.round(max);
-    const close = document.createElement("button");
-    close.type = "button";
-    close.className = "dist-close";
-    close.textContent = "×";
-    close.title = "閉じる";
-    close.addEventListener("click", onClose);
     head.appendChild(title);
     head.appendChild(info);
-    head.appendChild(close);
     el.appendChild(head);
 
     // 横軸は 0〜設定の最大（js/settings.js の ngramMaxMs。初期値 2000 ms）で、100 個の区間に分ける。最大以上の値は一番右の区間に入れる

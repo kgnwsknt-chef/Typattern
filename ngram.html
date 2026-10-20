@@ -21,10 +21,6 @@
     </div>
   </nav>
 
-  <header class="header page-header">
-    <h1 class="page-title">n-gram</h1>
-  </header>
-
   <main class="main stats-main">
     <h2 class="stats-title">データの絞り込み</h2>
     <div class="filters stats-filters">
@@ -58,8 +54,8 @@
     </div>
     <p id="stats-summary" class="stats-summary">読み込み中…</p>
 
+    <!-- 並び：絞り込み → 回数・集計・説明 → bigram の2次元ヒストグラム → 分布（クリックで出る）→ bigram・trigram の表 -->
     <section class="stats-section">
-      <h2 class="stats-title">n-gram</h2>
       <div class="filters">
         <label class="filter">回数
           <select id="f-min" class="layout-select">
@@ -71,22 +67,12 @@
         </label>
       </div>
       <p id="ngram-summary" class="stats-summary"></p>
-      <p class="rhythm-legend">続けて押した2キー（bigram）・3キー（trigram）ごとの平均 IKI を、選んだ記録すべてで集計。キーは QWERTY の文字で表示（日本語も押したキー）。trigram は2つの打鍵間隔の平均 ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡んだものは除外 ／ 色は全体の打鍵間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い ／ 行をクリックで分布を表示</p>
-      <div class="ngram-grid">
-        <div class="ngram-col">
-          <div id="bigram" class="ngram-scroll"></div>
-          <div id="bigram-dist" class="ngram-dist"></div>
-        </div>
-        <div class="ngram-col">
-          <div id="trigram" class="ngram-scroll"></div>
-          <div id="trigram-dist" class="ngram-dist"></div>
-        </div>
-      </div>
+      <p class="rhythm-legend">続けて押した2キー（bigram）・3キー（trigram）ごとの平均 IKI を、選んだ記録すべてで集計。キーは QWERTY の文字で表示（日本語も押したキー）。trigram は2つの打鍵間隔の平均 ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡んだものは除外 ／ 色は全体の打鍵間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い ／ 表の上に IKI の分布を表示（最初は一番速い bigram・trigram。2次元ヒストグラムのマスや表の行をクリックすると切り替わる）</p>
     </section>
 
     <section class="stats-section">
       <h2 class="stats-title">bigram の2次元ヒストグラム</h2>
-      <p class="rhythm-legend">横軸 = 1キー目、縦軸 = 2キー目（QWERTY の文字。キーボードの行の順で、行が変わるところに区切り線）。上の表と同じ bigram（「回数」の絞り込みも同じ）を、マスの色で表示 ／ マスにマウスを乗せると値を表示 ／ マスをクリックで分布を表示</p>
+      <p class="rhythm-legend">横軸 = 1キー目、縦軸 = 2キー目（QWERTY の文字。キーボードの行の順で、行が変わるところに区切り線）。下の表と同じ bigram（「回数」の絞り込みも同じ）を、マスの色で表示 ／ マスにマウスを乗せると値を表示 ／ マスをクリックで分布を表示</p>
       <div class="ngram-grid">
         <div class="ngram-col">
           <h3 class="hm-title">回数</h3>
@@ -95,6 +81,22 @@
         <div class="ngram-col">
           <h3 class="hm-title">平均 IKI（白 = なし）</h3>
           <div id="hm-iki" class="hm"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-section">
+      <!-- クリックで出る IKI の分布（左が bigram、右が trigram） -->
+      <div class="ngram-grid ngram-dists">
+        <div class="ngram-col"><div id="bigram-dist" class="ngram-dist"></div></div>
+        <div class="ngram-col"><div id="trigram-dist" class="ngram-dist"></div></div>
+      </div>
+      <div class="ngram-grid">
+        <div class="ngram-col">
+          <div id="bigram" class="ngram-scroll"></div>
+        </div>
+        <div class="ngram-col">
+          <div id="trigram" class="ngram-scroll"></div>
         </div>
       </div>
     </section>
