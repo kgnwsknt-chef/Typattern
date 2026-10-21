@@ -1147,7 +1147,7 @@ a.text-btn {
 }
 
 .dist-mean {
-  stroke: var(--accent);
+  stroke: var(--text); /* 平均の点線は黒（青い棒と区別しやすいように） */
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
 }
