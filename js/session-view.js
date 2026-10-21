@@ -6,7 +6,9 @@ const SessionView = (function () {
   // 日本語：記録したキー（events の "k" の行）を判定（js/typer.js）にもう一度通し、打ったときのまとまりを再現する
   //   optionsFn：打ち方の一覧（Romaji.options か、かな配列の KanaLayout.create(…).options）
   //   再現した "+" の行が記録と合わないとき（判定の決まりがその後に変わったときなど）は null
-  function replay(raw, optionsFn) {
+  //   observe(e, before, result, shiftOn)：渡すと、Shift 以外の "k" の行ごとに呼ぶ（ミスタイプのページで使う）。
+  //     before は押す前の typer.expect()、result は typer.press の結果（Backspace のときはどちらも null）
+  function replay(raw, optionsFn, observe) {
     const typer = Typer.create(raw.text, optionsFn);
     const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
@@ -24,10 +26,14 @@ const SessionView = (function () {
       }
       if (e[2] === Keys.BACKSPACE) {
         typer.backspace(e[0]);
+        if (observe) observe(e, null, null, shiftDown.size > 0);
         return;
       }
+      const before = observe ? typer.expect() : null;
+      const shiftOn = shiftDown.size > 0;
       // 文字のないキー（JIS の「ろ」など）は、どの打ち方にも合わない文字として渡す（タイピング画面と同じ）
-      const r = typer.press(Keys.charOf(e[2], shiftDown.size > 0) || "\u0000", e[0]);
+      const r = typer.press(Keys.charOf(e[2], shiftOn) || "\u0000", e[0]);
+      if (observe) observe(e, before, r, shiftOn);
       r.confirmed.forEach(function (u) {
         for (let j = 0; j < u.len; j++) added.push([u.time, raw.text[u.pos + j], u.pos + j, u.correct ? 1 : 0]);
       });

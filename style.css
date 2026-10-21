@@ -756,6 +756,89 @@ a.text-btn {
   color: var(--accent);
 }
 
+/* ---- ミスタイプのページ（mistype.html）の配列図。キーの文字を左上に、値（回数・ミス率）を下に書く ---- */
+.mt-kb .mt-char {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  font-size: 13px;
+}
+
+.mt-kb .mt-func .mt-char {
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--sub);
+}
+
+.mt-kb .mt-val {
+  position: absolute;
+  left: 0;
+  right: 3px;
+  bottom: 2px;
+  text-align: right;
+  font-size: 10px;
+}
+
+/* 回数が少なくて色を付けないキーの値 */
+.mt-kb .mt-val.mt-dim {
+  color: var(--typed);
+}
+
+/* 濃い色のキーは白い文字 */
+.mt-kb .mt-dark span {
+  color: #ffffff;
+}
+
+/* 記録しないキー（Tab・Ctrl など） */
+.mt-kb .mt-none {
+  background: var(--bg);
+  border-style: dashed;
+}
+
+.mt-kb .mt-func:not([style*="background"]) {
+  background: var(--kb-func);
+}
+
+.mt-types {
+  max-width: 420px;
+}
+
+/* 押し間違いの直前の間隔の分布：正しい打鍵は薄い青の棒、押し間違いの直前は赤い線。中央値は同じ色の点線 */
+.mt-interval-svg {
+  display: block;
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+}
+
+.mt-normal-bar {
+  fill: #b7cdee;
+}
+
+.mt-miss-line {
+  fill: none;
+  stroke: var(--error);
+  stroke-width: 1.8;
+}
+
+.mt-normal-med,
+.mt-miss-med {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.mt-normal-med {
+  stroke: var(--accent);
+}
+
+.mt-miss-med {
+  stroke: var(--error);
+}
+
+.mt-type {
+  white-space: nowrap;
+}
+
 /* 試し打ちで押しているキー */
 .kb-key.pressed {
   background: var(--accent);

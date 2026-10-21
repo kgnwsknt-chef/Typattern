@@ -248,8 +248,9 @@ const NGram = (function () {
   }
 
   // bigram の2次元ヒストグラム（ヒートマップ）。横軸 = 1キー目、縦軸 = 2キー目、マスの色 = 値
-  //   kind："count"（回数。0 回は白、一番多いマスが一番濃い。回数に比例）か "iki"（平均 IKI。表と同じ配色、baseAvg が基準）
-  //   rows：toRows の結果（bigram）。軸には rows に出てくるキーだけを並べる
+  //   kind："count"（回数。0 回は白、一番多いマスが一番濃い。回数に比例）か "iki"（平均 IKI。表と同じ配色、baseAvg が基準）、
+  //     "miss"（ミス率 r.rate。0 は白、baseAvg のミス率以上が一番濃い赤。ミスタイプのページで使う）
+  //   rows：toRows の結果（bigram）。軸には rows に出てくるキーだけを並べる。"miss" は { gram, count, misses, rate }
   //   opts.selected：枠で囲むマスの bigram。opts.onSelect(row)：データのあるマスをクリック（または Enter）したときに呼ぶ
   function drawHeatmap(el, rows, kind, baseAvg, opts) {
     opts = opts || {};
@@ -314,10 +315,13 @@ const NGram = (function () {
         const r = cells.get(first + second);
         let fill;
         if (kind === "count") fill = r ? countColor(r.count / maxCount) : "var(--hm-none)";
+        else if (kind === "miss") fill = r ? missColor(r.rate / baseAvg) : "var(--hm-none)";
         else fill = r ? Rhythm.color(r.avg, baseAvg) : "var(--hm-none)";
         const rect = svgEl("rect", { x: L + xi * C, y: T + yi * C, width: C, height: C, fill: fill, class: "hm-cell" });
         const tip = svgEl("title", {});
-        tip.textContent = first + second + "：" + (r ? r.count + " 回・平均 " + Math.round(r.avg) + " ms" : "なし");
+        tip.textContent = first + second + "：" + (!r ? "なし"
+          : kind === "miss" ? r.count + " 回中 " + r.misses + " 回押し間違い（" + (r.rate * 100).toFixed(1) + "%）"
+          : r.count + " 回・平均 " + Math.round(r.avg) + " ms");
         rect.appendChild(tip);
         if (r && opts.onSelect) {
           rect.setAttribute("class", "hm-cell hm-click");
@@ -349,12 +353,14 @@ const NGram = (function () {
     const steps = 20;
     for (let i = 0; i < steps; i++) {
       const f = (i + 0.5) / steps;
-      const fill = kind === "count" ? countColor(f) : Rhythm.color(f * 2 * baseAvg, baseAvg);
+      const fill = kind === "count" ? countColor(f) : kind === "miss" ? missColor(f) : Rhythm.color(f * 2 * baseAvg, baseAvg);
       svg.appendChild(svgEl("rect", { x: L + (i * lw) / steps, y: ly, width: lw / steps + 0.5, height: lh, fill: fill }));
     }
     const labels = kind === "count"
       ? ["0", String(Math.round(maxCount / 2)), maxCount + " 回"]
-      : ["0", "平均 " + Math.round(baseAvg), Math.round(baseAvg * 2) + " ms 以上"];
+      : kind === "miss"
+        ? ["0%", (baseAvg * 50).toFixed(1) + "%", (baseAvg * 100).toFixed(1) + "% 以上"]
+        : ["0", "平均 " + Math.round(baseAvg), Math.round(baseAvg * 2) + " ms 以上"];
     svg.appendChild(svgText(L, ly + lh + 11, labels[0], "start"));
     svg.appendChild(svgText(L + lw / 2, ly + lh + 11, labels[1], "middle"));
     svg.appendChild(svgText(L + lw, ly + lh + 11, labels[2], "end"));
@@ -365,6 +371,11 @@ const NGram = (function () {
   // 回数の色。f = 回数 ÷ 一番多い回数（0〜1）。白に近い青 → 濃い青
   function countColor(f) {
     return "hsl(215, 75%, " + Math.round(96 - f * 64) + "%)";
+  }
+
+  // ミス率の色。f = ミス率 ÷ 一番濃くするミス率（1 を超えたら 1）。白 → 濃い赤（ミスタイプのページの配列図と同じ）
+  function missColor(f) {
+    return "hsl(0, 75%, " + Math.round(96 - Math.min(1, f) * 58) + "%)";
   }
 
   function svgEl(name, attrs) {
@@ -405,7 +416,7 @@ const NGram = (function () {
 
   // 生データの events から、連続する n 個のキーごとの IKI を map に足し込む
   // （複数回分を同じ map に足せば、全記録の集計になる）
-  // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis.md を参照
+  // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis_ngram.md を参照
   function accumulate(map, n, events) {
     const seq = keySequence(events);
     for (let end = n - 1; end < seq.length; end++) {

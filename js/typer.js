@@ -135,10 +135,47 @@ const Typer = (function () {
       return { typed: pending, rest: o.seq.slice(pending.length), ahead: ahead };
     }
 
+    // 次に押すと正解になるキー（US キーボードの文字）の一覧と、手引きが示すキー（ミスタイプのページで使う）
+    //   keys：正解になるキーすべて。preferred：手引きの打ち方で次に押すキー。next：その次のキー（なければ null）。pending：今のかなに打ちかけのキー
+    //   打ち方がないかな（かな配列にないかな）は、press と同じく飛ばした先のかなで考える
+    function expect() {
+      let p = pos;
+      if (!pending) while (p < text.length && optionsFn(text, p).length === 0) p++;
+      if (p >= text.length) return { keys: [], preferred: null, next: null, pending: pending };
+      const opts = p === pos ? current() : optionsFn(text, p);
+      const keys = [];
+      let preferred = null;
+      let next = null;
+      opts.forEach(function (o) {
+        if (o.seq.indexOf(pending) !== 0 || o.seq.length <= pending.length) return;
+        const c = o.seq[pending.length];
+        if (keys.indexOf(c) === -1) keys.push(c);
+        if (preferred === null) {
+          // 手引きと同じ打ち方（条件に合う最初のもの）
+          preferred = c;
+          const rest = o.seq.slice(pending.length);
+          if (rest.length > 1) next = rest[1];
+          else {
+            const n = constrain(optionsFn(text, p + o.len), o.doubled)[0];
+            next = n ? n.seq[0] : null;
+          }
+        }
+      });
+      // 打ちかけだけで完成している打ち方（「ん」の n など）があれば、次のかなの始まりのキーも正解
+      const done = pending ? opts.filter(function (o) { return o.seq === pending; })[0] : null;
+      if (done) {
+        constrain(optionsFn(text, p + done.len), done.doubled).forEach(function (o) {
+          if (keys.indexOf(o.seq[0]) === -1) keys.push(o.seq[0]);
+        });
+      }
+      return { keys: keys, preferred: preferred, next: next, pending: pending };
+    }
+
     return {
       press: press,
       backspace: backspace,
       guide: guide,
+      expect: expect,
       units: units,
       get pos() { return pos; },
       get pending() { return pending; },

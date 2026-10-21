@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typattern ミスタイプ</title>
+  <link rel="stylesheet" href="style.css?v=58">
+</head>
+<body>
+  <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
+  <nav class="top-nav" aria-label="ページ">
+    <div class="brand">
+      <div class="logo">Typattern<span id="version" class="version"></span><span id="data-size" class="data-size" title="ブラウザに保存している記録と登録したキー配列の大きさ（書き出すファイルとほぼ同じ）。書き出し・読み込みは設定のページ"></span></div>
+    </div>
+    <div class="nav-links">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
+      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+      <a class="text-btn" href="mistype.html" aria-current="page" title="どのキーを、どのキーと押し間違えたか">ミスタイプ</a>
+      <a class="text-btn" href="settings.html" title="キー配列・お題の登録、グラフの範囲・ランキングの基準、記録の書き出しと読み込み">設定</a>
+    </div>
+  </nav>
+
+  <main class="main stats-main">
+    <h2 class="stats-title">データの絞り込み</h2>
+    <div class="filters stats-filters">
+      <label class="filter">言語
+        <select id="f-lang" class="layout-select">
+          <option value="">すべて</option>
+          <option value="en">英語</option>
+          <option value="ja">日本語</option>
+        </select>
+      </label>
+      <label class="filter">配列
+        <select id="f-layout" class="layout-select">
+          <option value="">すべて</option>
+          <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
+      <label class="filter">モード
+        <select id="f-mode" class="layout-select">
+          <option value="">すべて</option>
+          <option value="normal">文章</option>
+          <option value="short">短い文章</option>
+          <option value="words">単語</option>
+          <option value="other">その他</option>
+        </select>
+      </label>
+      <span class="filter">期間
+        <input id="f-from" type="date" class="layout-select" aria-label="開始日">
+        〜
+        <input id="f-to" type="date" class="layout-select" aria-label="終了日">
+        <button id="f-clear" type="button" class="text-btn small-btn" title="期間の指定をなくす">すべて</button>
+      </span>
+    </div>
+    <p id="stats-summary" class="stats-summary">読み込み中…</p>
+
+    <!-- 並び：絞り込み → 集計の要約 → キーごとのストローク回数とミス率（配列図）→ 種類 → 打ち間違いの組 → ミスが起きやすい並び → 直前の間隔。決まりは docs/analysis_mistype.md -->
+    <section class="stats-section">
+      <p id="mt-summary" class="stats-summary"></p>
+      <p class="rhythm-legend">押し間違い = 続けて起きたミスのまとまりの最初のミス（2つ目以降は、最初の押し間違いの続きなので数えない）。結果画面の「ミス」の数とは数え方が違う ／ キーは QWERTY の文字で表示（日本語も押したキー）。打つべきキーは、日本語では手引きが示す打ち方のキー</p>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">キーごとのストローク回数</h2>
+      <p class="rhythm-legend">そのキーを押した回数（Shift・Backspace・間違えたキーも含む）。多いほど濃い青</p>
+      <div class="kb-scroll"><div id="kb-strokes" class="kb mt-kb"></div></div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">キーごとのミス率</h2>
+      <p id="kb-miss-legend" class="rhythm-legend"></p>
+      <div class="kb-scroll"><div id="kb-miss" class="kb mt-kb"></div></div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">押し間違いの種類</h2>
+      <p class="rhythm-legend">続く打鍵も手がかりにして分ける（決まりは docs/analysis_mistype.md の「種類」）。日本語の「抜け」「重ね打ち」はまだ見分けない</p>
+      <div id="mt-types" class="ngram-scroll mt-types"></div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">打ち間違いの組</h2>
+      <p class="rhythm-legend">打つべきキー → 押したキー。多い順 ／ 列の見出しをクリックで並べ替え ／ 種類は、その組の押し間違いを種類ごとに数えたもの</p>
+      <div id="mt-pairs" class="ngram-scroll"></div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">ミスが起きやすい並び</h2>
+      <div class="filters">
+        <label class="filter">回数
+          <select id="f-min" class="layout-select">
+            <option value="5">5 回以上</option>
+            <option value="10" selected>10 回以上</option>
+            <option value="20">20 回以上</option>
+            <option value="50">50 回以上</option>
+          </select>
+        </label>
+      </div>
+      <p id="mt-bigram-legend" class="rhythm-legend"></p>
+      <div class="ngram-grid">
+        <div class="ngram-col">
+          <h3 class="hm-title">ミス率</h3>
+          <div id="hm-miss" class="hm"></div>
+        </div>
+        <div class="ngram-col">
+          <div id="mt-bigrams" class="ngram-scroll"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">押し間違いの直前の間隔</h2>
+      <p id="mt-interval-summary" class="stats-summary"></p>
+      <p id="mt-interval-legend" class="rhythm-legend"></p>
+      <div id="mt-interval" class="mt-interval"></div>
+    </section>
+  </main>
+
+  <script src="js/store.js?v=58"></script>
+  <script src="js/keys.js?v=58"></script>
+  <script src="js/settings.js?v=58"></script>
+  <script src="js/page-footer.js?v=58"></script>
+  <script src="js/keyboard-shapes.js?v=58"></script>
+  <script src="js/romaji.js?v=58"></script>
+  <script src="js/typer.js?v=58"></script>
+  <script src="js/kana-layout.js?v=58"></script>
+  <script src="js/session-view.js?v=58"></script>
+  <script src="js/rhythm.js?v=58"></script>
+  <script src="js/ngram.js?v=58"></script>
+  <script src="js/filters.js?v=58"></script>
+  <script src="js/mistype.js?v=58"></script>
+  <script src="js/mistype-page.js?v=58"></script>
+</body>
+</html>

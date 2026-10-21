@@ -68,6 +68,17 @@ const Keys = (function () {
     return shift ? row[3] : row[2];
   }
 
+  // US キーボードの文字 ch を打つキー { number: 物理キーの番号, shift: Shift が要るか }。打てない文字は null
+  // （ミスタイプのページで、打つべきだった文字からキーを求めるのに使う）
+  const byChar = {};
+  TABLE.forEach(function (row) {
+    if (row[2] !== null && !(row[2] in byChar)) byChar[row[2]] = { number: row[1], shift: false };
+    if (row[3] !== null && !(row[3] in byChar)) byChar[row[3]] = { number: row[1], shift: true };
+  });
+  function ofChar(ch) {
+    return byChar[ch] || null;
+  }
+
   function isShift(code) {
     return code === "ShiftLeft" || code === "ShiftRight";
   }
@@ -76,5 +87,5 @@ const Keys = (function () {
     return n === "30" || n === "3c";
   }
 
-  return { number: number, char: char, charOf: charOf, label: label, isShift: isShift, isShiftNumber: isShiftNumber, BACKSPACE: "0d", SPACE: "45" };
+  return { number: number, char: char, charOf: charOf, ofChar: ofChar, label: label, isShift: isShift, isShiftNumber: isShiftNumber, BACKSPACE: "0d", SPACE: "45" };
 })();
