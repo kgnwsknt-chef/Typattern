@@ -247,6 +247,12 @@ const NGram = (function () {
     return KEY_ROWS.length;
   }
 
+  // 左手で打つキー（ふつうの指の割り当て：各行の左から 5・T・G・B まで）。それより右は右手
+  const LEFT_HAND = "`12345qwertasdfgzxcvb";
+  function isLeftHand(ch) {
+    return LEFT_HAND.indexOf(ch) >= 0;
+  }
+
   // bigram の2次元ヒストグラム（ヒートマップ）。横軸 = 1キー目、縦軸 = 2キー目、マスの色 = 値
   //   kind："count"（回数。0 回は白、一番多いマスが一番濃い。回数に比例）か "iki"（平均 IKI。表と同じ配色、baseAvg が基準）、
   //     "miss"（ミス率 r.rate。0 は白、baseAvg のミス率以上が一番濃い赤。ミスタイプのページで使う）
@@ -335,11 +341,14 @@ const NGram = (function () {
       });
     });
 
-    // キーボードの行が変わるところの区切り線
+    // キーボードの行が変わるところの区切り線（実線）と、同じ行の中で左手と右手の担当が変わるところの区切り線（点線）
     for (let i = 1; i < n; i++) {
-      if (keyRow(keys[i]) === keyRow(keys[i - 1])) continue;
-      svg.appendChild(svgEl("line", { x1: L + i * C, y1: T, x2: L + i * C, y2: T + n * C, class: "hm-sep" }));
-      svg.appendChild(svgEl("line", { x1: L, y1: T + i * C, x2: L + n * C, y2: T + i * C, class: "hm-sep" }));
+      let cls;
+      if (keyRow(keys[i]) !== keyRow(keys[i - 1])) cls = "hm-sep";
+      else if (isLeftHand(keys[i - 1]) && !isLeftHand(keys[i])) cls = "hm-sep hm-hand";
+      else continue;
+      svg.appendChild(svgEl("line", { x1: L + i * C, y1: T, x2: L + i * C, y2: T + n * C, class: cls }));
+      svg.appendChild(svgEl("line", { x1: L, y1: T + i * C, x2: L + n * C, y2: T + i * C, class: cls }));
     }
     svg.appendChild(svgEl("rect", { x: L, y: T, width: n * C, height: n * C, class: "hm-frame" }));
     // 分布を表示中のマスを枠で囲む

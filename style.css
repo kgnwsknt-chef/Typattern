@@ -1326,6 +1326,12 @@ a.text-btn {
   stroke-width: 1.4;
 }
 
+/* 左手と右手の担当が変わるところの区切り線（行の区切りと同じ黒の点線） */
+.hm-sep.hm-hand {
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2;
+}
+
 .hm-frame {
   fill: none;
   stroke: var(--border);
