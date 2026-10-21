@@ -63,6 +63,16 @@
   const speedUnitEls = Array.from(document.querySelectorAll(".speed-unit"));
   const rhythmWhatEl = document.getElementById("rhythm-what");
   const rhythmNoteEl = document.getElementById("rhythm-note");
+  const paceEl = document.getElementById("pace");
+  const paceTextEl = document.getElementById("pace-text");
+  // インジケーターの帯のマス（Levels.PACE_STEPS 個）。左から順に、届いている段まで色を付ける
+  const paceCells = [];
+  for (let i = 0; i < Levels.PACE_STEPS; i++) {
+    const cell = document.createElement("span");
+    cell.className = "pace-cell";
+    document.getElementById("pace-bar").appendChild(cell);
+    paceCells.push(cell);
+  }
 
   // 状態
   // 記録のモード（"normal" 文章 / "short" 短い文章 / "words" 単語 / "other" その他＝追加したお題で長さが文章・短い文章に当たらないもの）。ランキングはモードごとに分ける
@@ -92,6 +102,17 @@
   let timerId = 0;
   let finished = false;
   let lastActivity = 0; // 最後にキーを押した時刻（入力がないまま止めるのに使う。docs/measurement.md の「入力がないときの停止」）
+  let allSessions = null; // 全記録の概要（インジケーターの目標を決めるのに使う）。読み込むまでは null
+  let goal = null;        // このお題で目指すレベル（達成レベルの次。js/levels.js の TABLE の行）。出さないときは null
+  // インジケーターの帯に出している段数と、次に今のペースと比べる時刻。
+  // 1打ごとの揺れで帯がちらつかないよう、PACE_STEP_MS ごとに今のペースの段数と比べ、
+  // 差の PACE_STEP_RATIO 倍（端数は切り捨て。少なくとも1段）だけ近づける
+  const PACE_STEP_MS = 1500;
+  const PACE_STEP_RATIO = 0.5;
+  // 打ち始め直後はペースが跳ねるので、この文字数（日本語はかなの数）進むまではインジケーターを出さない
+  const PACE_MIN_CHARS = 5;
+  let paceShown = null; // 帯に出している段数（0〜Levels.PACE_STEPS）。出していないときは null
+  let paceNextAt = 0;
 
   // 英語の1文字の正誤判定。日本語は js/romaji.js で、お題のかなに合う打ち方かを判定する
   function isCorrect(typed, expected) {
@@ -319,6 +340,7 @@
     lastActivity = 0;
     guideEl.classList.remove("idle-stopped");
     clearInterval(timerId);
+    setGoal();
 
     // 日本語：QWERTY ならローマ字、かな配列ならその割り当て表で判定する
     const kana = kanaLayouts[keyLayoutEl.value];
@@ -462,6 +484,57 @@
     stat.acc.textContent = Math.floor(r.acc);
     stat.time.textContent = r.sec.toFixed(1);
     stat.miss.textContent = misses;
+    updatePace(r);
+  }
+
+  // ---- インジケーター（決まりは docs/levels.md の「打っている間のインジケーター」） ----
+
+  // 目標：この言語・モードの達成レベルの次（短い文章・その他は文章の目標）。一番上を達成していれば null
+  // 設定で消しているとき・記録をまだ読み込んでいないときも null（出さない）
+  function setGoal() {
+    goal = allSessions && Settings.get("indicator")
+      ? Levels.next(Levels.achieved(allSessions, lang, Levels.targetMode(mode)))
+      : null;
+  }
+
+  // 今のペース（ここまでに進んだ文字数で求めた文字/秒）を目標と比べて、帯の長さ・色と文字を変える
+  // 目標のペースなら満タン（青）。遅れ1秒（基準の量を打つ秒数で）ごとに1段短くし、真ん中より長ければ黄、それ以下は赤
+  // 5文字（日本語はかな）進むまでと、停止したときは空（灰色）。正確率がレベルの基準（95%）未満なら色を暗くする
+  // 帯の段数は、PACE_STEP_MS（1.5秒）ごとに今のペースの段数と比べ、差の半分（切り捨て。差が1なら1段）だけ増やす・減らす。
+  // 出し始め（5文字目）は今のペースの段数から始め、打ち終えたときは今のペースの段数にそろえる（結果のレベルと同じ判定）。
+  // 文字の「今 ○ 文字/秒」「あと ○ 秒」は今のペースそのもの
+  function updatePace(r) {
+    paceEl.hidden = !goal;
+    if (!goal) return;
+    const chars = Levels.charsFor(lang);
+    const progressed = typedStates().length;
+    const rate = startTime && (progressed >= PACE_MIN_CHARS || finished) ? Levels.rateOf(progressed, r.sec) : null;
+    const now = performance.now();
+    if (rate === null) {
+      paceShown = null;
+    } else {
+      const actual = Levels.paceSteps(rate, goal, chars);
+      if (finished || paceShown === null) {
+        paceShown = actual;
+        paceNextAt = now + PACE_STEP_MS;
+      } else if (now >= paceNextAt) {
+        // 差が大きいほど大きく動かす：差の半分（端数は切り捨て。ただし差が1なら1段）
+        const diff = actual - paceShown;
+        paceShown += Math.sign(diff) * Math.max(1, Math.floor(Math.abs(diff) * PACE_STEP_RATIO));
+        paceNextAt += PACE_STEP_MS;
+      }
+    }
+    const steps = paceShown === null ? 0 : paceShown;
+    const state = rate === null ? "idle" : Levels.paceState(steps);
+    const dark = rate !== null && r.acc < Levels.MIN_ACCURACY;
+    paceEl.className = "pace pace-" + state + (dark ? " pace-dark" : "");
+    paceCells.forEach(function (cell, i) { cell.classList.toggle("on", i < steps); });
+    // 遅れ：今のペースで基準の量を打つ秒数が、目標の秒数をどれだけ超えるか
+    const late = rate === null ? 0 : chars / rate - goal.maxSec;
+    paceTextEl.textContent = "目標 " + goal.name + "（" + Levels.minRate(goal, chars).toFixed(2) + " 文字/秒より速く）　今 " +
+      (rate === null ? "-" : rate.toFixed(2)) + " 文字/秒" +
+      (rate !== null && late >= 0 ? "（あと " + late.toFixed(1) + " 秒）" : "") +
+      (dark ? "　正確率 " + Levels.MIN_ACCURACY + "% 未満" : "");
   }
 
   // 入力がないまま止める。続きからは打てない（もう一度か次のお題を選ぶ）。記録は保存しない
@@ -472,6 +545,7 @@
     board.classList.add("finished");
     guideEl.classList.add("idle-stopped");
     guideEl.textContent = Settings.get("idleStopSec") + " 秒間入力がなかったので停止しました（記録はしません）。もう一度（Esc）か次のお題（Shift+Enter）を選んでください。";
+    updatePace({ sec: 0, acc: 100 }); // インジケーターは灰色に戻す
   }
 
   function finish() {
@@ -612,6 +686,7 @@
         return Promise.all([Store.rankOf(session), Store.top(session, RANK_TOP), Store.getAllSessions()]);
       })
       .then(function (v) {
+        allSessions = v[2]; // 次のお題からは、今回を含めた達成レベルで目標を決める
         renderLevelStatus(session, v[2]);
         const info = v[0];
         if (info.eligible) {
@@ -950,4 +1025,13 @@
       updateKeyLayoutOptions();
       setMode(initialMode);
     });
+
+  // インジケーターの目標を決めるため、全記録の概要を読んでおく（読めなければインジケーターを出さない）
+  Store.getAllSessions()
+    .then(function (all) {
+      allSessions = all;
+      setGoal();
+      updateStats();
+    })
+    .catch(function (err) { console.warn(err); });
 })();

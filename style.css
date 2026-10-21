@@ -34,6 +34,15 @@
   --rank-3: #1f9d55;
   /* 記録のページ：ランキングで選んだ回を、推移のグラフで示す縦線 */
   --trend-selected: #3ddc84;
+  /* 打っている間のインジケーター（docs/levels.md）：目標より速い・今の達成レベルの範囲・それより遅い・打ち始め前 */
+  --pace-ahead: var(--accent);
+  --pace-near: #e8b400;
+  --pace-behind: #d93036;
+  --pace-idle: #d6d1c6;
+  /* 正確率がレベルの基準（95%）未満のとき：青は黒、黄・赤はそれぞれ暗くした色 */
+  --pace-ahead-dark: #111111;
+  --pace-near-dark: #876900;
+  --pace-behind-dark: #7c1c20;
   --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "Consolas", "Menlo", monospace;
 }
@@ -144,6 +153,40 @@ body {
   font-size: 12px;
   color: var(--sub);
 }
+
+/* 打っている間のインジケーター：目標のペースとの差を帯の色で出す */
+.pace {
+  margin: -12px 0 20px;
+}
+
+.pace-text {
+  font-size: 12px;
+  color: var(--sub);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* 20 マスを横に並べ、届いている段まで色を付ける（左から） */
+.pace-bar {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 3px;
+}
+
+.pace-cell {
+  height: 10px;
+  border-radius: 2px;
+  background: var(--pace-idle); /* 色はすぐ変える（変化のなだらかさは js/app.js でペースをならしてつける） */
+}
+
+.pace-ahead .pace-cell.on { background: var(--pace-ahead); }
+.pace-near .pace-cell.on { background: var(--pace-near); }
+.pace-behind .pace-cell.on { background: var(--pace-behind); }
+/* 正確率がレベルの基準（95%）未満：それぞれの色を暗くして、このままではレベルが付かないことを知らせる */
+.pace-dark.pace-ahead .pace-cell.on { background: var(--pace-ahead-dark); }
+.pace-dark.pace-near .pace-cell.on { background: var(--pace-near-dark); }
+.pace-dark.pace-behind .pace-cell.on { background: var(--pace-behind-dark); }
+.pace-dark .pace-text { color: var(--text); }
 
 /* お題表示エリア */
 .board {

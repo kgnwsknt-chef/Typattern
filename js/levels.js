@@ -120,6 +120,25 @@ const Levels = (function () {
     return ups;
   }
 
+  // インジケーターの帯の長さ（0〜PACE_STEPS 段）。今のペースで基準の量（英語 400文字・日本語 280文字）を打つと
+  // 何秒かかるかを求め、目標の秒数（maxSec）未満なら満タン。届かなければ、遅れ1秒ごとに1段ずつ短くする
+  const PACE_STEPS = 20;
+
+  // インジケーターの色（docs/levels.md）。帯の長さ steps で決める
+  //   "ahead"  … 満タン＝目標のペースに届いている（青）
+  //   "near"   … 帯の真ん中より長い（黄）
+  //   "behind" … 真ん中まで、またはそれより短い（赤）
+  function paceState(steps) {
+    if (steps >= PACE_STEPS) return "ahead";
+    return steps > PACE_STEPS / 2 ? "near" : "behind";
+  }
+
+  function paceSteps(rate, target, chars) {
+    const sec = chars / rate;
+    if (sec < target.maxSec) return PACE_STEPS;
+    return Math.max(0, PACE_STEPS - 1 - Math.floor(sec - target.maxSec));
+  }
+
   // 短い文章で打ったときの目標は、文章の目標を使う
   function targetMode(mode) {
     return COUNTED_MODES.indexOf(mode) === -1 ? "normal" : mode;
@@ -139,6 +158,9 @@ const Levels = (function () {
     next: next,
     summary: summary,
     levelUps: levelUps,
+    paceState: paceState,
+    PACE_STEPS: PACE_STEPS,
+    paceSteps: paceSteps,
     targetMode: targetMode
   };
 })();
