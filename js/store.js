@@ -95,6 +95,14 @@ const Store = (function () {
     });
   }
 
+  // 全部の記録（概要と生データ）を1つのトランザクションで消す。登録したキー配列・追加したお題は消さない（設定のページの「記録を消す」）
+  function clearRecords() {
+    return tx(["sessions", "raws"], "readwrite", function (t) {
+      t.objectStore("sessions").clear();
+      t.objectStore("raws").clear();
+    });
+  }
+
   function count() {
     return tx("sessions", "readonly", function (t) { return t.objectStore("sessions").count(); });
   }
@@ -354,6 +362,7 @@ const Store = (function () {
     eligible: eligible,
     compare: compare,
     save: save,
+    clearRecords: clearRecords,
     count: count,
     top: top,
     rankOf: rankOf,

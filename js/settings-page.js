@@ -40,6 +40,51 @@
     msgEl.textContent = "初期値に戻しました。";
   });
 
+  // 記録を消す：元に戻せないので2回押しで確かめる（確認のダイアログ confirm は、出さないブラウザでは押せなくなるので使わない）。
+  // 1回目で記録の数を出してボタンを「本当に全部消す」（赤）に変え、8秒たつと元に戻す
+  const clearBtn = document.getElementById("clear-btn");
+  const clearMsgEl = document.getElementById("clear-msg");
+  const CLEAR_LABEL = clearBtn.textContent;
+  let clearArmed = false;
+  let clearTimer = 0;
+
+  function disarmClear() {
+    clearArmed = false;
+    clearTimeout(clearTimer);
+    clearBtn.textContent = CLEAR_LABEL;
+    clearBtn.classList.remove("tm-danger");
+  }
+
+  clearBtn.addEventListener("click", function () {
+    if (!clearArmed) {
+      Store.count().then(function (n) {
+        if (n === 0) {
+          clearMsgEl.textContent = "消す記録はありません。";
+          return;
+        }
+        clearArmed = true;
+        clearBtn.textContent = "本当に全部消す（" + n + " 回分）";
+        clearBtn.classList.add("tm-danger");
+        clearMsgEl.textContent = "もう一度押すと、" + n + " 回分の記録をすべて消します。元に戻せません。";
+        clearTimer = setTimeout(function () {
+          disarmClear();
+          clearMsgEl.textContent = "";
+        }, 8000);
+      });
+      return;
+    }
+    disarmClear();
+    Store.count().then(function (n) {
+      return Store.clearRecords().then(function () {
+        clearMsgEl.textContent = n + " 回分の記録を消しました。";
+        PageFooter.refreshSize();
+      });
+    }).catch(function (err) {
+      console.error(err);
+      clearMsgEl.textContent = "消せませんでした: " + err.message;
+    });
+  });
+
   fill();
   // バージョン表示と、記録の書き出し・読み込み
   PageFooter.init();
