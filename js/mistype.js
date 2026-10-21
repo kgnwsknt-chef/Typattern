@@ -168,7 +168,7 @@ const Mistype = (function () {
       keys: {},   // 物理キーの番号 → { strokes: 押した回数, attempts: 打つべきキーだった回数, misses: 最初のミスの数 }
       pairs: new Map(), // "打つべきキー>押したキー" → { expected, pressed, count, types: { 種類: 回数 } }
       types: {},  // 種類 → 回数
-      strokes: 0, // 押したキーの数（Shift・Backspace・ミスも含む。n-gram のページの総打鍵数と同じ）
+      strokes: 0, // 押したキーの数（Shift・Backspace・ミスも含む。IKI のページの総打鍵数と同じ）
       misses: 0,  // ミスの打鍵の数（続けて起きたものも全部）
       firsts: 0,  // 最初のミスの数（押し間違いとして数えたもの）
       skipped: 0, // 判定を再現できず、数えなかった記録の数（かな配列を削除したなど）
@@ -177,7 +177,7 @@ const Mistype = (function () {
     };
   }
 
-  // ミスが起きやすい並びに使えるキー：スペース・Backspace・Shift と同時に押したキーは除く（n-gram のページと同じ）
+  // ミスが起きやすい並びに使えるキー：スペース・Backspace・Shift と同時に押したキーは除く（IKI のページと同じ）
   function bigramLabel(number, shift) {
     if (shift || number === Keys.SPACE || number === Keys.BACKSPACE) return null;
     return Keys.label(number);

@@ -7,7 +7,7 @@
 | 判定（お題に合う打ち方・「ん」「っ」・間違い・Backspace）、計測（平均 IKI・かな/分・正確率）、手引き、キーごとの間隔のグラフ、かな配列での判定 | [measurement.md](measurement.md) の「日本語（ローマ字入力・かな配列）」 |
 | キー配列のページ（配列図・シフト面・試し打ち・割り当て表の書き方・登録・上書き・削除） | [layouts.md](layouts.md) |
 | 記録の形（`events` の各行・`raws`・`layouts`・書き出しファイル・版の決まり） | [storage.md](storage.md) |
-| n-gram（押したキーの組で数える・Shift と同時に押したキーは除く） | [analysis_ngram.md](analysis_ngram.md) |
+| n-gram（押したキーの組で数える・Shift と同時に押したキーは除く） | [analysis_iki.md](analysis_iki.md) |
 | レベル（日本語は 280 かなが基準） | [levels.md](levels.md) |
 | お題・単語リストの書き方（最初から入っているファイルは CLAUDE.md の「構成」、お題のページで追加するものは text-manager.md） | [CLAUDE.md](../CLAUDE.md)、[text-manager.md](text-manager.md) |
 

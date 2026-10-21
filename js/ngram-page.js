@@ -1,4 +1,4 @@
-// n-gram ページ（ngram.html）。絞り込んだ記録の生データから bigram・trigram を集計して表示する
+// IKI のページ（ngram.html）。絞り込んだ記録の生データから bigram・trigram を集計して表示する
 (function () {
   "use strict";
 
@@ -15,20 +15,30 @@
   const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"), redrawHeatmaps);
   const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"));
   const filters = Filters.init(update);
+  const keyIkiEl = document.getElementById("key-iki"); // キーごとの IKI の配列図
+  const keyIkiLegendEl = document.getElementById("key-iki-legend");
+  const layoutFilterEl = document.getElementById("f-layout");
+  // キーごとの IKI に色を付けるのは、間隔の数がこれ以上のキーだけ（少ないと平均がぶれるため）
+  const KEY_MIN_COUNT = 20;
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
 
   function update() {
     const myId = ++loadId;
     summaryEl.textContent = "集計中…";
-    Store.getAllSessions().then(function (sessions) {
+    Promise.all([Store.getAllSessions(), Store.getAllLayouts()]).then(function (v) {
       if (myId !== loadId) return;
+      const sessions = v[0];
+      // 絞り込みの「配列」でかな配列を選んでいれば、キーごとの IKI の配列図にその配列のかなを書く
+      const layout = v[1].find(function (l) { return l.id === layoutFilterEl.value; });
+      const kana = layout ? KeyMap.kanaOf(KanaLayout.create(layout.entries)) : null;
       const picked = filters.pick(sessions);
       summaryEl.textContent = Filters.summary(picked);
       if (picked.length === 0) {
         ngramSummaryEl.textContent = "";
         bigramTable.renderRows(bigramEl, [], 0, "データなし");
         trigramTable.renderRows(trigramEl, [], 0, "データなし");
+        drawKeyIki([], 0, kana);
         drawHeatmaps([], 0);
         return;
       }
@@ -59,6 +69,7 @@
         const tri = NGram.toRows(trigrams).filter(keep);
         bigramTable.renderRows(bigramEl, bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
+        drawKeyIki(allBi, base, kana);
         drawHeatmaps(bi, base);
         ngramSummaryEl.textContent = "総打鍵数 " + strokes.toLocaleString() + " ／ bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
       });
@@ -66,6 +77,38 @@
       console.error(err);
       summaryEl.textContent = "記録を読み込めませんでした: " + err.message;
     });
+  }
+
+  // キーごとの IKI：そのキーを押すまでの間隔（直前のキーからそのキーまで。bigram の2キー目がそのキーの間隔）の平均を、
+  // 配列図にキーごとの色で描く。色は表と同じ（全体の打鍵間隔の平均が基準）。bigram と同じく、間違えたキー・Backspace・
+  // スペース・Shift と同時に押したキーが絡む間隔は除く。「回数」の絞り込みは使わない（全部の bigram から出す）
+  function drawKeyIki(allBi, base, kana) {
+    const byKey = {}; // QWERTY の文字 → { sum, count }
+    allBi.forEach(function (r) {
+      const k = r.gram[1];
+      const e = byKey[k] || (byKey[k] = { sum: 0, count: 0 });
+      r.values.forEach(function (v) { e.sum += v; e.count++; });
+    });
+    keyIkiLegendEl.textContent = "";
+    keyIkiLegendEl.append("そのキーを押すまでの間隔（直前のキーから）の平均（ms）。色は表と同じで、全体の打鍵間隔の平均（" + Math.round(base) + " ms）が基準 ／ 速い");
+    const scale = document.createElement("span");
+    scale.className = "rhythm-scale";
+    keyIkiLegendEl.append(scale, "遅い ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡む間隔は除く ／ 間隔の数が " + KEY_MIN_COUNT +
+      " 回未満のキーは色を付けず、値を薄く表示 ／ マウスを乗せると回数を表示");
+    KeyMap.draw(keyIkiEl, function (number) {
+      const label = Keys.label(number);
+      const e = label === null ? null : byKey[label];
+      if (!e || !e.count) return null;
+      const avg = e.sum / e.count;
+      const enough = e.count >= KEY_MIN_COUNT;
+      return {
+        fill: enough ? Rhythm.color(avg, base) : null,
+        dark: enough, // 表と同じ濃い色なので、文字は白
+        dim: !enough,
+        value: String(Math.round(avg)),
+        title: label + "：平均 " + Math.round(avg) + " ms（" + e.count.toLocaleString() + " 回）"
+      };
+    }, kana);
   }
 
   // 2次元ヒストグラム2枚を描く。マスをクリックすると、その bigram の分布を表の行のクリックと同じ場所（bigram の表の下）に出す

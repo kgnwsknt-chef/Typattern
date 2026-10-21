@@ -3,9 +3,6 @@
 (function () {
   "use strict";
 
-  const UNIT = 44; // 配列図のキー1個分の大きさ(px)。キー配列のページと同じ
-  const GAP = 4;   // キーどうしの隙間(px)
-  const SHIFT_MIN = 5; // かな配列のシフトのキーの求め方（キー配列のページと同じ）
   // ミス率に色を付けるのは、打つべきキーだった回数がこれ以上のキーだけ（少ないと率がぶれるため）
   const MIN_ATTEMPTS = 20;
 
@@ -17,7 +14,6 @@
   const typesEl = document.getElementById("mt-types");
   const pairsEl = document.getElementById("mt-pairs");
   const filters = Filters.init(update);
-  const shape = KeyboardShapes.layout("us-row-stagger");
 
   const minEl = document.getElementById("f-min"); // ミスが起きやすい並びに出す、打とうとした回数の下限
   const bigramLegendEl = document.getElementById("mt-bigram-legend");
@@ -52,10 +48,10 @@
       const kana = {};
       v[1].forEach(function (l) {
         const k = KanaLayout.create(l.entries);
-        kana[l.id] = { options: k.options, shifts: k.shiftKeys(SHIFT_MIN), get: k.get };
+        kana[l.id] = { options: k.options, map: KeyMap.kanaOf(k) };
       });
       // 絞り込みの「配列」でかな配列を選んでいれば、配列図にその配列の割り当て（シフトなしのかな）を書く
-      kbKana = kana[layoutFilterEl.value] || null;
+      kbKana = kana[layoutFilterEl.value] ? kana[layoutFilterEl.value].map : null;
       const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
       const acc = Mistype.create();
       mtSummaryEl.textContent = picked.length ? "集計中…" : "";
@@ -67,7 +63,7 @@
           if (raw.keyLayout === "qwerty") optionsFn = Romaji.options;
           else if (kana[raw.keyLayout]) {
             optionsFn = kana[raw.keyLayout].options;
-            shifts = kana[raw.keyLayout].shifts;
+            shifts = kana[raw.keyLayout].map.shifts;
           }
         }
         Mistype.add(acc, raw, s.lang, optionsFn, shifts);
@@ -97,58 +93,7 @@
     drawIntervals(acc);
   }
 
-  // ---- 配列図 ----
-
-  function span(className, text) {
-    const s = document.createElement("span");
-    s.className = className;
-    s.textContent = text;
-    return s;
-  }
-
-  // 配列図を描く。cell(number) は { fill, value, title, dark } か null（色を付けないキー）
-  //   左上に物理キーの番号、右上に QWERTY の文字（文字のないキーは名前）、下に値。
-  //   絞り込みでかな配列を選んでいるときは、真ん中にそのキーだけを押したときのかなを書き、
-  //   前置・後置シフトのキーは外形線の色で示す（キー配列のページと同じ）
-  function drawKeyboard(el, cell) {
-    el.textContent = "";
-    el.style.width = shape.width * UNIT + "px";
-    el.style.height = shape.height * UNIT + "px";
-    el.classList.toggle("mt-kana", !!kbKana);
-    shape.keys.forEach(function (k) {
-      const key = document.createElement("div");
-      key.className = "kb-key";
-      key.style.left = k.x * UNIT + GAP / 2 + "px";
-      key.style.top = k.y * UNIT + GAP / 2 + "px";
-      key.style.width = k.w * UNIT - GAP + "px";
-      key.style.height = UNIT - GAP + "px";
-      const number = Keys.number(k.code);
-      const plain = Keys.char(k.code, false);
-      const c = number ? cell(number) : null;
-      const func = plain === null || plain === " ";
-      if (number) key.appendChild(span("kb-num", number));
-      key.appendChild(span("mt-char", func ? (k.name || "") : plain));
-      if (func) key.classList.add("mt-func");
-      if (kbKana && !func) {
-        const kana = kbKana.get(plain);
-        if (kana) key.appendChild(span("mt-kana-char", kana));
-        if (kbKana.shifts.prefix.indexOf(plain) !== -1) key.classList.add("kb-prefix");
-        if (kbKana.shifts.postfix.indexOf(plain) !== -1) key.classList.add("kb-postfix");
-      }
-      if (c) {
-        if (c.fill) key.style.background = c.fill;
-        if (c.dark) key.classList.add("mt-dark");
-        const val = document.createElement("span");
-        val.className = "mt-val" + (c.dim ? " mt-dim" : "");
-        val.textContent = c.value;
-        key.appendChild(val);
-        key.title = c.title;
-      } else if (!number) {
-        key.classList.add("mt-none"); // 記録しないキー（Tab・Ctrl など）
-      }
-      el.appendChild(key);
-    });
-  }
+  // ---- 配列図（描き方は js/key-map.js） ----
 
   // 数を短く書く（12345 → 12.3k）
   function short(n) {
@@ -158,7 +103,7 @@
   // ストローク回数：多いほど濃い青（n-gram の2次元ヒストグラムの回数と同じ色）
   function drawStrokes(acc) {
     const max = Math.max.apply(null, Object.keys(acc.keys).map(function (n) { return acc.keys[n].strokes; }).concat([1]));
-    drawKeyboard(kbStrokesEl, function (number) {
+    KeyMap.draw(kbStrokesEl, function (number) {
       const st = acc.keys[number];
       const n = st ? st.strokes : 0;
       const f = n / max;
@@ -168,7 +113,7 @@
         value: short(n),
         title: Mistype.keyName({ number: number, shift: false }) + "：" + n.toLocaleString() + " 回"
       };
-    });
+    }, kbKana);
   }
 
   // ミス率 = 押し間違い ÷ 打つべきキーだった回数。高いほど濃い赤。
@@ -181,7 +126,7 @@
     kbMissLegendEl.textContent = "押し間違い ÷ そのキーが打つべきキーだった回数。高いほど濃い赤（全体のミス率 " +
       (attempts ? (misses / attempts * 100).toFixed(1) : "0.0") + "% の3倍＝" + (max * 100).toFixed(1) + "% 以上は一番濃い）／ 打つべきキーだった回数が " +
       MIN_ATTEMPTS + " 回未満のキーは色を付けず、値を薄く表示 ／ マウスを乗せると回数を表示";
-    drawKeyboard(kbMissEl, function (number) {
+    KeyMap.draw(kbMissEl, function (number) {
       const st = acc.keys[number];
       if (!st || !st.attempts) return null;
       const r = rate(st);
@@ -194,7 +139,7 @@
         value: (r * 100).toFixed(1) + "%",
         title: Mistype.keyName({ number: number, shift: false }) + "：押し間違い " + st.misses + " ／ 打つべきキーだった回数 " + st.attempts
       };
-    });
+    }, kbKana);
   }
 
   // ---- 表 ----

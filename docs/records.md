@@ -1,6 +1,6 @@
 # 記録（レベルの達成度・データの絞り込み・推移・ランキング）
 
-保存した記録の見せ方の決まり。記録ページ（記録／n-gram／ミスタイプ）の絞り込み、レベルの達成度、推移のグラフ、ランキング。レベルの決まりは `docs/levels.md`。計測の決まりは `docs/measurement.md`、n-gram の分析は `docs/analysis_ngram.md`、ミスタイプの分析は `docs/analysis_mistype.md`、保存形式は `docs/storage.md`。ルールを変えるときは、このファイルとコードを一緒に直す。
+保存した記録の見せ方の決まり。記録ページ（記録／IKI／ミスタイプ）の絞り込み、レベルの達成度、推移のグラフ、ランキング。レベルの決まりは `docs/levels.md`。計測の決まりは `docs/measurement.md`、n-gram の分析は `docs/analysis_iki.md`、ミスタイプの分析は `docs/analysis_mistype.md`、保存形式は `docs/storage.md`。ルールを変えるときは、このファイルとコードを一緒に直す。
 
 ## レベルの達成度
 

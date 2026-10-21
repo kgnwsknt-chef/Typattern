@@ -15,7 +15,7 @@
     <div class="nav-links">
       <a class="text-btn" href="index.html">タイピング</a>
       <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
-      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+      <a class="text-btn" href="ngram.html" title="キーごと・bigram・trigram ごとの IKI">IKI</a>
       <a class="text-btn" href="mistype.html" title="どのキーを、どのキーと押し間違えたか">ミスタイプ</a>
       <a class="text-btn" href="settings.html" aria-current="page" title="キー配列・お題の登録、グラフの範囲・ランキングの基準、記録の書き出しと読み込み">設定</a>
     </div>
@@ -53,11 +53,11 @@
     </section>
 
     <section class="stats-section settings-section">
-      <h2 class="stats-title">n-gram</h2>
+      <h2 class="stats-title">IKI</h2>
       <div class="setting">
         <label class="setting-label" for="s-ngram">分布の横軸の最大</label>
         <span class="setting-input"><input id="s-ngram" class="layout-select setting-number" type="number" data-setting="ngramMaxMs"> ms</span>
-        <p class="setting-help">n-gram のページで行（または2次元ヒストグラムのマス）をクリックしたときに出す IKI の分布。横軸は 0 からこの値までで、100 個の区間に分けます（区間の幅 = この値 ÷ 100）。これ以上の値は一番右の区間に入れます。<span class="setting-range"></span></p>
+        <p class="setting-help">IKI のページで行（または2次元ヒストグラムのマス）をクリックしたときに出す IKI の分布。横軸は 0 からこの値までで、100 個の区間に分けます（区間の幅 = この値 ÷ 100）。これ以上の値は一番右の区間に入れます。<span class="setting-range"></span></p>
       </div>
     </section>
 

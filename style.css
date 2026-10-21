@@ -756,35 +756,35 @@ a.text-btn {
   color: var(--accent);
 }
 
-/* ---- ミスタイプのページ（mistype.html）の配列図。物理キーの番号を左上（.kb-num）、キーの文字を右上、値（回数・ミス率）を下に書く。
+/* ---- キーごとの値の配列図（js/key-map.js。ミスタイプ・n-gram のページ）。物理キーの番号を左上（.kb-num）、キーの文字を右上、値（回数・ミス率・IKI）を下に書く。
    かな配列を選んでいるときは、そのキーのかなを真ん中に書き、QWERTY の文字は小さくする ---- */
-.mt-kb .mt-char {
+.km .km-char {
   position: absolute;
   top: 1px;
   right: 4px;
   font-size: 13px;
 }
 
-.mt-kb.mt-kana .mt-char {
+.km.km-kana .km-char {
   font-size: 10px;
   color: var(--sub);
 }
 
-.mt-kb .mt-func .mt-char {
+.km .km-func .km-char {
   font-family: var(--font);
   font-size: 11px;
   color: var(--sub);
 }
 
 /* 文字のないキーの名前は、番号と重ならないよう下の段の左に書く */
-.mt-kb .mt-func .mt-char {
+.km .km-func .km-char {
   top: auto;
   right: auto;
   left: 5px;
   bottom: 2px;
 }
 
-.mt-kb .mt-kana-char {
+.km .km-kana-char {
   position: absolute;
   left: 0;
   right: 0;
@@ -794,7 +794,7 @@ a.text-btn {
   font-size: 14px;
 }
 
-.mt-kb .mt-val {
+.km .km-val {
   position: absolute;
   left: 0;
   right: 3px;
@@ -804,22 +804,22 @@ a.text-btn {
 }
 
 /* 回数が少なくて色を付けないキーの値 */
-.mt-kb .mt-val.mt-dim {
+.km .km-val.km-dim {
   color: var(--typed);
 }
 
 /* 濃い色のキーは白い文字 */
-.mt-kb .mt-dark span {
+.km .km-dark span {
   color: #ffffff;
 }
 
 /* 記録しないキー（Tab・Ctrl など） */
-.mt-kb .mt-none {
+.km .km-none {
   background: var(--bg);
   border-style: dashed;
 }
 
-.mt-kb .mt-func:not([style*="background"]) {
+.km .km-func:not([style*="background"]) {
   background: var(--kb-func);
 }
 

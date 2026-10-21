@@ -15,7 +15,7 @@
     <div class="nav-links">
       <a class="text-btn" href="index.html">タイピング</a>
       <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
-      <a class="text-btn" href="ngram.html" title="bigram・trigram ごとの IKI">n-gram</a>
+      <a class="text-btn" href="ngram.html" title="キーごと・bigram・trigram ごとの IKI">IKI</a>
       <a class="text-btn" href="mistype.html" aria-current="page" title="どのキーを、どのキーと押し間違えたか">ミスタイプ</a>
       <a class="text-btn" href="settings.html" title="キー配列・お題の登録、グラフの範囲・ランキングの基準、記録の書き出しと読み込み">設定</a>
     </div>
@@ -64,13 +64,13 @@
     <section class="stats-section">
       <h2 class="stats-title">キーごとのストローク回数</h2>
       <p class="rhythm-legend">そのキーを押した回数（Shift・Backspace・間違えたキーも含む）。多いほど濃い青</p>
-      <div class="kb-scroll"><div id="kb-strokes" class="kb mt-kb"></div></div>
+      <div class="kb-scroll"><div id="kb-strokes" class="kb km"></div></div>
     </section>
 
     <section class="stats-section">
       <h2 class="stats-title">キーごとのミス率</h2>
       <p id="kb-miss-legend" class="rhythm-legend"></p>
-      <div class="kb-scroll"><div id="kb-miss" class="kb mt-kb"></div></div>
+      <div class="kb-scroll"><div id="kb-miss" class="kb km"></div></div>
     </section>
 
     <section class="stats-section">
@@ -122,6 +122,7 @@
   <script src="js/settings.js?v=62"></script>
   <script src="js/page-footer.js?v=62"></script>
   <script src="js/keyboard-shapes.js?v=62"></script>
+  <script src="js/key-map.js?v=62"></script>
   <script src="js/romaji.js?v=62"></script>
   <script src="js/typer.js?v=62"></script>
   <script src="js/kana-layout.js?v=62"></script>

@@ -425,7 +425,7 @@ const NGram = (function () {
 
   // 生データの events から、連続する n 個のキーごとの IKI を map に足し込む
   // （複数回分を同じ map に足せば、全記録の集計になる）
-  // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis_ngram.md を参照
+  // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis_iki.md を参照
   function accumulate(map, n, events) {
     const seq = keySequence(events);
     for (let end = n - 1; end < seq.length; end++) {
