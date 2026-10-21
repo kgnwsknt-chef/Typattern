@@ -18,8 +18,6 @@
   const keyIkiEl = document.getElementById("key-iki"); // キーごとの IKI の配列図
   const keyIkiLegendEl = document.getElementById("key-iki-legend");
   const layoutFilterEl = document.getElementById("f-layout");
-  // キーごとの IKI に色を付けるのは、間隔の数がこれ以上のキーだけ（少ないと平均がぶれるため）
-  const KEY_MIN_COUNT = 20;
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
 
@@ -93,18 +91,15 @@
     keyIkiLegendEl.append("そのキーを押すまでの間隔（直前のキーから）の平均（ms）。色は表と同じで、全体の打鍵間隔の平均（" + Math.round(base) + " ms）が基準 ／ 速い");
     const scale = document.createElement("span");
     scale.className = "rhythm-scale";
-    keyIkiLegendEl.append(scale, "遅い ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡む間隔は除く ／ 間隔の数が " + KEY_MIN_COUNT +
-      " 回未満のキーは色を付けず、値を薄く表示 ／ マウスを乗せると回数を表示");
+    keyIkiLegendEl.append(scale, "遅い ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡む間隔は除く ／ 1回でもあれば色を付ける（回数が少ないキーは平均がぶれやすい）／ マウスを乗せると回数を表示");
     KeyMap.draw(keyIkiEl, function (number) {
       const label = Keys.label(number);
       const e = label === null ? null : byKey[label];
       if (!e || !e.count) return null;
       const avg = e.sum / e.count;
-      const enough = e.count >= KEY_MIN_COUNT;
       return {
-        fill: enough ? Rhythm.color(avg, base) : null,
-        dark: enough, // 表と同じ濃い色なので、文字は白
-        dim: !enough,
+        fill: Rhythm.color(avg, base),
+        dark: true, // 表と同じ濃い色なので、文字は白
         value: String(Math.round(avg)),
         title: label + "：平均 " + Math.round(avg) + " ms（" + e.count.toLocaleString() + " 回）"
       };
