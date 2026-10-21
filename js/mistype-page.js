@@ -27,8 +27,11 @@
   const intervalLegendEl = document.getElementById("mt-interval-legend");
   const intervalEl = document.getElementById("mt-interval");
 
+  const layoutFilterEl = document.getElementById("f-layout");
+
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
   let lastAcc = null;
+  let kbKana = null; // 配列図に割り当てを書くかな配列 { get, shifts }。QWERTY・「すべて」のときは null
   let pairRows = [];
   let sortKey = "count"; // 打ち間違いの組の並べ替え："expected"・"pressed"・"count"
   let order = "desc";
@@ -49,8 +52,10 @@
       const kana = {};
       v[1].forEach(function (l) {
         const k = KanaLayout.create(l.entries);
-        kana[l.id] = { options: k.options, shifts: k.shiftKeys(SHIFT_MIN) };
+        kana[l.id] = { options: k.options, shifts: k.shiftKeys(SHIFT_MIN), get: k.get };
       });
+      // 絞り込みの「配列」でかな配列を選んでいれば、配列図にその配列の割り当て（シフトなしのかな）を書く
+      kbKana = kana[layoutFilterEl.value] || null;
       const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
       const acc = Mistype.create();
       mtSummaryEl.textContent = picked.length ? "集計中…" : "";
@@ -94,11 +99,22 @@
 
   // ---- 配列図 ----
 
+  function span(className, text) {
+    const s = document.createElement("span");
+    s.className = className;
+    s.textContent = text;
+    return s;
+  }
+
   // 配列図を描く。cell(number) は { fill, value, title, dark } か null（色を付けないキー）
+  //   左上に物理キーの番号、右上に QWERTY の文字（文字のないキーは名前）、下に値。
+  //   絞り込みでかな配列を選んでいるときは、真ん中にそのキーだけを押したときのかなを書き、
+  //   前置・後置シフトのキーは外形線の色で示す（キー配列のページと同じ）
   function drawKeyboard(el, cell) {
     el.textContent = "";
     el.style.width = shape.width * UNIT + "px";
     el.style.height = shape.height * UNIT + "px";
+    el.classList.toggle("mt-kana", !!kbKana);
     shape.keys.forEach(function (k) {
       const key = document.createElement("div");
       key.className = "kb-key";
@@ -109,11 +125,16 @@
       const number = Keys.number(k.code);
       const plain = Keys.char(k.code, false);
       const c = number ? cell(number) : null;
-      const name = document.createElement("span");
-      name.className = "mt-char";
-      name.textContent = plain === null || plain === " " ? (k.name || "") : plain;
-      key.appendChild(name);
-      if (plain === null || plain === " ") key.classList.add("mt-func");
+      const func = plain === null || plain === " ";
+      if (number) key.appendChild(span("kb-num", number));
+      key.appendChild(span("mt-char", func ? (k.name || "") : plain));
+      if (func) key.classList.add("mt-func");
+      if (kbKana && !func) {
+        const kana = kbKana.get(plain);
+        if (kana) key.appendChild(span("mt-kana-char", kana));
+        if (kbKana.shifts.prefix.indexOf(plain) !== -1) key.classList.add("kb-prefix");
+        if (kbKana.shifts.postfix.indexOf(plain) !== -1) key.classList.add("kb-postfix");
+      }
       if (c) {
         if (c.fill) key.style.background = c.fill;
         if (c.dark) key.classList.add("mt-dark");

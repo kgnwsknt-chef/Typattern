@@ -756,18 +756,42 @@ a.text-btn {
   color: var(--accent);
 }
 
-/* ---- ミスタイプのページ（mistype.html）の配列図。キーの文字を左上に、値（回数・ミス率）を下に書く ---- */
+/* ---- ミスタイプのページ（mistype.html）の配列図。物理キーの番号を左上（.kb-num）、キーの文字を右上、値（回数・ミス率）を下に書く。
+   かな配列を選んでいるときは、そのキーのかなを真ん中に書き、QWERTY の文字は小さくする ---- */
 .mt-kb .mt-char {
   position: absolute;
-  top: 2px;
-  left: 5px;
+  top: 1px;
+  right: 4px;
   font-size: 13px;
+}
+
+.mt-kb.mt-kana .mt-char {
+  font-size: 10px;
+  color: var(--sub);
 }
 
 .mt-kb .mt-func .mt-char {
   font-family: var(--font);
   font-size: 11px;
   color: var(--sub);
+}
+
+/* 文字のないキーの名前は、番号と重ならないよう下の段の左に書く */
+.mt-kb .mt-func .mt-char {
+  top: auto;
+  right: auto;
+  left: 5px;
+  bottom: 2px;
+}
+
+.mt-kb .mt-kana-char {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9px;
+  text-align: center;
+  font-family: var(--font);
+  font-size: 14px;
 }
 
 .mt-kb .mt-val {
