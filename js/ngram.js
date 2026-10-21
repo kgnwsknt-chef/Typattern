@@ -283,10 +283,25 @@ const NGram = (function () {
       "aria-label": "bigram の" + (kind === "count" ? "回数" : "平均 IKI") + "の2次元ヒストグラム" });
     svg.style.maxWidth = (W * 1.6) + "px";
 
-    // 軸のラベル（キーの QWERTY の文字）
+    // 軸のラベル（キーの QWERTY の文字）。分布を表示中のマスの1キー目（横軸）と2キー目（縦軸）は、
+    // 青い四角の上に白い文字で出して強調する（「'」「,」のような小さい記号でも分かるように）
+    const sel = opts.selected && cells.has(opts.selected) ? opts.selected : null;
     keys.forEach(function (k, i) {
-      svg.appendChild(svgText(L + i * C + C / 2, T - 4, k, "middle"));
-      svg.appendChild(svgText(L - 4, T + i * C + C / 2 + 3.5, k, "end"));
+      const xl = svgText(L + i * C + C / 2, T - 4, k, "middle");
+      const yl = svgText(L - 4, T + i * C + C / 2 + 3.5, k, "end");
+      if (sel && k === sel[0]) {
+        svg.appendChild(svgEl("rect", { x: L + i * C + 1, y: T - C - 1, width: C - 2, height: C, rx: 2, class: "hm-label-box" }));
+        xl.setAttribute("x", L + i * C + C / 2);
+        xl.classList.add("hm-label-selected");
+      }
+      if (sel && k === sel[1]) {
+        svg.appendChild(svgEl("rect", { x: L - C - 2, y: T + i * C + 1, width: C, height: C - 2, rx: 2, class: "hm-label-box" }));
+        yl.setAttribute("x", L - C / 2 - 2);
+        yl.setAttribute("text-anchor", "middle");
+        yl.classList.add("hm-label-selected");
+      }
+      svg.appendChild(xl);
+      svg.appendChild(yl);
     });
     svg.appendChild(svgText(L, 10, "1キー目 →", "start"));
     const yTitle = svgText(12, T, "2キー目 →", "start");

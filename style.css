@@ -1193,6 +1193,17 @@ a.text-btn {
   outline: none;
 }
 
+/* 分布を表示中のマスの軸のラベル（1キー目・2キー目）は、青い四角の上に白い太字で出して目立たせる
+   （「'」「,」のような小さい記号でも、四角で場所が分かるように） */
+.hm-label-box {
+  fill: var(--accent);
+}
+
+.hm-svg .dist-label.hm-label-selected {
+  font-weight: 700;
+  fill: #ffffff;
+}
+
 /* 分布を表示中のマス */
 .hm-selected {
   fill: none;
