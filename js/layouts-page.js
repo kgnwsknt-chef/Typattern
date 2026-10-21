@@ -272,8 +272,36 @@
     layouts.push({ id: record.id, name: record.name, type: "kana", entries: record.entries, source: record.source, kana: KanaLayout.create(record.entries) });
   }
 
+  // 上書き保存と削除は2回押しで確かめる（確認のダイアログ confirm は、出さないブラウザでは押せなくなるので使わない）。
+  // 1回目で注意を出してボタンを「上書きして保存する」「本当に削除する」に変え、6秒たつか配列を変えると元に戻す
+  const SAVE_LABEL = saveBtn.textContent;
+  const DELETE_LABEL = deleteBtn.textContent;
+  let armed = null; // 2回目を待っているボタン
+  let armTimer = 0;
+
+  function arm(btn, label) {
+    disarm();
+    armed = btn;
+    btn.textContent = label;
+    btn.classList.add("tm-danger");
+    armTimer = setTimeout(function () {
+      disarm();
+      layoutMsgEl.textContent = "";
+    }, 6000);
+  }
+
+  function disarm() {
+    clearTimeout(armTimer);
+    armed = null;
+    saveBtn.textContent = SAVE_LABEL;
+    deleteBtn.textContent = DELETE_LABEL;
+    saveBtn.classList.remove("tm-danger");
+    deleteBtn.classList.remove("tm-danger");
+  }
+
   function updateActions() {
     const layout = current();
+    disarm();
     saveBtn.hidden = !(layout.type === "kana" && isUnsaved(layout));
     deleteBtn.hidden = !(layout.type === "kana" && !isUnsaved(layout));
   }
@@ -287,10 +315,16 @@
       return;
     }
     const exists = layouts.some(function (l) { return l.id === name; });
+    const confirmed = armed === saveBtn;
     // その配列で打った記録があっても上書きできる（記録は消さない。記録の keyLayout は配列名なので、上書き後の配列の記録として扱われる）
     Store.countSessionsWithLayout(name).then(function (n) {
-      if (exists && !confirm("「" + name + "」という配列がすでに保存されています。上書きしますか？" +
-        (n > 0 ? "\nこの配列で打った記録が " + n + " 件あります。記録は残りますが、前の割り当て表で打ったものと区別できなくなります（区別したいときは、別の名前で保存してください）。" : ""))) return;
+      if (exists && !confirmed) {
+        arm(saveBtn, "上書きして保存する");
+        layoutMsgEl.textContent = "「" + name + "」はすでに保存されています。もう一度押すと上書きします。" +
+          (n > 0 ? "この配列で打った記録が " + n + " 件あります。記録は残りますが、前の割り当て表で打ったものと区別できなくなります（区別したいときは、別の名前で読み込み直して保存してください）。" : "");
+        return;
+      }
+      disarm();
       // source は読み込んだ割り当て表の文字列（ローマ字で書いたままの形）。フォームに出し直すのに使う
       const record = { id: name, name: name, type: "kana", entries: layout.entries, source: layout.source, savedAt: new Date().toISOString() };
       return Store.saveLayout(record).then(function () {
@@ -298,7 +332,7 @@
         buildLayoutOptions();
         layoutEl.value = name;
         changeLayout();
-        layoutMsgEl.textContent = "「" + name + "」を保存しました。";
+        layoutMsgEl.textContent = "「" + name + "」を" + (exists ? "上書きして" : "") + "保存しました。";
         PageFooter.refreshSize();
       });
     }).catch(function (err) {
@@ -309,10 +343,16 @@
 
   deleteBtn.addEventListener("click", function () {
     const layout = current();
+    const confirmed = armed === deleteBtn;
     // その配列で打った記録があっても削除できる。記録は消さず、記録ページでは「配列名（削除済）」と出す
     Store.countSessionsWithLayout(layout.id).then(function (n) {
-      if (!confirm("「" + layout.name + "」を削除しますか？" +
-        (n > 0 ? "\nこの配列で打った記録 " + n + " 件は消さずに残ります（記録ページでは「" + layout.name + "（削除済）」と表示します）。" : ""))) return;
+      if (!confirmed) {
+        arm(deleteBtn, "本当に削除する");
+        layoutMsgEl.textContent = "もう一度押すと「" + layout.name + "」を削除します。" +
+          (n > 0 ? "この配列で打った記録 " + n + " 件は消さずに残ります（記録ページでは「" + layout.name + "（削除済）」と表示します）。" : "");
+        return;
+      }
+      disarm();
       return Store.deleteLayout(layout.id).then(function () {
         layouts.splice(layouts.indexOf(layout), 1);
         buildLayoutOptions();
