@@ -39,7 +39,7 @@ IKI のページ（`ngram.html`）で、保存した記録をまとめて bigram
 
 ## IKI の推移
 
-IKI のページで分布を出している bigram・trigram について、その IKI が回を重ねるとどう変わったかを、分布のすぐ下に描く（bigram は左、trigram は右）。選ぶ n-gram を変えると、分布と一緒に切り替わる。実装は `js/ngram.js` の `drawTrend`（どの回の値かは `accumulate` で値ごとに覚える）。
+IKI のページで分布を出している bigram・trigram について、その IKI が回を重ねるとどう変わったかを、分布のすぐ下に描く（bigram は左、trigram は右）。選ぶ n-gram を変えると、分布と一緒に切り替わる。実装は `js/ngram.js` の `drawTrend`（どの回の値かは `accumulate` で値ごとに覚える）。図の描き方は `js/point-trend.js`（ミスタイプのページのキーのミス率の推移と共通）。
 
 - **縦軸**：IKI（ms）。0 から、描く点の最大（の 1.05 倍）まで。ただし設定の「分布の横軸の最大」（初期値 2000 ms。`docs/settings.md`）で頭打ちにし、それより大きい点は上端に描く。
 - **横軸**：分布の上の「推移の横軸」で選ぶ（bigram・trigram 共通。初期値は回数。選び直すと、集計し直さずに推移だけを描き直す）。

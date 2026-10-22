@@ -218,11 +218,24 @@ const Mistype = (function () {
   }
 
   function keyStat(acc, number) {
-    return acc.keys[number] || (acc.keys[number] = { strokes: 0, attempts: 0, misses: 0 });
+    return acc.keys[number] || (acc.keys[number] = { strokes: 0, attempts: 0, misses: 0, runs: new Map() });
+  }
+
+  // キーのミス率を、記録（回）ごとにも数える（ミス率の推移に使う）。runs：回 → { attempts, misses, tag }
+  function countAttempt(acc, number, miss, tag) {
+    const st = keyStat(acc, number);
+    st.attempts++;
+    if (miss) st.misses++;
+    if (!tag) return;
+    const r = st.runs.get(tag.run) || { attempts: 0, misses: 0, tag: tag };
+    r.attempts++;
+    if (miss) r.misses++;
+    st.runs.set(tag.run, r);
   }
 
   // 1回分の記録を足す。optionsFn は日本語の打ち方の一覧（なければ null）、shifts はかな配列のシフトのキー（なければ null）
-  function add(acc, raw, lang, optionsFn, shifts) {
+  //   tag：その記録の印 { run, day, at }（js/point-trend.js の tagsOf。ミス率の推移に使う。なければ推移は数えない）
+  function add(acc, raw, lang, optionsFn, shifts, tag) {
     raw.events.forEach(function (e) {
       if (e[1] !== "k") return;
       acc.strokes++;
@@ -235,7 +248,7 @@ const Mistype = (function () {
     list.forEach(function (s, i) {
       if (s.bs) return;
       if (s.ok) {
-        keyStat(acc, s.number).attempts++;
+        countAttempt(acc, s.number, false, tag);
         addContext(acc, list, i);
         return;
       }
@@ -246,9 +259,7 @@ const Mistype = (function () {
       const type = classify(list, i, ctx);
       acc.types[type] = (acc.types[type] || 0) + 1;
       if (!s.expected) return;
-      const st = keyStat(acc, s.expected.number);
-      st.attempts++;
-      st.misses++;
+      countAttempt(acc, s.expected.number, true, tag);
       const id = s.expected.number + (s.expected.shift ? "S" : "") + ">" + s.number + (s.shift ? "S" : "");
       const pair = acc.pairs.get(id) || { expected: s.expected, pressed: { number: s.number, shift: s.shift }, count: 0, types: {} };
       pair.count++;

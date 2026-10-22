@@ -23,7 +23,8 @@ const KeyMap = (function () {
 
   // el に配列図を描く。cell(number) は { fill, value, title, dark, dim } か null（色を付けないキー）
   //   kana：kanaOf の結果か null（QWERTY だけを書く）
-  function draw(el, cell, kana) {
+  //   pick：{ selected: 強調するキーの番号, onSelect(number) } を渡すと、値のあるキーをクリック（または Enter）で選べる
+  function draw(el, cell, kana, pick) {
     el.textContent = "";
     el.style.width = shape.width * UNIT + "px";
     el.style.height = shape.height * UNIT + "px";
@@ -54,6 +55,15 @@ const KeyMap = (function () {
         if (c.dark) key.classList.add("km-dark");
         key.appendChild(span("km-val" + (c.dim ? " km-dim" : ""), c.value));
         key.title = c.title;
+        if (pick) {
+          key.classList.add("km-click");
+          if (number === pick.selected) key.classList.add("km-selected");
+          key.tabIndex = 0;
+          key.addEventListener("click", function () { pick.onSelect(number); });
+          key.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick.onSelect(number); }
+          });
+        }
       } else if (!number) {
         key.classList.add("km-none"); // 記録しないキー（Tab・Ctrl など）
       }

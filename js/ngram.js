@@ -170,20 +170,8 @@ const NGram = (function () {
     trend = t;
   }
 
-  const DAY_MS = 86400000;
-  const MA_POINTS = 10; // 移動平均にする点の数（直近10点）
-  // "YYYY-MM-DD" を、日の通し番号にする（このPCの日付の0時。日の差を数えるのに使う）
-  function dayIndex(day) {
-    const p = day.split("-").map(Number);
-    return Math.round(new Date(p[0], p[1] - 1, p[2]).getTime() / DAY_MS);
-  }
-
-  function fmtDay(day) {
-    return day.replace(/-/g, "/");
-  }
-
   // 1つの n-gram の IKI の推移を el の下に描く。横軸は回数（1回の記録の中の平均を1点）か日付（その日の平均を1点）、
-  // 縦軸は IKI。点に加えて、直近 MA_POINTS 点の移動平均の線を描く
+  // 縦軸は IKI（設定の「分布の横軸の最大」で頭打ち）。描き方は js/point-trend.js
   function drawTrend(el, row, label) {
     const byRun = trend.mode === "run";
     // 回（日）ごとにまとめる
@@ -192,90 +180,21 @@ const NGram = (function () {
       const tag = row.tags[i];
       if (!tag) return;
       const key = byRun ? tag.run : tag.day;
-      const g = groups.get(key) || { key: key, sum: 0, count: 0, tag: tag };
+      const g = groups.get(key) || { sum: 0, count: 0, tag: tag };
       g.sum += v;
       g.count++;
       groups.set(key, g);
     });
-    const firstX = byRun ? 1 : dayIndex(trend.firstDay);
-    const lastX = byRun ? trend.runs : dayIndex(trend.lastDay);
-    const points = Array.from(groups.values()).map(function (g) {
-      return { x: byRun ? g.key : dayIndex(g.key), avg: g.sum / g.count, count: g.count, tag: g.tag };
-    }).sort(function (a, b) { return a.x - b.x; });
-    // 移動平均（その点までの直近 MA_POINTS 点の平均）
-    points.forEach(function (p, i) {
-      const from = Math.max(0, i - MA_POINTS + 1);
-      const part = points.slice(from, i + 1);
-      p.ma = part.reduce(function (a, q) { return a + q.avg; }, 0) / part.length;
+    PointTrend.draw(el, groups, {
+      axis: trend,
+      title: label + "「" + row.gram + "」の IKI の推移",
+      info: function (n, run) { return n + (run ? " 回の記録に出現" : " 日に出現"); },
+      pointWhat: "平均",
+      unit: "ms",
+      cap: Settings.get("ngramMaxMs"),
+      tip: function (p) { return "平均 " + Math.round(p.value) + " ms（" + p.count + " 回）"; },
+      ariaLabel: label + " " + row.gram + " の IKI の推移"
     });
-
-    const head = document.createElement("div");
-    head.className = "dist-head trend-head";
-    const title = document.createElement("span");
-    title.className = "dist-title";
-    title.textContent = label + "「" + row.gram + "」の IKI の推移";
-    const info = document.createElement("span");
-    info.className = "dist-info";
-    info.textContent = points.length + (byRun ? " 回の記録に出現" : " 日に出現") + " ／ 点 = " + (byRun ? "1回" : "1日") + "の平均 ／ 線 = 直近 " + MA_POINTS + " 点の移動平均";
-    head.appendChild(title);
-    head.appendChild(info);
-    el.appendChild(head);
-
-    // 縦軸は 0〜描く値の最大（設定の「分布の横軸の最大」で頭打ち。それより大きい点は上端に描く）
-    const cap = Settings.get("ngramMaxMs");
-    const top = Math.min(cap, Math.max.apply(null, points.map(function (p) { return p.avg; })) * 1.05) || 1;
-    const W = 360, H = 176, L = 36, R = 14, T = 14, B = 34;
-    const pw = W - L - R, ph = H - T - B;
-    const span = Math.max(1, lastX - firstX);
-    const x = function (v) { return L + (lastX === firstX ? pw / 2 : (v - firstX) / span * pw); };
-    const y = function (v) { return T + ph - Math.min(v, top) / top * ph; };
-    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg ngram-trend", role: "img",
-      "aria-label": label + " " + row.gram + " の IKI の推移" });
-
-    // 軸と目盛り
-    svg.appendChild(svgEl("line", { x1: L, y1: T + ph, x2: L + pw, y2: T + ph, class: "dist-axis" }));
-    svg.appendChild(svgEl("line", { x1: L, y1: T, x2: L, y2: T + ph, class: "dist-axis" }));
-    const yStep = [10, 20, 25, 50, 100, 200, 250, 500, 1000].find(function (s) { return top / s <= 5; }) || 2000;
-    for (let v = 0; v <= top; v += yStep) {
-      svg.appendChild(svgEl("line", { x1: L, y1: y(v), x2: L + pw, y2: y(v), class: "trend-grid" }));
-      svg.appendChild(svgText(L - 4, y(v) + 3, String(v), "end"));
-    }
-    svg.appendChild(svgText(L - 4, T - 4, "ms", "end"));
-    if (byRun) {
-      const xStep = [1, 2, 5, 10, 20, 25, 50, 100, 200, 500, 1000].find(function (s) { return span / s <= 6; }) || 2000;
-      for (let v = 0; v <= lastX; v += xStep) {
-        if (v < firstX) continue;
-        svg.appendChild(svgText(x(v), T + ph + 14, String(v), "middle"));
-      }
-      svg.appendChild(svgText(L + pw, H - 2, "回目", "end"));
-    } else {
-      // 日付：最初と最後の日（間が広ければ真ん中も）
-      const days = [firstX, lastX];
-      if (span >= 4) days.splice(1, 0, firstX + Math.round(span / 2));
-      const p0 = trend.firstDay.split("-").map(Number);
-      days.filter(function (d, i, a) { return a.indexOf(d) === i; }).forEach(function (d, i, a) {
-        const dt = new Date(p0[0], p0[1] - 1, p0[2] + (d - firstX)); // 最初の日から数えた日（時差で日がずれないように）
-        svg.appendChild(svgText(x(d), T + ph + 14, (dt.getMonth() + 1) + "/" + dt.getDate(), a.length > 1 && i === 0 ? "start" : a.length > 1 && i === a.length - 1 ? "end" : "middle"));
-      });
-      svg.appendChild(svgText(L + pw, H - 2, "日付", "end"));
-    }
-
-    // 移動平均の線
-    if (points.length > 1) {
-      svg.appendChild(svgEl("polyline", { points: points.map(function (p) { return x(p.x) + "," + y(p.ma); }).join(" "), class: "ngram-trend-ma" }));
-    }
-    // 点
-    points.forEach(function (p) {
-      const c = svgEl("circle", { cx: x(p.x), cy: y(p.avg), r: 3, class: "ngram-trend-point" });
-      const tip = svgEl("title", {});
-      const when = byRun
-        ? p.x + " 回目（" + fmtDay(p.tag.day) + " " + new Date(p.tag.at).toTimeString().slice(0, 5) + "）"
-        : fmtDay(p.tag.day);
-      tip.textContent = when + "：平均 " + Math.round(p.avg) + " ms（" + p.count + " 回）" + (p.avg > top ? "。上端より大きい" : "");
-      c.appendChild(tip);
-      svg.appendChild(c);
-    });
-    el.appendChild(svg);
   }
 
   // 1つの n-gram の IKI の分布をヒストグラムで描く。平均を点線、1回ごとの値を軸の下の短い線で示す

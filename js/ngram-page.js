@@ -35,16 +35,8 @@
       const picked = filters.pick(sessions);
       summaryEl.textContent = Filters.summary(picked);
       // IKI の推移の横軸：絞り込んだ記録の古い順の通し番号（回数）と、その記録の日（このPCの日付）
-      const tags = new Map();
-      picked.forEach(function (s, i) {
-        tags.set(s.id, { run: i + 1, day: Filters.localDate(s.finishedAt), at: s.finishedAt });
-      });
-      trendInfo = {
-        mode: trendEl.value,
-        runs: picked.length,
-        firstDay: picked.length ? Filters.localDate(picked[0].finishedAt) : null,
-        lastDay: picked.length ? Filters.localDate(picked[picked.length - 1].finishedAt) : null
-      };
+      const tags = PointTrend.tagsOf(picked, Filters.localDate);
+      trendInfo = PointTrend.axisOf(trendEl.value, picked, Filters.localDate);
       NGram.setTrend(trendInfo);
       if (picked.length === 0) {
         ngramSummaryEl.textContent = "";

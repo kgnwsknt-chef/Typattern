@@ -813,6 +813,24 @@ a.text-btn {
   color: #ffffff;
 }
 
+/* クリックで選べるキー（ミスタイプのページのミス率）と、選んでいるキー（黒い太枠） */
+.km .km-click {
+  cursor: pointer;
+}
+
+.km .km-click:hover,
+.km .km-click:focus {
+  outline: 1px solid var(--text);
+}
+
+.km .km-selected,
+.km .km-selected:hover,
+.km .km-selected:focus {
+  outline: 3px solid var(--text);
+  outline-offset: 1px;
+  z-index: 1;
+}
+
 /* 記録しないキー（Tab・Ctrl など） */
 .km .km-none {
   background: var(--bg);
@@ -825,6 +843,11 @@ a.text-btn {
 
 .mt-types {
   max-width: 420px;
+}
+
+/* 選んだキーのミス率の推移（IKI のページの推移と同じ図。広がりすぎないように幅を決める） */
+.mt-trend {
+  max-width: 560px;
 }
 
 /* 押し間違いの直前の間隔の分布：正しい打鍵は薄い青の棒、押し間違いの直前は赤い線。中央値は同じ色の点線 */

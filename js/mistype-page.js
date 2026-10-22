@@ -24,6 +24,7 @@
   const intervalEl = document.getElementById("mt-interval");
 
   const layoutFilterEl = document.getElementById("f-layout");
+  const missTrendEl = document.getElementById("miss-trend");
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
   let lastAcc = null;
@@ -36,6 +37,8 @@
   let bgSelected = null; // 強調している並び
   let bgSortKey = "rate"; // 並べ替え："gram"・"count"・"rate"
   let bgOrder = "desc";
+  let missSelected = null; // ミス率の推移を出しているキーの番号
+  let trendAxis = { mode: "day", runs: 0, firstDay: null, lastDay: null }; // ミス率の推移の横軸（PointTrend.axisOf。日付だけ）
 
   function update() {
     const myId = ++loadId;
@@ -53,6 +56,9 @@
       // 絞り込みの「配列」でかな配列を選んでいれば、配列図にその配列の割り当て（シフトなしのかな）を書く
       kbKana = kana[layoutFilterEl.value] ? kana[layoutFilterEl.value].map : null;
       const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
+      // ミス率の推移の横軸：その記録の日
+      const tags = PointTrend.tagsOf(picked, Filters.localDate);
+      trendAxis = PointTrend.axisOf("day", picked, Filters.localDate);
       const acc = Mistype.create();
       mtSummaryEl.textContent = picked.length ? "集計中…" : "";
       return Store.eachRaw(new Set(byId.keys()), function (raw) {
@@ -66,7 +72,7 @@
             shifts = kana[raw.keyLayout].map.shifts;
           }
         }
-        Mistype.add(acc, raw, s.lang, optionsFn, shifts);
+        Mistype.add(acc, raw, s.lang, optionsFn, shifts, tags.get(raw.id));
       }).then(function () {
         if (myId !== loadId) return;
         render(acc);
@@ -125,7 +131,12 @@
     const max = attempts ? 3 * misses / attempts : 0;
     kbMissLegendEl.textContent = "押し間違い ÷ そのキーが打つべきキーだった回数。高いほど濃い赤（全体のミス率 " +
       (attempts ? (misses / attempts * 100).toFixed(1) : "0.0") + "% の3倍＝" + (max * 100).toFixed(1) + "% 以上は一番濃い）／ 打つべきキーだった回数が " +
-      MIN_ATTEMPTS + " 回未満のキーは色を付けず、値を薄く表示 ／ マウスを乗せると回数を表示";
+      MIN_ATTEMPTS + " 回未満のキーは色を付けず、値を薄く表示 ／ マウスを乗せると回数を表示 ／ キーをクリックすると、下にそのキーのミス率の推移を表示";
+    // 推移を出すキー：選んだキーがなければ（最初や、絞り込みでそのキーを打たなくなったとき）押し間違いの一番多いキー
+    if (!missSelected || !acc.keys[missSelected] || !acc.keys[missSelected].attempts) {
+      missSelected = Object.keys(acc.keys).filter(function (n) { return acc.keys[n].attempts; })
+        .sort(function (a, b) { return acc.keys[b].misses - acc.keys[a].misses || acc.keys[b].attempts - acc.keys[a].attempts; })[0] || null;
+    }
     KeyMap.draw(kbMissEl, function (number) {
       const st = acc.keys[number];
       if (!st || !st.attempts) return null;
@@ -139,7 +150,42 @@
         value: (r * 100).toFixed(1) + "%",
         title: Mistype.keyName({ number: number, shift: false }) + "：押し間違い " + st.misses + " ／ 打つべきキーだった回数 " + st.attempts
       };
-    }, kbKana);
+    }, kbKana, {
+      selected: missSelected,
+      onSelect: function (n) {
+        missSelected = n;
+        drawMisses(acc);
+      }
+    });
+    drawMissTrend(acc);
+  }
+
+  // 選んだキーのミス率の推移（js/point-trend.js。IKI のページの n-gram の推移と同じ形）。
+  // 横軸は日付だけ（1回ごとだと打つ回数が少なく、0% の点ばかりになるため）。1日の押し間違い ÷ 打つべきキーだった回数を1点にする
+  function drawMissTrend(acc) {
+    missTrendEl.textContent = "";
+    const st = missSelected ? acc.keys[missSelected] : null;
+    if (!st || !trendAxis.runs) return;
+    const groups = new Map();
+    st.runs.forEach(function (r) {
+      const key = r.tag.day;
+      const g = groups.get(key) || { sum: 0, count: 0, misses: 0, tag: r.tag };
+      g.sum += r.misses * 100; // 点の値（sum ÷ count）がミス率(%)になるように
+      g.misses += r.misses;
+      g.count += r.attempts;
+      groups.set(key, g);
+    });
+    const name = Mistype.keyName({ number: missSelected, shift: false });
+    PointTrend.draw(missTrendEl, groups, {
+      axis: trendAxis,
+      title: "キー「" + name + "」のミス率の推移",
+      info: function (n) { return n + " 日に打った"; },
+      pointWhat: "ミス率",
+      unit: "%",
+      cap: 100,
+      tip: function (p) { return "ミス率 " + p.value.toFixed(1) + "%（押し間違い " + Math.round(p.sum / 100) + " ／ 打つべきキーだった回数 " + p.count + "）"; },
+      ariaLabel: "キー " + name + " のミス率の推移"
+    });
   }
 
   // ---- 表 ----

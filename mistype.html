@@ -71,6 +71,8 @@
       <h2 class="stats-title">キーごとのミス率</h2>
       <p id="kb-miss-legend" class="rhythm-legend"></p>
       <div class="kb-scroll"><div id="kb-miss" class="kb km"></div></div>
+      <!-- 選んだキーのミス率の推移（キーをクリックで切り替え。横軸は日付だけ） -->
+      <div id="miss-trend" class="mt-trend"></div>
     </section>
 
     <section class="stats-section">
@@ -128,6 +130,7 @@
   <script src="js/kana-layout.js?v=66"></script>
   <script src="js/session-view.js?v=66"></script>
   <script src="js/rhythm.js?v=66"></script>
+  <script src="js/point-trend.js?v=66"></script>
   <script src="js/ngram.js?v=66"></script>
   <script src="js/filters.js?v=66"></script>
   <script src="js/mistype.js?v=66"></script>
