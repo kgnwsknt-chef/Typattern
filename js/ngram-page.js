@@ -20,6 +20,8 @@
   const layoutFilterEl = document.getElementById("f-layout");
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
+  const trendEl = document.getElementById("f-trend"); // 分布の下の IKI の推移の横軸（回数・日付）
+  let trendInfo = { mode: "run", runs: 0, firstDay: null, lastDay: null }; // NGram.setTrend に渡したもの
 
   function update() {
     const myId = ++loadId;
@@ -32,6 +34,18 @@
       const kana = layout ? KeyMap.kanaOf(KanaLayout.create(layout.entries)) : null;
       const picked = filters.pick(sessions);
       summaryEl.textContent = Filters.summary(picked);
+      // IKI の推移の横軸：絞り込んだ記録の古い順の通し番号（回数）と、その記録の日（このPCの日付）
+      const tags = new Map();
+      picked.forEach(function (s, i) {
+        tags.set(s.id, { run: i + 1, day: Filters.localDate(s.finishedAt), at: s.finishedAt });
+      });
+      trendInfo = {
+        mode: trendEl.value,
+        runs: picked.length,
+        firstDay: picked.length ? Filters.localDate(picked[0].finishedAt) : null,
+        lastDay: picked.length ? Filters.localDate(picked[picked.length - 1].finishedAt) : null
+      };
+      NGram.setTrend(trendInfo);
       if (picked.length === 0) {
         ngramSummaryEl.textContent = "";
         bigramTable.renderRows(bigramEl, [], 0, "データなし");
@@ -48,8 +62,8 @@
       ngramSummaryEl.textContent = "集計中…";
       return Store.eachRaw(ids, function (raw) {
         // 押したキーの記録（events の "k" の行）から数える。英語も日本語も同じ
-        NGram.accumulate(bigrams, 2, raw.events);
-        NGram.accumulate(trigrams, 3, raw.events);
+        NGram.accumulate(bigrams, 2, raw.events, tags.get(raw.id));
+        NGram.accumulate(trigrams, 3, raw.events, tags.get(raw.id));
         raw.events.forEach(function (e) { if (e[1] === "k") strokes++; });
       }).then(function () {
         if (myId !== loadId) return;
@@ -120,6 +134,13 @@
   }
 
   minEl.addEventListener("change", update);
+  // 推移の横軸を切り替えたら、集計し直さずに分布の下の推移だけを描き直す
+  trendEl.addEventListener("change", function () {
+    trendInfo.mode = trendEl.value;
+    NGram.setTrend(trendInfo);
+    bigramTable.refresh();
+    trigramTable.refresh();
+  });
   // バージョン表示と、記録の書き出し・読み込み（読み込んだら表示を更新する）
   PageFooter.init({ onImport: update });
   filters.ready.then(update);

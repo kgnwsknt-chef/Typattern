@@ -93,7 +93,16 @@
     </section>
 
     <section class="stats-section">
-      <!-- クリックで出る IKI の分布（左が bigram、右が trigram） -->
+      <!-- 分布の下の IKI の推移の横軸（bigram・trigram 共通） -->
+      <div class="filters">
+        <label class="filter">推移の横軸
+          <select id="f-trend" class="layout-select">
+            <option value="run">回数（1回ごとの平均）</option>
+            <option value="day">日付（1日ごとの平均）</option>
+          </select>
+        </label>
+      </div>
+      <!-- クリックで出る IKI の分布と推移（左が bigram、右が trigram） -->
       <div class="ngram-grid ngram-dists">
         <div class="ngram-col"><div id="bigram-dist" class="ngram-dist"></div></div>
         <div class="ngram-col"><div id="trigram-dist" class="ngram-dist"></div></div>

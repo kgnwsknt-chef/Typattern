@@ -1139,6 +1139,24 @@ a.text-btn {
   stroke-linejoin: round;
 }
 
+/* IKI のページの、n-gram ごとの IKI の推移（分布の下。記録のページの推移と同じ色） */
+.trend-head {
+  margin-top: 14px;
+}
+
+.ngram-trend-point {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 0.8;
+}
+
+.ngram-trend-ma {
+  fill: none;
+  stroke: var(--trend-ma);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
 .trend-line,
 .trend-acc-line {
   fill: none;
