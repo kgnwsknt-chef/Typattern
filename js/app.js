@@ -63,6 +63,13 @@
   const speedUnitEls = Array.from(document.querySelectorAll(".speed-unit"));
   const rhythmWhatEl = document.getElementById("rhythm-what");
   const rhythmNoteEl = document.getElementById("rhythm-note");
+  // 苦手な単語のモード（docs/weak-words.md）：練習するものの選択と、結果の単語ごとの平均 IKI
+  const weakKindEl = document.getElementById("weak-kind");
+  const weakKindLabelEl = document.getElementById("weak-kind-label");
+  const weakResultEl = document.getElementById("weak-result");
+  const weakResultTableEl = document.getElementById("weak-result-table");
+  const rankingTabEl = document.getElementById("tab-ranking");
+  const WEAK_KIND_STORAGE = "typing-test.weakKind";
   const paceEl = document.getElementById("pace");
   const paceTextEl = document.getElementById("pace-text");
   // インジケーターの帯のマス（Levels.PACE_STEPS 個）。左から順に、届いている段まで色を付ける
@@ -128,6 +135,7 @@
 
   // 今のモードのお題の元を読み込む。最初から入っているお題に、お題のページで追加したお題（docs/text-manager.md）を足す
   function loadSources() {
+    if (mode === "weak") return loadWeakSources();
     const builtin = mode === "words" ? loadWordlists()
       : mode === "other" ? Promise.resolve([]) // 「その他」は追加したお題だけ
       : loadTexts(mode === "short" ? "_short.txt" : ".txt");
@@ -136,6 +144,17 @@
       if (sources.length === 0) {
         throw new Error(mode === "other" ? "NO_OTHER" : "no texts for mode " + mode + " in " + (mode === "words" ? wordlistDir() : textDir()));
       }
+    });
+  }
+
+  // 苦手な単語のモード：今の言語・配列の単語モードの記録から、遅い単語・ミスの多い単語（30語ずつ）を求める（js/weak-words.js）。
+  // sources は1つだけ { name: "weak", slow, miss, displays }。候補が1語もなければ NO_WEAK
+  function loadWeakSources() {
+    return Promise.all([WeakWords.load(lang, keyLayoutEl.value), WeakWords.loadDisplays(lang)]).then(function (v) {
+      const slow = WeakWords.slowList(v[0]);
+      const miss = WeakWords.missList(v[0]);
+      if (!slow.length && !miss.length) throw new Error("NO_WEAK");
+      sources = [{ name: "weak", slow: slow, miss: miss, displays: v[1] }];
     });
   }
 
@@ -240,10 +259,16 @@
       picked.push(pool[i]);
       length = next;
     }
+    return wordText(picked);
+  }
+
+  // 単語の並び（英語は文字列、日本語は { display, reading }）をスペースでつないだお題にする。返り値 { text, lines }
+  // 日本語：画面では JA_LINE_LENGTH 文字ほどで行を分け、表示する語と読みを1行ずつ並べる。
+  // 行の終わりのスペースは読みの行に残す（行をつなぐとお題 text になる）
+  function wordText(picked) {
+    const reading = function (w) { return typeof w === "string" ? w : w.reading; };
     const text = picked.map(reading).join(" ");
     if (typeof picked[0] === "string") return { text: text };
-    // 日本語：画面では JA_LINE_LENGTH 文字ほどで行を分け、表示する語と読みを1行ずつ並べる。
-    // 行の終わりのスペースは読みの行に残す（行をつなぐとお題 text になる）
     const lines = [];
     let line = [];
     let lineLength = 0;
@@ -275,6 +300,13 @@
       input.disabled = true;
       return;
     }
+    if (err && err.message === "NO_WEAK") {
+      // 苦手な単語は単語モードの記録から選ぶので、まだなければ単語モードで打つように案内する
+      textEl.textContent = (lang === "ja" ? "日本語" : "英語") + "・この配列の苦手な単語はまだありません。単語モードで打つと、苦手な単語が出ます（" +
+        WeakWords.MIN_COUNT + " 回以上打った単語から選びます）。";
+      input.disabled = true;
+      return;
+    }
     console.error(err);
     textEl.textContent = location.protocol === "file:"
       ? "お題を読み込めませんでした。index.html を直接開くと読み込めないため、サーバー経由（例: http://localhost:8000）で開いてください。"
@@ -290,6 +322,14 @@
       const list = sources[Math.floor(Math.random() * sources.length)];
       const made = makeWordText(list.words);
       current = { name: list.name, text: made.text, lines: made.lines };
+    } else if (mode === "weak") {
+      // 苦手な単語：候補（30語ずつ）からランダムに10語を選び、それぞれ5回続けて並べる。日本語は表示する語を読みで引く
+      const src = sources[0];
+      const words = WeakWords.practiceWords(WeakWords.choose(src.slow, src.miss, weakKindEl.value));
+      const made = wordText(lang === "ja"
+        ? words.map(function (r) { return { display: src.displays.get(r) || r, reading: r }; })
+        : words);
+      current = { name: "weak", text: words.length ? made.text : "", lines: made.lines };
     } else {
       let i;
       do {
@@ -305,6 +345,7 @@
   function setMode(newMode) {
     mode = newMode;
     modeEl.value = mode;
+    weakKindLabelEl.hidden = mode !== "weak"; // 「練習するもの」は苦手な単語のときだけ出す
     sources = [];
     current = null;
     textIndex = -1;
@@ -319,6 +360,16 @@
   function reset(next) {
     if (sources.length === 0) return; // 読み込み前・失敗時は何もしない
     const picked = pickText(next);
+    if (!picked.text) {
+      // 苦手な単語：選んだ「練習するもの」の候補がない（ミスの多い単語がまだない、など）
+      clearInterval(timerId);
+      resultEl.hidden = true;
+      paceEl.hidden = true;
+      current = null;
+      textEl.textContent = "「" + weakKindEl.selectedOptions[0].textContent + "」の苦手な単語はまだありません。「練習するもの」をほかのものにするか、単語モードで打ってください。";
+      input.disabled = true;
+      return;
+    }
     textId = picked.name;
     target = picked.text;
     events = [];
@@ -355,6 +406,7 @@
     // 「キーごとの間隔」の説明。日本語は押したキーごとの間隔（かなは下の段に書く）
     rhythmWhatEl.textContent = lang === "ja" ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
     rhythmNoteEl.textContent = "修正の時間を含まないので、結果の平均 IKI より小さくなる";
+    weakResultEl.hidden = true;
     resultEl.hidden = true;
     board.classList.remove("finished");
 
@@ -571,7 +623,68 @@
     rhythmAvgEl.textContent = lastAvg;
     resultEl.hidden = false;
 
+    if (mode === "weak") {
+      showWeakResult();
+      return;
+    }
+    rankingTabEl.hidden = false;
     saveSession(r);
+  }
+
+  // 苦手な単語の練習の結果：記録には残さず、順位・レベル・ランキングのタブを出さない。代わりに単語ごとの平均 IKI の表を出す
+  function showWeakResult() {
+    res.rank.textContent = "-";
+    res.rank.classList.remove("rank-1", "rank-2", "rank-3");
+    res.rankLabel.textContent = "記録しません";
+    res.level.textContent = "-";
+    res.level.classList.remove("level-up");
+    res.levelLabel.textContent = "レベル（記録しないので出しません）";
+    levelStatusEl.textContent = "";
+    saveStatusEl.textContent = "苦手な単語の練習は記録しません（ランキング・推移・レベルの達成度・各ページの分析には入りません）。";
+    // ランキングのタブを出さない（開いていたら、キーごとの間隔のタブに戻す）
+    rankingTabEl.hidden = true;
+    if (rankingTabEl.getAttribute("aria-selected") === "true") document.getElementById("tab-rhythm").click();
+
+    // 単語ごとの平均 IKI。色の基準は、この回の位置ごとの最後の打鍵の間隔の平均
+    const values = intervals.filter(function (v) { return v !== null; });
+    const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
+    const displays = sources[0] ? sources[0].displays : new Map();
+    const table = document.createElement("table");
+    table.className = "bg-table";
+    const hr = document.createElement("tr");
+    ["単語", "平均 IKI(ms/文字)", "ミスした回数"].forEach(function (t) {
+      const th = document.createElement("th");
+      th.textContent = t;
+      hr.appendChild(th);
+    });
+    table.appendChild(document.createElement("thead")).appendChild(hr);
+    const body = table.appendChild(document.createElement("tbody"));
+    WeakWords.results(target, intervals, missed).forEach(function (w) {
+      const tr = document.createElement("tr");
+      const word = document.createElement("td");
+      word.className = "ww-word";
+      const display = lang === "ja" ? displays.get(w.word) : null;
+      word.textContent = display && display !== w.word ? display + " " : w.word;
+      if (display && display !== w.word) {
+        const reading = document.createElement("span");
+        reading.className = "ww-reading";
+        reading.textContent = w.word;
+        word.appendChild(reading);
+      }
+      tr.appendChild(word);
+      const iki = document.createElement("td");
+      iki.className = "bg-avg";
+      iki.textContent = w.slow === null ? "-" : Math.round(w.slow);
+      if (w.slow !== null && base) iki.style.color = Rhythm.color(w.slow, base);
+      tr.appendChild(iki);
+      const miss = document.createElement("td");
+      miss.textContent = w.misses + " / " + w.count;
+      tr.appendChild(miss);
+      body.appendChild(tr);
+    });
+    weakResultTableEl.textContent = "";
+    weakResultTableEl.appendChild(table);
+    weakResultEl.hidden = false;
   }
 
   // 日本語の「キーごとの間隔」のグラフの元：最後に残ったかなごとに、そのかなを打ったキーと間隔
@@ -588,7 +701,7 @@
   // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他" };
+  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他", weak: "苦手な単語" };
 
   // 今回のレベルと文字/秒。正確率が基準未満なら「-」
   function renderLevel(session) {
@@ -977,7 +1090,19 @@
 
   keyLayoutEl.addEventListener("change", function () {
     try { localStorage.setItem(KEY_LAYOUT_STORAGE, keyLayoutEl.value); } catch (e) { /* 無視 */ }
-    reset(false);
+    // 苦手な単語は配列ごとに数えるので、配列を変えたら選び直す
+    if (mode === "weak") setMode(mode);
+    else reset(false);
+  });
+
+  // 苦手な単語の「練習するもの」。選んだものはブラウザに覚えさせ、変えたら選び直す
+  try {
+    const saved = localStorage.getItem(WEAK_KIND_STORAGE);
+    if (saved && weakKindEl.querySelector('option[value="' + saved + '"]')) weakKindEl.value = saved;
+  } catch (e) { /* 既定（遅い単語）を使う */ }
+  weakKindEl.addEventListener("change", function () {
+    try { localStorage.setItem(WEAK_KIND_STORAGE, weakKindEl.value); } catch (e) { /* 無視 */ }
+    reset(true);
   });
 
   document.getElementById("retry-btn").addEventListener("click", function () { reset(false); });

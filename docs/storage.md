@@ -64,7 +64,7 @@
 | `finishedAt` | 打ち終わりの日時（UTC, ISO 8601）。打ち始めは `finishedAt - result.timeSec` で求められるので持たない |
 | `appVersion` | 記録したときのアプリのバージョン |
 | `lang` | お題の言語（`en` 英語・`ja` 日本語） |
-| `mode` | `"normal"`（文章）・`"short"`（短い文章）・`"words"`（単語）・`"other"`（その他。追加したお題で、文章・短い文章の長さに入らないもの。`docs/text-manager.md`）。IndexedDB の索引に true/false は使えないため文字列にしている |
+| `mode` | `"normal"`（文章）・`"short"`（短い文章）・`"words"`（単語）・`"other"`（その他。追加したお題で、文章・短い文章の長さに入らないもの。`docs/text-manager.md`）。IndexedDB の索引に true/false は使えないため文字列にしている。苦手な単語の練習（`docs/weak-words.md`）は記録に残さないので、それに当たる値はない |
 | `keyLayout` | キー配列。`"qwerty"`（英語は QWERTY、日本語はローマ字入力）か、登録したかな配列の配列名（`layouts` の `id`。日本語のみ）。画面上部の「配列」で選ぶ |
 | `textId` | お題の題材名（`texts/index.json` の名前。例 `qwerty`）。単語モードは単語リスト名（例 `basic1000`）。追加したお題は、その名前（`texts` の `name`） |
 | `textLength` | お題の文字数（日本語は読みのかなの数） |

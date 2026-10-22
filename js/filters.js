@@ -29,7 +29,11 @@ const Filters = (function () {
   // 返り値の ready は、配列の選択肢を足して前の条件に戻し終えたら解決する（最初の表示はその後にする）
   function init(onChange) {
     const f = {};
-    Object.keys(IDS).forEach(function (k) { f[k] = document.getElementById(IDS[k]); });
+    // ページにない選択（苦手な単語のページのモードなど）は使わない（その条件では絞り込まず、覚えた値もそのまま残す）
+    Object.keys(IDS).forEach(function (k) {
+      const el = document.getElementById(IDS[k]);
+      if (el) f[k] = el;
+    });
 
     // 初期値：このタブで前に選んだ条件。なければ、配列だけタイピング画面で選んでいるもの
     function restore() {
@@ -52,7 +56,8 @@ const Filters = (function () {
       .then(restore);
 
     function changed() {
-      const values = {};
+      let values = {};
+      try { values = JSON.parse(sessionStorage.getItem(FILTER_STORAGE) || "{}") || {}; } catch (e) { /* 使わない */ }
       Object.keys(f).forEach(function (k) { values[k] = f[k].value; });
       try { sessionStorage.setItem(FILTER_STORAGE, JSON.stringify(values)); } catch (e) { /* 無視 */ }
       onChange();
@@ -66,7 +71,7 @@ const Filters = (function () {
 
     // 概要の記録（古い順）を条件で絞り込む。空の値（「すべて」・期間の指定なし）はその条件で絞り込まない
     function pick(sessions) {
-      const match = function (sel, v) { return !sel.value || sel.value === v; };
+      const match = function (sel, v) { return !sel || !sel.value || sel.value === v; };
       return sessions.filter(function (s) {
         const day = localDate(s.finishedAt);
         return match(f.lang, s.lang) && match(f.layout, s.keyLayout) && match(f.mode, s.mode) &&

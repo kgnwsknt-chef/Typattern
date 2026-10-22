@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typattern 苦手な単語</title>
+  <link rel="stylesheet" href="style.css?v=67">
+</head>
+<body>
+  <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
+  <nav class="top-nav" aria-label="ページ">
+    <div class="brand">
+      <div class="logo">Typattern<span id="version" class="version"></span><span id="data-size" class="data-size" title="ブラウザに保存している記録と登録したキー配列の大きさ（書き出すファイルとほぼ同じ）。書き出し・読み込みは設定のページ"></span></div>
+    </div>
+    <div class="nav-links">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
+      <a class="text-btn" href="ngram.html" title="キーごと・bigram・trigram ごとの IKI">IKI</a>
+      <a class="text-btn" href="mistype.html" title="どのキーを、どのキーと押し間違えたか">ミスタイプ</a>
+      <a class="text-btn" href="weak-words.html" aria-current="page" title="単語モードで遅い単語・ミスの多い単語">苦手な単語</a>
+      <a class="text-btn" href="settings.html" title="キー配列・お題の登録、グラフの範囲・ランキングの基準、記録の書き出しと読み込み">設定</a>
+    </div>
+  </nav>
+
+  <main class="main stats-main">
+    <!-- 単語モードの記録だけを使うので、モードの選択は出さない。決まりは docs/weak-words.md -->
+    <h2 class="stats-title">データの絞り込み</h2>
+    <div class="filters stats-filters">
+      <label class="filter">言語
+        <select id="f-lang" class="layout-select">
+          <option value="">すべて</option>
+          <option value="en">英語</option>
+          <option value="ja">日本語</option>
+        </select>
+      </label>
+      <label class="filter">配列
+        <select id="f-layout" class="layout-select">
+          <option value="">すべて</option>
+          <option value="qwerty">QWERTY</option>
+        </select>
+      </label>
+      <span class="filter">期間
+        <input id="f-from" type="date" class="layout-select" aria-label="開始日">
+        〜
+        <input id="f-to" type="date" class="layout-select" aria-label="終了日">
+        <button id="f-clear" type="button" class="text-btn small-btn" title="期間の指定をなくす">すべて</button>
+      </span>
+    </div>
+    <p id="stats-summary" class="stats-summary">読み込み中…</p>
+
+    <section class="stats-section">
+      <p id="ww-summary" class="stats-summary"></p>
+      <p class="rhythm-legend">単語モードの記録から、2回以上打った単語を集計 ／ 遅さ = その単語の文字（日本語はかな）ごとの、最後に打ったときの間隔の平均（1文字目は直前のスペースからの間隔）／ ミスの割合 = その単語のどこかで一度でもミスした回 ÷ 回数 ／ 言語・配列が違えば別に数える ／ この 30 語ずつが、タイピング画面の「苦手な単語」モードで練習する単語の候補（タイピング画面で選んでいる言語・配列の、全部の単語モードの記録から選ぶ）</p>
+      <div class="ngram-grid">
+        <div class="ngram-col">
+          <h3 class="hm-title">遅い単語（遅い順）</h3>
+          <div id="ww-slow" class="ngram-scroll ww-table"></div>
+        </div>
+        <div class="ngram-col">
+          <h3 class="hm-title">ミスの多い単語（ミスの多い順）</h3>
+          <div id="ww-miss" class="ngram-scroll ww-table"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/store.js?v=67"></script>
+  <script src="js/keys.js?v=67"></script>
+  <script src="js/settings.js?v=67"></script>
+  <script src="js/page-footer.js?v=67"></script>
+  <script src="js/filters.js?v=67"></script>
+  <script src="js/weak-words.js?v=67"></script>
+  <script src="js/weak-words-page.js?v=67"></script>
+</body>
+</html>
