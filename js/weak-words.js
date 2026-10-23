@@ -110,12 +110,17 @@ const WeakWords = (function () {
     });
   }
 
-  // 言語・配列の、全部の単語モードの記録から候補の行を求める（Promise）
+  // 苦手な単語を数える回数（設定の「苦手な単語を数える回数」。言語・配列ごとに、単語モードの記録の新しい方から）
+  function recentRuns() {
+    return Settings.get("weakRecentRuns");
+  }
+
+  // 言語・配列の、直近 recentRuns() 回の単語モードの記録から候補の行を求める（Promise）
   function load(lang, keyLayout) {
     return Store.getAllSessions().then(function (sessions) {
       const ids = new Set(sessions.filter(function (s) {
         return s.mode === "words" && !s.practice && s.lang === lang && s.keyLayout === keyLayout; // 練習モードの回は使わない
-      }).map(function (s) { return s.id; }));
+      }).slice(-recentRuns()).map(function (s) { return s.id; })); // getAllSessions は古い順なので、後ろから
       const map = new Map();
       return Store.eachRaw(ids, function (raw) { add(map, raw); }).then(function () { return rows(map); });
     });
@@ -151,6 +156,6 @@ const WeakWords = (function () {
   return {
     MIN_COUNT: MIN_COUNT, LIST_SIZE: LIST_SIZE, PRACTICE_WORDS: PRACTICE_WORDS, REPEAT: REPEAT,
     add: add, rows: rows, slowList: slowList, missList: missList, choose: choose,
-    practiceWords: practiceWords, results: results, load: load, loadDisplays: loadDisplays
+    practiceWords: practiceWords, results: results, load: load, loadDisplays: loadDisplays, recentRuns: recentRuns
   };
 })();

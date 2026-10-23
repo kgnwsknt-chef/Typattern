@@ -25,7 +25,7 @@
   <main class="main stats-main">
     <p class="rhythm-legend">設定は、変えるとすぐこのブラウザに保存し、ほかのページを開いたとき（開き直したとき）から使います。記録の書き出しには含めません。</p>
 
-    <!-- 並びはページの順（タイピング・記録・n-gram）。その下に「初期値に戻す」、横線を引いて「登録」と「データ」（設定の項目ではないもの）。項目はそれを使うページのところに置く -->
+    <!-- 並びはページの順（タイピング・記録・IKI・苦手な単語）。その下に「初期値に戻す」、横線を引いて「登録」と「データ」（設定の項目ではないもの）。項目はそれを使うページのところに置く -->
     <section class="stats-section settings-section">
       <h2 class="stats-title">タイピング</h2>
       <div class="setting">
@@ -59,6 +59,15 @@
         <label class="setting-label" for="s-ngram">分布の横軸の最大</label>
         <span class="setting-input"><input id="s-ngram" class="layout-select setting-number" type="number" data-setting="ngramMaxMs"> ms</span>
         <p class="setting-help">IKI のページで行（または2次元ヒストグラムのマス）をクリックしたときに出す IKI の分布。横軸は 0 からこの値までで、100 個の区間に分けます（区間の幅 = この値 ÷ 100）。これ以上の値は一番右の区間に入れます。<span class="setting-range"></span></p>
+      </div>
+    </section>
+
+    <section class="stats-section settings-section">
+      <h2 class="stats-title">苦手な単語</h2>
+      <div class="setting">
+        <label class="setting-label" for="s-weak-runs">苦手な単語を数える回数</label>
+        <span class="setting-input">直近 <input id="s-weak-runs" class="layout-select setting-number" type="number" data-setting="weakRecentRuns"> 回</span>
+        <p class="setting-help">苦手な単語（遅い単語・ミスの多い単語）を、言語・配列ごとに、単語モードの記録の新しい方からこの回数だけで数えます。苦手な単語のページ（期間を指定しないとき）と、タイピング画面の「苦手な単語」モードで選ぶ単語に使います。少なくすると今の苦手がすぐ反映され、多くすると値が安定します。<span class="setting-range"></span></p>
       </div>
     </section>
 

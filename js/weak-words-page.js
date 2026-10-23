@@ -9,6 +9,8 @@
   const missEl = document.getElementById("ww-miss");
   const filters = Filters.init(update);
   const LANG_NAME = { en: "英語", ja: "日本語" };
+  const fromEl = document.getElementById("f-from"); // 絞り込みの期間（指定したときだけ、その期間の全部の回で集計する）
+  const toEl = document.getElementById("f-to");
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
 
@@ -17,9 +19,23 @@
     summaryEl.textContent = "集計中…";
     Store.getAllSessions().then(function (sessions) {
       if (myId !== loadId) return;
-      // 単語モードの記録だけを使う
-      const picked = filters.pick(sessions).filter(function (s) { return s.mode === "words" && !s.practice; });
-      summaryEl.textContent = picked.length ? Filters.summary(picked).replace("対象", "対象（単語モード）") : "条件に合う単語モードの記録がありません。単語モードで打つと、ここに苦手な単語が出ます。";
+      // 単語モードの記録だけを使う（練習モードの回は使わない）
+      let picked = filters.pick(sessions).filter(function (s) { return s.mode === "words" && !s.practice; });
+      // 期間を指定しないときは、言語・配列ごとに直近 N 回だけ（練習の候補と同じ）。指定したときは、その期間の全部の回
+      const byPeriod = !!(fromEl.value || toEl.value);
+      if (!byPeriod) {
+        const n = WeakWords.recentRuns();
+        const counts = new Map();
+        picked = picked.slice().reverse().filter(function (s) { // 新しい方から数える
+          const key = s.lang + "\t" + s.keyLayout;
+          counts.set(key, (counts.get(key) || 0) + 1);
+          return counts.get(key) <= n;
+        }).reverse();
+      }
+      summaryEl.textContent = picked.length
+        ? Filters.summary(picked).replace("対象", "対象（単語モード）") + " ／ " +
+          (byPeriod ? "指定した期間の全部の回で集計" : "言語・配列ごとに直近 " + WeakWords.recentRuns() + " 回で集計（設定の「苦手な単語を数える回数」。練習で選ぶ単語と同じ）")
+        : "条件に合う単語モードの記録がありません。単語モードで打つと、ここに苦手な単語が出ます。";
       // 言語・配列が違えば別に数える
       const groups = new Map(); // "言語\t配列" → 単語の集計
       const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
