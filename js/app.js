@@ -70,6 +70,8 @@
   const weakResultTableEl = document.getElementById("weak-result-table");
   const rankingTabEl = document.getElementById("tab-ranking");
   const WEAK_KIND_STORAGE = "typing-test.weakKind";
+  // 練習モード（記録に practice: true を付け、レベルの達成度・ランキング・記録のページの推移に入れないモード）
+  const PRACTICE_MODES = ["weak"];
   const paceEl = document.getElementById("pace");
   const paceTextEl = document.getElementById("pace-text");
   // インジケーターの帯のマス（Levels.PACE_STEPS 個）。左から順に、届いている段まで色を付ける
@@ -623,28 +625,28 @@
     rhythmAvgEl.textContent = lastAvg;
     resultEl.hidden = false;
 
-    if (mode === "weak") {
-      showWeakResult();
-      return;
-    }
-    rankingTabEl.hidden = false;
+    if (PRACTICE_MODES.indexOf(mode) !== -1) showPracticeResult();
+    else rankingTabEl.hidden = false;
+    if (mode === "weak") showWeakResult();
     saveSession(r);
   }
 
-  // 苦手な単語の練習の結果：記録には残さず、順位・レベル・ランキングのタブを出さない。代わりに単語ごとの平均 IKI の表を出す
-  function showWeakResult() {
+  // 練習モードの結果：順位・レベル・ランキングのタブを出さない（練習モードの回はレベルの達成度・ランキングに入らない）
+  function showPracticeResult() {
     res.rank.textContent = "-";
     res.rank.classList.remove("rank-1", "rank-2", "rank-3");
-    res.rankLabel.textContent = "記録しません";
+    res.rankLabel.textContent = "練習モード";
     res.level.textContent = "-";
     res.level.classList.remove("level-up");
-    res.levelLabel.textContent = "レベル（記録しないので出しません）";
+    res.levelLabel.textContent = "レベル（練習モードは出しません）";
     levelStatusEl.textContent = "";
-    saveStatusEl.textContent = "苦手な単語の練習は記録しません（ランキング・推移・レベルの達成度・各ページの分析には入りません）。";
     // ランキングのタブを出さない（開いていたら、キーごとの間隔のタブに戻す）
     rankingTabEl.hidden = true;
     if (rankingTabEl.getAttribute("aria-selected") === "true") document.getElementById("tab-rhythm").click();
+  }
 
+  // 苦手な単語の練習の結果：単語ごとの平均 IKI の表を出す
+  function showWeakResult() {
     // 単語ごとの平均 IKI。色の基準は、この回の位置ごとの最後の打鍵の間隔の平均
     const values = intervals.filter(function (v) { return v !== null; });
     const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
@@ -776,6 +778,9 @@
       session.result.kanaPerMin = Math.round(r.wpm * 10) / 10;
       session.result.correctKeys = correctKeys();
     }
+    // 練習モードの回には印を付ける（レベルの達成度・ランキング・記録のページの推移に入れない。docs/measurement.md の「練習モード」）
+    const practice = PRACTICE_MODES.indexOf(mode) !== -1;
+    if (practice) session.practice = true;
     const raw = {
       id: id,
       keyLayout: session.keyLayout, // 文字から物理キーの位置を求めるのに使う（概要と同じ値）
@@ -786,6 +791,20 @@
     };
 
     saveStatusEl.textContent = "記録を保存中…";
+    if (practice) {
+      // 練習モード：保存するだけ（順位・レベルは出さない。showPracticeResult）
+      Store.save(session, raw)
+        .then(function () {
+          Store.persist();
+          PageFooter.refreshSize();
+          saveStatusEl.textContent = "記録を保存しました。練習モードの回は、レベルの達成度・ランキングには入りません（IKI・ミスタイプのページには入ります）。";
+        })
+        .catch(function (err) {
+          console.error(err);
+          saveStatusEl.textContent = "記録を保存できませんでした: " + err.message;
+        });
+      return;
+    }
     res.rank.textContent = "-";
     res.rank.classList.remove("rank-1", "rank-2", "rank-3");
     res.level.classList.remove("level-up");

@@ -18,7 +18,7 @@
     Store.getAllSessions().then(function (sessions) {
       if (myId !== loadId) return;
       // 単語モードの記録だけを使う
-      const picked = filters.pick(sessions).filter(function (s) { return s.mode === "words"; });
+      const picked = filters.pick(sessions).filter(function (s) { return s.mode === "words" && !s.practice; });
       summaryEl.textContent = picked.length ? Filters.summary(picked).replace("対象", "対象（単語モード）") : "条件に合う単語モードの記録がありません。単語モードで打つと、ここに苦手な単語が出ます。";
       // 言語・配列が違えば別に数える
       const groups = new Map(); // "言語\t配列" → 単語の集計

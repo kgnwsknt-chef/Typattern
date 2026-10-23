@@ -115,9 +115,9 @@ const Store = (function () {
     );
   }
 
-  // ランキングに載せる記録か（正確率が設定の基準 rankMinAccuracy% 以上）
+  // ランキングに載せる記録か（練習モードの回でなく、正確率が設定の基準 rankMinAccuracy% 以上）
   function eligible(s) {
-    return s.result.avgIki !== null && s.result.accuracy >= rankMinAccuracy();
+    return !s.practice && s.result.avgIki !== null && s.result.accuracy >= rankMinAccuracy();
   }
 
   // a が b より上位か。平均 IKI の小さい順、同じなら正確率の高い順

@@ -70,11 +70,13 @@ const Filters = (function () {
     });
 
     // 概要の記録（古い順）を条件で絞り込む。空の値（「すべて」・期間の指定なし）はその条件で絞り込まない
+    //   モードの「練習モード以外」（値 "regular"。IKI・ミスタイプのページ）は、練習モード（practice: true）でない回をまとめて選ぶ
     function pick(sessions) {
       const match = function (sel, v) { return !sel || !sel.value || sel.value === v; };
+      const modeMatch = function (s) { return f.mode && f.mode.value === "regular" ? !s.practice : match(f.mode, s.mode); };
       return sessions.filter(function (s) {
         const day = localDate(s.finishedAt);
-        return match(f.lang, s.lang) && match(f.layout, s.keyLayout) && match(f.mode, s.mode) &&
+        return match(f.lang, s.lang) && match(f.layout, s.keyLayout) && modeMatch(s) &&
           (!f.from.value || day >= f.from.value) && (!f.to.value || day <= f.to.value);
       });
     }

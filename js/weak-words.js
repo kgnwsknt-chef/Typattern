@@ -114,7 +114,7 @@ const WeakWords = (function () {
   function load(lang, keyLayout) {
     return Store.getAllSessions().then(function (sessions) {
       const ids = new Set(sessions.filter(function (s) {
-        return s.mode === "words" && s.lang === lang && s.keyLayout === keyLayout;
+        return s.mode === "words" && !s.practice && s.lang === lang && s.keyLayout === keyLayout; // 練習モードの回は使わない
       }).map(function (s) { return s.id; }));
       const map = new Map();
       return Store.eachRaw(ids, function (raw) { add(map, raw); }).then(function () { return rows(map); });

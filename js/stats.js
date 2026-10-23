@@ -32,7 +32,8 @@
     summaryEl.textContent = "集計中…";
     Store.getAllSessions().then(function (sessions) {
       if (myId !== loadId) return;
-      const picked = filters.pick(sessions); // 古い順のまま
+      // 古い順のまま。練習モードの回は、記録のページ（推移・ランキング）には入れない（docs/measurement.md の「練習モード」）
+      const picked = filters.pick(sessions).filter(function (s) { return !s.practice; });
       summaryEl.textContent = Filters.summary(picked);
       // レベルの達成度と、達成レベルが上がった回は、絞り込まずに全部の記録から出す
       renderLevels(sessions);
