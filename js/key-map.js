@@ -16,7 +16,7 @@ const KeyMap = (function () {
     return s;
   }
 
-  // 登録したかな配列から、配列図に書くための { get, shifts } を作る（KanaLayout.create の結果を渡す）
+  // 登録した配列（かな配列・英語の配列）から、配列図に書くための { get, shifts } を作る（KanaLayout.create の結果を渡す）
   function kanaOf(k) {
     return { get: k.get, shifts: k.shiftKeys(SHIFT_MIN) };
   }

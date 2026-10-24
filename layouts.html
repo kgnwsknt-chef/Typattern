@@ -69,9 +69,15 @@
       <div id="entries" class="entries"></div>
     </details>
 
-    <h2 class="stats-title">かな配列の登録</h2>
-    <p class="rhythm-legend">割り当て表（キーの並び → かな）を読み込むと、配列図と試し打ちで確かめられます。確かめたら、配列図の上の「この配列を保存する」でブラウザに保存します（記録の書き出しにも入ります）。配列名は自由に付けられます（版を付けるなら名前に入れてください）。1行に1つ、<code>{"j'", "pi"},</code> の形か、<code>j' pi</code> のようにキーの並びとかなを空白（タブ・スペース。いくつ続いてもよい）で区切った形で書きます。キーは US キーボードの QWERTY の文字で書きます。かなはローマ字で書いてもかまいません（例 <code>j xtu</code>。ふつうのローマ字入力の決まりで「っ」に直します）。</p>
+    <h2 class="stats-title">キー配列の登録</h2>
+    <p class="rhythm-legend">割り当て表（かな配列は「キーの並び → かな」、英語の配列は「キー → 文字」）を読み込むと、配列図と試し打ちで確かめられます。確かめたら、配列図の上の「この配列を保存する」でブラウザに保存します（記録の書き出しにも入ります）。配列名は自由に付けられます（版を付けるなら名前に入れてください）。英語の配列は1行に「1キー → 1文字」で、英字の大文字の行は書かなければ小文字の行から作ります。1行に1つ、<code>{"j'", "pi"},</code> の形か、<code>j' pi</code> のようにキーの並びとかなを空白（タブ・スペース。いくつ続いてもよい）で区切った形で書きます。キーは US キーボードの QWERTY の文字で書きます。かなはローマ字で書いてもかまいません（例 <code>j xtu</code>。ふつうのローマ字入力の決まりで「っ」に直します）。</p>
     <div class="import-form">
+      <label class="filter">種類
+        <select id="import-kind" class="layout-select" title="登録する配列の種類">
+          <option value="kana">かな配列</option>
+          <option value="eng">英語</option>
+        </select>
+      </label>
       <label class="filter">配列名
         <input id="import-name" class="layout-select import-name" type="text" placeholder="例：tsukimisou-v2">
       </label>

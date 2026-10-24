@@ -111,6 +111,7 @@
   let typer = null;    // 日本語のときの入力の状態（js/typer.js）。英語では null
   let showRomajiGuide = false; // ローマ字の手引きを出すか（日本語のローマ字入力のときだけ。かな配列では出さない）
   const kanaLayouts = {}; // 登録したかな配列（配列名 → KanaLayout.create の結果）
+  const engLayouts = {};  // 登録した英語の配列（配列名 → KanaLayout.engMap の結果 { toChar, toKey }）。英語と、日本語のローマ字で使う
   let imeOn = false;   // IME がオンのまま打たれたか（日本語のとき、注意を出す）
   let timerId = 0;
   let finished = false;
@@ -172,6 +173,7 @@
   // sources は1つだけ { name: FASTER, cands: [{ row, words }] }。含む単語がない bigram は外す。1つもなければ NO_FASTER
   function loadFasterSources() {
     const kana = kanaLayouts[keyLayoutEl.value];
+    const eng = engLayouts[keyLayoutEl.value];
     const optionsFn = kana ? kana.options : Romaji.options;
     const custom = Store.getAllTexts().catch(function (err) {
       console.warn(err); // 追加した単語リストが読めなくても、最初から入っている単語リストは使う
@@ -184,7 +186,12 @@
       const add = function (w) {
         if (seen.has(reading(w))) return;
         seen.add(reading(w));
-        const keys = lang === "ja" ? Typer.keysOf(w.reading, optionsFn) : w;
+        let keys = lang === "ja" ? Typer.keysOf(w.reading, optionsFn) : w;
+        // 英語の配列では、打つ文字を割り当て表で逆に引いて、押すキー（QWERTY の文字）にする
+        if (keys && eng) {
+          const mapped = Array.from(keys).map(eng.toKey);
+          keys = mapped.indexOf(null) === -1 ? mapped.join("") : null;
+        }
         if (keys) keyed.push({ word: w, keys: keys }); // 配列にないかなを含む単語は使わない
       };
       v[1].forEach(function (list) { list.words.forEach(add); });
@@ -451,7 +458,7 @@
     clearInterval(timerId);
     setGoal();
 
-    // 日本語：QWERTY ならローマ字、かな配列ならその割り当て表で判定する
+    // 日本語：QWERTY と英語の配列ならローマ字、かな配列ならその割り当て表で判定する（英語の配列は、押したキーを文字に直してからローマ字の判定にかける）
     const kana = kanaLayouts[keyLayoutEl.value];
     typer = lang !== "ja" ? null : Typer.create(target, kana ? kana.options : Romaji.options);
     showRomajiGuide = lang === "ja" && !kana;
@@ -534,8 +541,8 @@
 
   // 日本語：次に打つローマ字の手引き。打ちかけ（灰色）・今のかなの残り（青）・その先（薄く）
   function renderRomajiGuide() {
-    romajiGuideEl.hidden = !typer;
-    if (!typer) return;
+    // 英語は手引きを出さないが、英語の配列で IME がオンのまま打たれたときは注意を出す
+    romajiGuideEl.hidden = !typer && !imeOn;
     romajiGuideEl.textContent = "";
     if (imeOn) {
       const warn = document.createElement("span");
@@ -544,6 +551,7 @@
       romajiGuideEl.appendChild(warn);
       return;
     }
+    if (!typer) return;
     if (finished || !showRomajiGuide) return; // かな配列では手引きを出さない（IME の注意だけ）
     const g = typer.guide(24);
     [["rg-typed", g.typed], ["rg-rest", g.rest], ["rg-ahead", g.ahead]].forEach(function (p) {
@@ -973,7 +981,8 @@
   // 押したキーを1行記録する。どの行も5要素にそろえる（docs/storage.md）
   //   [経過ms, "k", 物理キーの番号, 打っている位置, 正解なら1・ミスなら0（Shift・Backspace は null）]
   // 計測開始前のキーは preKeys にためておき、開始したときに startKeys で events に移す
-  function logKey(e, now) {
+  //   typed：そのキーで入る文字（英語の配列のとき。なければ e.key）
+  function logKey(e, now, typed) {
     if (finished || input.disabled) return;
     const number = Keys.number(e.code);
     if (number === null) return; // Ctrl・矢印など、番号のないキーは記録しない
@@ -982,7 +991,7 @@
     if ((e.ctrlKey || e.altKey || e.metaKey) && !isBackspace) return;
     const pos = input.value.length;
     let judge = null;
-    if (!Keys.isShift(e.code) && !isBackspace) judge = e.key === target[pos] ? 1 : 0;
+    if (!Keys.isShift(e.code) && !isBackspace) judge = (typed !== undefined ? typed : e.key) === target[pos] ? 1 : 0;
     pushKey(e.code, number, now, pos, judge);
   }
 
@@ -1007,6 +1016,34 @@
       events.push([round1(k.time - startTime), "k", k.number, k.pos, k.judge]);
     });
     preKeys = [];
+  }
+
+  // 英語の配列（docs/measurement.md の「英語の配列」）：e.code から QWERTY の文字を求め、割り当て表でその配列の文字に直して入力欄に入れる。
+  // 文字を入れたら、ふだんの英語と同じく input の処理（正誤・間隔・記録）に任せる。
+  // 受け持ったら true。文字のないキー（Backspace・Shift など）と Ctrl などとの組み合わせは false（ふだんの処理に任せる）
+  function handleEngKey(e, now, eng) {
+    if (e.key === "Process" || e.isComposing) {
+      // IME がオンだと文字が変わってしまうので受け付けず、注意を出す
+      e.preventDefault();
+      imeOn = true;
+      renderRomajiGuide();
+      return true;
+    }
+    if (e.ctrlKey || e.altKey || e.metaKey || Keys.isShift(e.code)) return false;
+    const qwerty = Keys.char(e.code, e.shiftKey);
+    if (qwerty === null) return false;
+    e.preventDefault();
+    if (imeOn) {
+      imeOn = false;
+      renderRomajiGuide();
+    }
+    if (finished || input.disabled || input.value.length >= target.length) return true;
+    const ch = eng.toChar(qwerty);
+    keyTime = now;
+    logKey(e, now, ch);
+    input.value += ch;
+    input.dispatchEvent(new Event("input"));
+    return true;
   }
 
   // 日本語：キーを押したときの処理。入力欄は使わず、e.code から US キーボードの文字を求めてローマ字の判定にかける
@@ -1056,7 +1093,11 @@
     }
     keystrokes++;
     // 文字のないキー（JIS の「ろ」など）は、どの打ち方にも合わない文字として渡す
-    const r = typer.press(Keys.char(e.code, e.shiftKey) || "\u0000", now);
+    // 英語の配列を選んでいれば、押したキーをその配列の文字に直してからローマ字の判定にかける
+    let ch = Keys.char(e.code, e.shiftKey);
+    const eng = engLayouts[keyLayoutEl.value];
+    if (eng && ch !== null) ch = eng.toChar(ch);
+    const r = typer.press(ch || "\u0000", now);
     pushKey(e.code, number, now, r.pos, r.judge);
     r.confirmed.forEach(function (u) {
       // "+" の時刻は、そのかなを生んだ最後のキーの時刻（次のキーで確定した「ん」も n の時刻）
@@ -1156,6 +1197,8 @@
       handleJaKey(e, now);
       return;
     }
+    const eng = engLayouts[keyLayoutEl.value];
+    if (eng && handleEngKey(e, now, eng)) return;
     if (!Keys.isShift(e.code)) keyTime = now; // Shift だけでは入力欄は変わらない
     logKey(e, now);
   });
@@ -1206,11 +1249,12 @@
   });
 
   // キー配列の選択。選んだ配列はブラウザに覚えさせ、変えたらその回はやり直す
-  // 選択肢は QWERTY と、キー配列のページで登録したかな配列（日本語のときだけ選べる）
+  // 選択肢は QWERTY と、キー配列のページで登録したかな配列（日本語のときだけ選べる）・英語の配列（英語と日本語のローマ字で選べる）
   function addKanaLayouts(records) {
     records.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
     records.forEach(function (r) {
-      kanaLayouts[r.id] = KanaLayout.create(r.entries);
+      if (r.type === "eng") engLayouts[r.id] = KanaLayout.engMap(r.entries);
+      else kanaLayouts[r.id] = KanaLayout.create(r.entries);
       const o = document.createElement("option");
       o.value = r.id;
       o.textContent = r.name;
@@ -1289,7 +1333,7 @@
     setMode(m);
   });
 
-  // 登録したかな配列を読み込んでから、前に選んだ配列に戻して始める（読み込めなくても QWERTY で始める）
+  // 登録した配列（かな配列・英語の配列）を読み込んでから、前に選んだ配列に戻して始める（読み込めなくても QWERTY で始める）
   Store.getAllLayouts()
     .then(addKanaLayouts)
     .catch(function (err) { console.error(err); })

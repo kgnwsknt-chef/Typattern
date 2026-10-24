@@ -1,5 +1,5 @@
 // キー配列のページ（layouts.html）。キー配列の配列図を描き、試し打ちでキーを押すと図のそのキーの色を変える
-// 配列は、最初から入っている QWERTY と、割り当て表を読み込んだかな配列
+// 配列は、最初から入っている QWERTY と、割り当て表を読み込んだかな配列・英語の配列
 (function () {
   "use strict";
 
@@ -24,15 +24,17 @@
 
   const LEGEND_QWERTY = "左上の小さな数字は物理キーの番号（行＋列。列は16進数）。大きい文字は Shift なし、右上の小さい文字は Shift を押したときの文字。";
   const LEGEND_KANA = "左上の小さな数字は物理キーの番号、右下の小さな文字はそのキーの QWERTY の文字。大きい文字は、表示中のシフト面でそのキーを押したときのかな（右上は Shift を押したとき）。外形線がオレンジのキーは前置シフト、紫のキーは後置シフト（両方なら二重線）。";
+  const LEGEND_ENG = "左上の小さな数字は物理キーの番号。大きい文字はそのキーを押したときの文字（右上は Shift を押したとき。英字の大文字は書かない）、右下の小さな文字は入れ替えたキーの QWERTY の文字。";
 
-  // 配列の一覧。QWERTY は最初から入っている。かな配列は割り当て表を読み込むと足す（まだ保存はしない）
+  // 配列の一覧。QWERTY は最初から入っている。かな配列・英語の配列は割り当て表を読み込むと足す（まだ保存はしない）
+  // 登録した配列は { id, name, type: "kana" か "eng", entries, source, kana: KanaLayout.create の結果 }（英語の配列も kana に入れる）
   const layouts = [{ id: "qwerty", name: "QWERTY", type: "qwerty" }];
 
   let shape = null;         // 今のキーボードの形（KeyboardShapes.layout の結果）
   let keyEls = {};          // 配列図のキーの要素。物理キーの番号（番号のないキーは e.code）で引く
   const heldShifts = new Set(); // 押されている Shift の e.code
   let qwertyOutput = "";    // QWERTY の試し打ちの結果
-  let conv = null;          // かな配列の試し打ちの変換器
+  let conv = null;          // かな配列・英語の配列の試し打ちの変換器
 
   function current() {
     return layouts.filter(function (l) { return l.id === layoutEl.value; })[0] || layouts[0];
@@ -103,6 +105,16 @@
         if (shifts.postfix.indexOf(plain) !== -1) el.classList.add("kb-postfix");
         return;
       }
+      if (layout.type === "eng") {
+        // 英語の配列：そのキー（と Shift ＋ そのキー）で出る文字。表にないキーは QWERTY の文字のまま
+        const main = layout.kana.get(plain) || plain;
+        const sub = layout.kana.get(shifted) || shifted;
+        const engLetter = sub !== main && sub === main.toUpperCase();
+        if (!engLetter) el.appendChild(span("kb-shift", sub));
+        el.appendChild(span("kb-main" + (engLetter ? " kb-letter" : ""), main));
+        if (main !== plain) el.appendChild(span("kb-qwerty", plain));
+        return;
+      }
       // QWERTY：英字は Shift ありが大文字になるだけなので、上の段は書かない（Shift を押すと大文字で表示する）
       const letter = shifted !== plain && shifted === plain.toUpperCase();
       if (!letter) el.appendChild(span("kb-shift", shifted));
@@ -142,7 +154,7 @@
     const layout = current();
     const isKana = layout.type === "kana";
     viewLabelEl.hidden = !isKana;
-    legendEl.textContent = isKana ? LEGEND_KANA : LEGEND_QWERTY;
+    legendEl.textContent = isKana ? LEGEND_KANA : layout.type === "eng" ? LEGEND_ENG : LEGEND_QWERTY;
     viewEl.textContent = "";
     if (!isKana) return;
     const add = function (value, text) {
@@ -174,7 +186,7 @@
 
   function renderOutput() {
     outputEl.textContent = "";
-    if (current().type === "kana") {
+    if (conv) {
       const st = conv.state();
       outputEl.appendChild(document.createTextNode(st.out));
       if (st.pending) {
@@ -191,7 +203,8 @@
   function resetTrial() {
     qwertyOutput = "";
     const layout = current();
-    conv = layout.type === "kana" ? layout.kana.converter() : null;
+    // 英語の配列も同じ変換器で打つ（1キー → 1文字なので、押すたびにすぐ確定する）
+    conv = layout.type !== "qwerty" ? layout.kana.converter() : null;
     lastEl.textContent = "";
     renderOutput();
   }
@@ -269,7 +282,7 @@
     for (let i = layouts.length - 1; i >= 0; i--) {
       if (layouts[i].id === record.id || layouts[i].id === UNSAVED + record.id) layouts.splice(i, 1);
     }
-    layouts.push({ id: record.id, name: record.name, type: "kana", entries: record.entries, source: record.source, kana: KanaLayout.create(record.entries) });
+    layouts.push({ id: record.id, name: record.name, type: record.type || "kana", entries: record.entries, source: record.source, kana: KanaLayout.create(record.entries) });
   }
 
   // 上書き保存と削除は2回押しで確かめる（確認のダイアログ confirm は、出さないブラウザでは押せなくなるので使わない）。
@@ -302,16 +315,22 @@
   function updateActions() {
     const layout = current();
     disarm();
-    saveBtn.hidden = !(layout.type === "kana" && isUnsaved(layout));
-    deleteBtn.hidden = !(layout.type === "kana" && !isUnsaved(layout));
+    saveBtn.hidden = !(layout.type !== "qwerty" && isUnsaved(layout));
+    deleteBtn.hidden = !(layout.type !== "qwerty" && !isUnsaved(layout));
   }
 
   saveBtn.addEventListener("click", function () {
     const layout = current();
     const name = layout.name;
     // 最初から入っている配列と同じ名前は使えない（記録の keyLayout が区別できなくなるため）
-    if (layouts.some(function (l) { return l.type !== "kana" && l.id.toLowerCase() === name.toLowerCase(); })) {
+    if (layouts.some(function (l) { return l.type === "qwerty" && l.id.toLowerCase() === name.toLowerCase(); })) {
       layoutMsgEl.textContent = "「" + name + "」は最初から入っている配列の名前なので使えません。別の名前で読み込み直してください。";
+      return;
+    }
+    // かな配列と英語の配列で同じ名前は使えない（記録の keyLayout が区別できなくなるため）
+    const other = layouts.find(function (l) { return l.id === name && l.type !== layout.type; });
+    if (other) {
+      layoutMsgEl.textContent = "「" + name + "」は" + (other.type === "eng" ? "英語の配列" : "かな配列") + "として保存されているので使えません。別の名前で読み込み直してください。";
       return;
     }
     const exists = layouts.some(function (l) { return l.id === name; });
@@ -326,7 +345,7 @@
       }
       disarm();
       // source は読み込んだ割り当て表の文字列（ローマ字で書いたままの形）。フォームに出し直すのに使う
-      const record = { id: name, name: name, type: "kana", entries: layout.entries, source: layout.source, savedAt: new Date().toISOString() };
+      const record = { id: name, name: name, type: layout.type, entries: layout.entries, source: layout.source, savedAt: new Date().toISOString() };
       return Store.saveLayout(record).then(function () {
         addSaved(record);
         buildLayoutOptions();
@@ -384,6 +403,7 @@
 
   // ---- 割り当て表の読み込み ----
 
+  const kindEl = document.getElementById("import-kind"); // 種類（かな配列・英語）
   const nameEl = document.getElementById("import-name");
   const tableFileEl = document.getElementById("import-table-file");
   const tableTextEl = document.getElementById("import-table-text");
@@ -405,14 +425,16 @@
       importMsgEl.textContent = "配列名を入れてください。";
       return;
     }
-    const parsed = KanaLayout.parse(tableTextEl.value);
+    // 種類で読み方を変える（英語の配列は1キー → 1文字で、ローマ字をかなに直さない）
+    const type = kindEl.value;
+    const parsed = type === "eng" ? KanaLayout.parseEng(tableTextEl.value) : KanaLayout.parse(tableTextEl.value);
     showImportErrors(parsed.errors);
     if (parsed.entries.length === 0) {
       importMsgEl.textContent = "割り当て表から1行も読めませんでした。";
       return;
     }
     const id = UNSAVED + name;
-    const layout = { id: id, name: name, type: "kana", entries: parsed.entries, source: tableTextEl.value, kana: KanaLayout.create(parsed.entries) };
+    const layout = { id: id, name: name, type: type, entries: parsed.entries, source: tableTextEl.value, kana: KanaLayout.create(parsed.entries) };
     const i = layouts.findIndex(function (l) { return l.id === id; });
     if (i === -1) layouts.push(layout);
     else layouts[i] = layout;
@@ -442,8 +464,8 @@
   function renderEntries() {
     const layout = current();
     entriesEl.textContent = "";
-    entriesEl.parentElement.hidden = layout.type !== "kana";
-    if (layout.type !== "kana") return;
+    entriesEl.parentElement.hidden = layout.type === "qwerty";
+    if (layout.type === "qwerty") return;
     const rows = layout.kana.entries.slice().sort(function (a, b) {
       return a[0].length - b[0].length || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
     });
@@ -478,11 +500,12 @@
     fillForm();
   }
 
-  // 表示中のかな配列の名前と割り当て表を、登録のフォームに出す（直して読み込み直せるように）
+  // 表示中の配列（かな配列・英語の配列）の種類・名前と割り当て表を、登録のフォームに出す（直して読み込み直せるように）
   // 割り当て表は、読み込んだときの文字列（ローマ字で書いたならローマ字のまま）。それがない配列は「キーの並び<タブ>かな」で書き出す
   function fillForm() {
     const layout = current();
-    if (layout.type !== "kana") return; // QWERTY のときは、書きかけのフォームをそのままにする
+    if (layout.type === "qwerty") return; // QWERTY のときは、書きかけのフォームをそのままにする
+    kindEl.value = layout.type;
     nameEl.value = layout.name;
     tableTextEl.value = layout.source || layout.entries.map(function (e) { return e[0] + "\t" + e[1]; }).join("\n");
   }

@@ -47,11 +47,13 @@
       if (myId !== loadId) return;
       const picked = filters.pick(v[0]);
       summaryEl.textContent = Filters.summary(picked);
-      // かな配列ごとの打ち方の一覧とシフトのキー
+      // 登録した配列ごとの打ち方の一覧とシフトのキー（英語の配列は、押したキーと文字の行き来 eng も）
       const kana = {};
       v[1].forEach(function (l) {
         const k = KanaLayout.create(l.entries);
-        kana[l.id] = { options: k.options, map: KeyMap.kanaOf(k) };
+        kana[l.id] = l.type === "eng"
+          ? { options: Romaji.options, map: KeyMap.kanaOf(k), eng: KanaLayout.engMap(l.entries) }
+          : { options: k.options, map: KeyMap.kanaOf(k), eng: null };
       });
       // 絞り込みの「配列」でかな配列を選んでいれば、配列図にその配列の割り当て（シフトなしのかな）を書く
       kbKana = kana[layoutFilterEl.value] ? kana[layoutFilterEl.value].map : null;
@@ -65,14 +67,18 @@
         const s = byId.get(raw.id);
         let optionsFn = null;
         let shifts = null;
+        const l = kana[raw.keyLayout];
+        const eng = l ? l.eng : null;
         if (s.lang === "ja") {
           if (raw.keyLayout === "qwerty") optionsFn = Romaji.options;
-          else if (kana[raw.keyLayout]) {
-            optionsFn = kana[raw.keyLayout].options;
-            shifts = kana[raw.keyLayout].map.shifts;
+          else if (l) {
+            optionsFn = l.options;
+            if (!eng) shifts = l.map.shifts;
           }
         }
-        Mistype.add(acc, raw, s.lang, optionsFn, shifts, tags.get(raw.id));
+        // 英語の配列の記録で、その配列を削除していたら、打つべきキーが分からないので数えない
+        if (s.lang !== "ja" && raw.keyLayout !== "qwerty" && !l) { acc.skipped++; return; }
+        Mistype.add(acc, raw, s.lang, optionsFn, shifts, tags.get(raw.id), eng);
       }).then(function () {
         if (myId !== loadId) return;
         render(acc);

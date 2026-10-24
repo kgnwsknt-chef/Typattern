@@ -9,7 +9,7 @@ const Filters = (function () {
   const FILTER_STORAGE = "typing-test.filters";
   const IDS = { lang: "f-lang", layout: "f-layout", mode: "f-mode", from: "f-from", to: "f-to" };
 
-  // 配列の選択肢に、登録したかな配列と、記録の中にある配列（配列を消した後の記録も）を足す
+  // 配列の選択肢に、登録した配列（かな配列・英語の配列）と、記録の中にある配列（配列を消した後の記録も）を足す
   function addLayoutOptions(sel, layouts, sessions) {
     const names = new Map(); // 配列名 → 表示名
     layouts.forEach(function (l) { names.set(l.id, l.name); });

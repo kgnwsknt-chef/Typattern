@@ -51,8 +51,11 @@ const Mistype = (function () {
   //   next: 手引きの打ち方でその次に押すキーの文字, pos, time, interval: 直前のキー（Backspace を含む、Shift は除く）からの間隔 }
   //   lang：記録の言語、optionsFn：日本語の打ち方の一覧（ローマ字か、かな配列）
   //   返り値は並び。日本語で判定を再現できないときは null
-  function strokesOf(raw, lang, optionsFn) {
+  //   eng：英語の配列の記録のとき、その配列の KanaLayout.engMap。打つべき文字を割り当て表で逆に引いてキーにする
+  function strokesOf(raw, lang, optionsFn, eng) {
     const list = [];
+    // 打つべき文字 → そのキーの QWERTY の文字（英語の配列なら割り当て表で逆に引く。出せない文字は null）
+    const keyChar = function (c) { return c === null || !eng ? c : eng.toKey(c); };
     let prevTime = null;
     function push(e, s) {
       s.time = e[0];
@@ -69,11 +72,12 @@ const Mistype = (function () {
         if (Keys.isShiftNumber(e[2])) { shiftDown.add(e[2]); return; }
         if (e[2] === Keys.BACKSPACE) { push(e, { number: e[2], bs: true }); return; }
         const pos = e[3];
-        const exp = pos < raw.text.length ? Keys.ofChar(raw.text[pos]) : null;
+        const want = pos < raw.text.length ? keyChar(raw.text[pos]) : null;
+        const exp = want === null ? null : Keys.ofChar(want);
         push(e, {
           number: e[2], shift: shiftDown.size > 0, ok: e[4] === 1, pos: pos,
           expected: exp, keys: exp ? [exp.number] : [],
-          next: pos + 1 < raw.text.length ? raw.text[pos + 1] : null
+          next: pos + 1 < raw.text.length ? keyChar(raw.text[pos + 1]) : null
         });
         if (!hasUp) shiftDown.clear();
       });
@@ -82,15 +86,17 @@ const Mistype = (function () {
     if (!optionsFn) return null;
     const units = SessionView.replay(raw, optionsFn, function (e, before, r, shiftOn) {
       if (!before) { push(e, { number: e[2], bs: true }); return; }
-      const exp = before.preferred === null ? null : Keys.ofChar(before.preferred);
+      // 判定が示すのはその配列で打つ文字（英語の配列なら割り当て表で逆に引いてキーにする）
+      const preferred = keyChar(before.preferred);
+      const exp = preferred === null ? null : Keys.ofChar(preferred);
       push(e, {
         number: e[2], shift: shiftOn, ok: r.judge === 1, pos: r.pos,
         expected: exp,
-        keys: before.keys.map(function (c) { const k = Keys.ofChar(c); return k ? k.number : null; }),
-        next: before.next,
+        keys: before.keys.map(function (c) { const k = Keys.ofChar(keyChar(c)); return k ? k.number : null; }),
+        next: keyChar(before.next),
         mid: before.pending !== "" // 今のかなを打ちかけていたか
       });
-    });
+    }, eng);
     return units ? list : null;
   }
 
@@ -235,13 +241,14 @@ const Mistype = (function () {
 
   // 1回分の記録を足す。optionsFn は日本語の打ち方の一覧（なければ null）、shifts はかな配列のシフトのキー（なければ null）
   //   tag：その記録の印 { run, day, at }（js/point-trend.js の tagsOf。ミス率の推移に使う。なければ推移は数えない）
-  function add(acc, raw, lang, optionsFn, shifts, tag) {
+  //   eng：英語の配列の記録のとき、その配列の KanaLayout.engMap（英語・日本語のローマ字とも）
+  function add(acc, raw, lang, optionsFn, shifts, tag, eng) {
     raw.events.forEach(function (e) {
       if (e[1] !== "k") return;
       acc.strokes++;
       keyStat(acc, e[2]).strokes++;
     });
-    const list = strokesOf(raw, lang, optionsFn);
+    const list = strokesOf(raw, lang, optionsFn, eng);
     if (!list) { acc.skipped++; return; }
     markFirst(list);
     const ctx = { lang: lang, text: raw.text, shifts: shifts };

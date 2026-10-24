@@ -5,10 +5,11 @@ const SessionView = (function () {
 
   // 日本語：記録したキー（events の "k" の行）を判定（js/typer.js）にもう一度通し、打ったときのまとまりを再現する
   //   optionsFn：打ち方の一覧（Romaji.options か、かな配列の KanaLayout.create(…).options）
+  //   eng：英語の配列でローマ字を打った記録のとき、その配列の KanaLayout.engMap（押したキーをその配列の文字に直してから判定にかける）
   //   再現した "+" の行が記録と合わないとき（判定の決まりがその後に変わったときなど）は null
   //   observe(e, before, result, shiftOn)：渡すと、Shift 以外の "k" の行ごとに呼ぶ（ミスタイプのページで使う）。
   //     before は押す前の typer.expect()、result は typer.press の結果（Backspace のときはどちらも null）
-  function replay(raw, optionsFn, observe) {
+  function replay(raw, optionsFn, observe, eng) {
     const typer = Typer.create(raw.text, optionsFn);
     const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
@@ -32,7 +33,9 @@ const SessionView = (function () {
       const before = observe ? typer.expect() : null;
       const shiftOn = shiftDown.size > 0;
       // 文字のないキー（JIS の「ろ」など）は、どの打ち方にも合わない文字として渡す（タイピング画面と同じ）
-      const r = typer.press(Keys.charOf(e[2], shiftOn) || "\u0000", e[0]);
+      let ch = Keys.charOf(e[2], shiftOn);
+      if (eng && ch !== null) ch = eng.toChar(ch);
+      const r = typer.press(ch || "\u0000", e[0]);
       if (observe) observe(e, before, r, shiftOn);
       r.confirmed.forEach(function (u) {
         for (let j = 0; j < u.len; j++) added.push([u.time, raw.text[u.pos + j], u.pos + j, u.correct ? 1 : 0]);
@@ -47,8 +50,18 @@ const SessionView = (function () {
     return same ? typer.units : null;
   }
 
+  // 日本語の記録を判定にもう一度通すときの打ち方 { optionsFn, eng }。配列が削除されていて分からなければ null
+  //   QWERTY と英語の配列はローマ字（英語の配列は、押したキーをその配列の文字に直す）、かな配列はその割り当て表
+  function inputOf(keyLayout, layouts) {
+    if (keyLayout === "qwerty") return { optionsFn: Romaji.options, eng: null };
+    const layout = layouts.find(function (l) { return l.id === keyLayout; });
+    if (!layout) return null;
+    if (layout.type === "eng") return { optionsFn: Romaji.options, eng: KanaLayout.engMap(layout.entries) };
+    return { optionsFn: KanaLayout.create(layout.entries).options, eng: null };
+  }
+
   // container にグラフを描き、{ avg: 点線の平均(ms) か "-", note: グラフの説明 } を返す
-  //   session：概要の記録、raw：その生データ、layouts：登録したかな配列（Store.getAllLayouts の結果）
+  //   session：概要の記録、raw：その生データ、layouts：登録した配列（Store.getAllLayouts の結果）
   function render(container, session, raw, layouts) {
     const missed = new Array(raw.text.length).fill(false);
     raw.missedPositions.forEach(function (i) { missed[i] = true; });
@@ -61,14 +74,9 @@ const SessionView = (function () {
       };
     }
 
-    let optionsFn = null;
-    if (raw.keyLayout === "qwerty") {
-      optionsFn = Romaji.options;
-    } else {
-      const layout = layouts.find(function (l) { return l.id === raw.keyLayout; });
-      if (layout) optionsFn = KanaLayout.create(layout.entries).options;
-    }
-    const units = optionsFn ? replay(raw, optionsFn) : null;
+    const how = inputOf(raw.keyLayout, layouts);
+    const optionsFn = how ? how.optionsFn : null;
+    const units = how ? replay(raw, how.optionsFn, null, how.eng) : null;
     if (units) {
       return {
         avg: Rhythm.renderKeys(container, Rhythm.kanaColumns(units, raw.text, missed)),
@@ -116,5 +124,5 @@ const SessionView = (function () {
     return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
 
-  return { render: render, summary: summary, replay: replay };
+  return { render: render, summary: summary, replay: replay, inputOf: inputOf };
 })();

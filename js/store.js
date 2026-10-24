@@ -189,7 +189,7 @@ const Store = (function () {
   }
 
   // ---- 登録したキー配列（layouts） ----
-  // 1件 { id: 配列名, name: 配列名, type: "kana", entries: [[キーの並び, かな], …], savedAt }。形式は docs/storage.md
+  // 1件 { id: 配列名, name: 配列名, type: "kana"（かな配列）か "eng"（英語の配列）, entries: [[キーの並び, かな（英語の配列は文字）], …], savedAt }。形式は docs/storage.md
 
   function getAllLayouts() {
     return tx("layouts", "readonly", function (t) { return t.objectStore("layouts").getAll(); });
