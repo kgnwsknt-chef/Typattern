@@ -16,7 +16,7 @@
 記録ページは4つに分かれている。どのページからも、ページの一番上のリンクで移れる。
 
 - **記録**（`stats.html`。以前の名前は「推移・ランキング」）：レベルの達成度・推移のグラフ・ランキング
-- **IKI**（`ngram.html`）：キーごとの IKI、bigram・trigram の一覧・分布・推移（`docs/analysis_iki.md`）
+- **IKI**（`analysis_iki.html`）：キーごとの IKI、bigram・trigram の一覧・分布・推移（`docs/analysis_iki.md`）
 - **ミスタイプ**（`mistype.html`）：押し間違いの分析（`docs/analysis_mistype.md`）
 - **苦手な単語**（`weak-words.html`）：単語モードの記録から、遅い単語・ミスの多い単語（`docs/weak-words.md`）
 

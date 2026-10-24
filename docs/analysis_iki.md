@@ -1,10 +1,10 @@
 # IKI の分析（キーごと・n-gram）
 
-打鍵の間隔を、キーごとと、続けて押したキーの組（n-gram）ごとに分析し、IKI のページ（`ngram.html`）に出す決まり。計測の決まりは `docs/measurement.md`、絞り込みは `docs/records.md`。ルールを変えるときは、このファイルとコードを一緒に直す。
+打鍵の間隔を、キーごとと、続けて押したキーの組（n-gram）ごとに分析し、IKI のページ（`analysis_iki.html`）に出す決まり。計測の決まりは `docs/measurement.md`、絞り込みは `docs/records.md`。ルールを変えるときは、このファイルとコードを一緒に直す。
 
 ## bigram・trigram
 
-IKI のページ（`ngram.html`）に、続けて押した2キー（bigram）・3キー（trigram）ごとの平均 IKI（打鍵間隔）と出現回数を一覧で表示する。実装は `js/ngram.js`。タイピング終了時の結果画面には出さない。
+IKI のページ（`analysis_iki.html`）に、続けて押した2キー（bigram）・3キー（trigram）ごとの平均 IKI（打鍵間隔）と出現回数を一覧で表示する。実装は `js/ngram.js`。タイピング終了時の結果画面には出さない。
 
 - **元のデータ**：生データの events の `"k"` の行（押した物理キーと時刻。`docs/storage.md`）を、記録された順に並べたもの。英語も日本語も同じ。日本語ではかなではなく、押したキーの組になる。
 - **表示**：キーの番号を、US の QWERTY でそのキーに割り当てられた文字（Shift なし、小文字）で表す（例 `21` → `a`、`38` → `,`）。`keyLayout` によらず QWERTY の文字で表す。
@@ -25,7 +25,7 @@ IKI のページ（`ngram.html`）に、続けて押した2キー（bigram）・
 
 ## IKI のページ
 
-IKI のページ（`ngram.html`）で、保存した記録をまとめて bigram・trigram を集計する。実装は `js/ngram-page.js`（集計の元になる計算は `js/ngram.js`）。
+IKI のページ（`analysis_iki.html`）で、保存した記録をまとめて bigram・trigram を集計する。実装は `js/ngram-page.js`（集計の元になる計算は `js/ngram.js`）。
 
 - **並び**：上から、データの絞り込み → 「回数」（N 回以上）・集計の行（総打鍵数・種類・打鍵間隔の平均）・説明 → キーごとの IKI（配列図）→ bigram の2次元ヒストグラム → 「推移の横軸」の選択 → クリックで出る分布とその下の推移（左が bigram、右が trigram）→ bigram・trigram の表（左右に並べる）。
 

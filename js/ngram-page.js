@@ -1,4 +1,4 @@
-// IKI のページ（ngram.html）。絞り込んだ記録の生データから bigram・trigram を集計して表示する
+// IKI のページ（analysis_iki.html）。絞り込んだ記録の生データから bigram・trigram を集計して表示する
 (function () {
   "use strict";
 
