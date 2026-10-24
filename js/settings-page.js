@@ -33,8 +33,33 @@
     });
   });
 
-  // 確認のダイアログは出さない（項目が少なく、すぐ設定し直せるため。ダイアログを出さないブラウザでも効くように）
-  document.getElementById("settings-reset").addEventListener("click", function () {
+  // 初期値に戻す：2回押しで確かめる（記録を消すのと同じ。確認のダイアログ confirm は、出さないブラウザでは押せなくなるので使わない）。
+  // 1回目でボタンを「本当に初期値に戻す」（赤）に変えて注意を出し、8秒たつと元に戻す
+  const resetBtn = document.getElementById("settings-reset");
+  const RESET_LABEL = resetBtn.textContent;
+  let resetArmed = false;
+  let resetTimer = 0;
+
+  function disarmReset() {
+    resetArmed = false;
+    clearTimeout(resetTimer);
+    resetBtn.textContent = RESET_LABEL;
+    resetBtn.classList.remove("tm-danger");
+  }
+
+  resetBtn.addEventListener("click", function () {
+    if (!resetArmed) {
+      resetArmed = true;
+      resetBtn.textContent = "本当に初期値に戻す";
+      resetBtn.classList.add("tm-danger");
+      msgEl.textContent = "もう一度押すと、すべての設定を初期値に戻します（登録したキー配列・お題と記録はそのまま）。";
+      resetTimer = setTimeout(function () {
+        disarmReset();
+        msgEl.textContent = "";
+      }, 8000);
+      return;
+    }
+    disarmReset();
     Settings.reset();
     fill();
     msgEl.textContent = "初期値に戻しました。";

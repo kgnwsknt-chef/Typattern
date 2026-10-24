@@ -13,12 +13,13 @@ const Trend = (function () {
   const PW = W - L - R;
   const T2 = T + PH1 + GAP; // 下段の上端
 
-  // sessions：絞り込んだ概要の記録（古い順）。group："run"（1回ごと）か "day"（日ごと）
+  // sessions：絞り込んだ概要の記録（古い順）。group："run"（1回ごと）・"day"（日ごと）・"month"（月ごと）
   // opts.levelUps：達成レベルが上がった回（Levels.levelUps の結果）。その点に「英語・単語 SB達成」のように書く
-  // opts.selectedId：記録のページのランキングで選んだ回の id。1回ごとのときだけ、上段と下段のその回の位置に緑の縦線を引く（日ごとでは引かない）
+  // opts.selectedId：記録のページのランキングで選んだ回の id。1回ごとのときだけ、上段と下段のその回の位置に緑の縦線を引く（日ごと・月ごとでは引かない）
   function render(container, legendEl, sessions, group, opts) {
     const ups = (opts && opts.levelUps) || new Map();
-    const selectedId = group === "day" ? null : (opts && opts.selectedId) || null;
+    const period = PERIODS[group] || null; // 日ごと・月ごとのまとめ方（1回ごとなら null）
+    const selectedId = period ? null : (opts && opts.selectedId) || null;
     container.textContent = "";
     const list = sessions.filter(function (s) { return s.result.avgIki !== null; });
     if (list.length === 0) {
@@ -30,10 +31,11 @@ const Trend = (function () {
       return;
     }
 
-    const data = group === "day" ? byDay(list, ups) : byRun(list, ups);
-    legendEl.textContent = group === "day"
-      ? "● その日の平均（正確率 " + Store.RANK_MIN_ACCURACY + "% 以上の回）／ ◇ その日の最高 ／ ○ その日は " +
-        Store.RANK_MIN_ACCURACY + "% 以上の回がない（全回の平均）／ 下段はその日の正確率の平均"
+    const data = period ? byPeriod(list, ups, period) : byRun(list, ups);
+    const that = period ? "その" + period.name : "";
+    legendEl.textContent = period
+      ? "● " + that + "の平均（正確率 " + Store.RANK_MIN_ACCURACY + "% 以上の回）／ ◇ " + that + "の最高 ／ ○ " + that + "は " +
+        Store.RANK_MIN_ACCURACY + "% 以上の回がない（全回の平均）／ 下段は" + that + "の正確率の平均"
       : "● 1回ごとの平均 IKI ／ ○ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満（ランキング対象外。移動平均に含めない）／ ━ 移動平均（直近 " +
         MA_WINDOW + " 回）";
     legendEl.textContent += " ／ 「英語・単語 SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
@@ -84,11 +86,11 @@ const Trend = (function () {
     }
     svg.appendChild(text(L + PW + 7, T - 8, "打/s", "start", "trend-axis-title"));
 
-    // 上段：移動平均・日ごとの線
+    // 上段：移動平均・日ごと（月ごと）の線
     if (data.ma && data.ma.length > 1) {
       svg.appendChild(svgEl("polyline", { points: data.ma.map(function (m) { return X(m.x) + "," + YI(m.v); }).join(" "), class: "trend-ma" }));
     }
-    if (group === "day" && data.points.length > 1) {
+    if (period && data.points.length > 1) {
       svg.appendChild(svgEl("polyline", { points: data.points.map(function (p) { return X(p.x) + "," + YI(p.iki); }).join(" "), class: "trend-line" }));
     }
 
@@ -159,10 +161,10 @@ const Trend = (function () {
 
     // 横軸の目盛り
     const axisY = T2 + PH2;
-    if (group === "day") {
-      const step = niceStep(x1 - x0, 7, [1, 2, 7, 14, 30, 61, 91, 182, 365, 730]);
-      for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, fmtDay(d));
-      svg.appendChild(text(L + PW, H - 2, "年月日", "end", "trend-axis-title"));
+    if (period) {
+      const step = niceStep(x1 - x0, 7, period.steps);
+      for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, period.fmt(d));
+      svg.appendChild(text(L + PW, H - 2, period.axis, "end", "trend-axis-title"));
     } else {
       const step = niceStep(x1 - x0, 10, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
       for (let n = Math.max(step, Math.ceil(x0 / step) * step); n <= x1; n += step) xTick(svg, X(n), axisY, String(n));
@@ -202,11 +204,17 @@ const Trend = (function () {
     return { points: points, ma: ma };
   }
 
-  // 日ごと：横軸はこのPCの日付。その日の平均と最高は正確率が基準以上の回で出す
-  function byDay(list, ups) {
+  // 日ごと・月ごとのまとめ方。key：記録の日時 → 通し番号（横軸の値）、fmt：通し番号 → 目盛りの文字、steps：目盛りの間隔の候補
+  const PERIODS = {
+    day: { name: "日", axis: "年月日", key: dayNumber, fmt: fmtDay, steps: [1, 2, 7, 14, 30, 61, 91, 182, 365, 730] },
+    month: { name: "月", axis: "年月", key: monthNumber, fmt: fmtMonth, steps: [1, 2, 3, 6, 12, 24, 60, 120] }
+  };
+
+  // 日ごと・月ごと：横軸はこのPCの日付（の月）。その日（その月）の平均と最高は正確率が基準以上の回で出す
+  function byPeriod(list, ups, period) {
     const days = new Map();
     list.forEach(function (s) {
-      const k = dayNumber(s.finishedAt);
+      const k = period.key(s.finishedAt);
       if (!days.has(k)) days.set(k, []);
       days.get(k).push(s);
     });
@@ -218,7 +226,7 @@ const Trend = (function () {
       const iki = mean(use, function (s) { return s.result.avgIki; });
       const acc = mean(ss, function (s) { return s.result.accuracy; });
       const accRaw = mean(ss, rawAccuracy);
-      // その日に達成レベルが上がった回（言語・モードごとに、その日の最後に届いたレベル）
+      // その日（その月）に達成レベルが上がった回（言語・モードごとに、その日の最後に届いたレベル）
       const dayUps = new Map();
       ss.forEach(function (s) {
         const up = ups.get(s.id);
@@ -233,7 +241,7 @@ const Trend = (function () {
         accRaw: accRaw,
         eligible: ok.length > 0,
         levelUp: upList.map(upLabel),
-        tip: fmtDay(day) + " ／ " + ss.length + " 回（うち正確率 " + Store.RANK_MIN_ACCURACY + "% 以上 " + ok.length + " 回）\n平均 IKI " +
+        tip: period.fmt(day) + " ／ " + ss.length + " 回（うち正確率 " + Store.RANK_MIN_ACCURACY + "% 以上 " + ok.length + " 回）\n平均 IKI " +
           iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%（ミスも数えると " + accRaw.toFixed(1) + "%）" +
           upList.map(function (u) { return "\n" + upText(u); }).join("")
       };
@@ -286,6 +294,16 @@ const Trend = (function () {
   function dayNumber(iso) {
     const d = new Date(iso);
     return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+  }
+
+  // このPCの日付での通し月数（0 年 1 月 = 0）
+  function monthNumber(iso) {
+    const d = new Date(iso);
+    return d.getFullYear() * 12 + d.getMonth();
+  }
+
+  function fmtMonth(n) {
+    return Math.floor(n / 12) + "/" + pad(n % 12 + 1);
   }
 
   function fmtDay(n) {
