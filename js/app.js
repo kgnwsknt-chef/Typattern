@@ -70,8 +70,12 @@
   const weakResultTableEl = document.getElementById("weak-result-table");
   const rankingTabEl = document.getElementById("tab-ranking");
   const WEAK_KIND_STORAGE = "typing-test.weakKind";
+  // 他では速い bigram のモード（docs/weak-words.md の「他では速い bigram の練習」）：結果の bigram ごとの IKI
+  const FASTER = "faster-other-setup";
+  const fasterResultEl = document.getElementById("faster-result");
+  const fasterResultTableEl = document.getElementById("faster-result-table");
   // 練習モード（記録に practice: true を付け、レベルの達成度・ランキング・記録のページの推移に入れないモード）
-  const PRACTICE_MODES = ["weak"];
+  const PRACTICE_MODES = ["weak", FASTER];
   const paceEl = document.getElementById("pace");
   const paceTextEl = document.getElementById("pace-text");
   // インジケーターの帯のマス（Levels.PACE_STEPS 個）。左から順に、届いている段まで色を付ける
@@ -136,16 +140,19 @@
   }
 
   // 今のモードのお題の元を読み込む。最初から入っているお題に、お題のページで追加したお題（docs/text-manager.md）を足す
+  // 返り値はお題の元の並び（Promise）。sources に入れるのは setMode（読み込みが重なったとき、新しい方だけを使うため）
   function loadSources() {
     if (mode === "weak") return loadWeakSources();
+    if (mode === FASTER) return loadFasterSources();
     const builtin = mode === "words" ? loadWordlists()
       : mode === "other" ? Promise.resolve([]) // 「その他」は追加したお題だけ
       : loadTexts(mode === "short" ? "_short.txt" : ".txt");
     return Promise.all([builtin, loadCustomTexts()]).then(function (v) {
-      sources = v[0].concat(v[1]);
-      if (sources.length === 0) {
+      const list = v[0].concat(v[1]);
+      if (list.length === 0) {
         throw new Error(mode === "other" ? "NO_OTHER" : "no texts for mode " + mode + " in " + (mode === "words" ? wordlistDir() : textDir()));
       }
+      return list;
     });
   }
 
@@ -156,7 +163,37 @@
       const slow = WeakWords.slowList(v[0]);
       const miss = WeakWords.missList(v[0]);
       if (!slow.length && !miss.length) throw new Error("NO_WEAK");
-      sources = [{ name: "weak", slow: slow, miss: miss, displays: v[1] }];
+      return [{ name: "weak", slow: slow, miss: miss, displays: v[1] }];
+    });
+  }
+
+  // 他では速い bigram のモード：今の言語・配列が遅い方になっている bigram（js/weak-words.js）ごとに、
+  // 今の言語の単語リスト（最初から入っているものと追加したもの）から、今の配列での打ち方（日本語は手引きの打ち方）にその bigram を含む単語を集める。
+  // sources は1つだけ { name: FASTER, cands: [{ row, words }] }。含む単語がない bigram は外す。1つもなければ NO_FASTER
+  function loadFasterSources() {
+    const kana = kanaLayouts[keyLayoutEl.value];
+    const optionsFn = kana ? kana.options : Romaji.options;
+    const custom = Store.getAllTexts().catch(function (err) {
+      console.warn(err); // 追加した単語リストが読めなくても、最初から入っている単語リストは使う
+      return [];
+    });
+    return Promise.all([WeakWords.loadFasterCandidates(lang, keyLayoutEl.value), loadWordlists(), custom]).then(function (v) {
+      const reading = function (w) { return typeof w === "string" ? w : w.reading; };
+      const seen = new Set();
+      const keyed = []; // { word, keys: 今の配列で打つキーの並び }
+      const add = function (w) {
+        if (seen.has(reading(w))) return;
+        seen.add(reading(w));
+        const keys = lang === "ja" ? Typer.keysOf(w.reading, optionsFn) : w;
+        if (keys) keyed.push({ word: w, keys: keys }); // 配列にないかなを含む単語は使わない
+      };
+      v[1].forEach(function (list) { list.words.forEach(add); });
+      v[2].forEach(function (x) { if (x.lang === lang && x.kind === "words") x.words.forEach(add); });
+      const cands = v[0].map(function (row) {
+        return { row: row, words: keyed.filter(function (k) { return k.keys.indexOf(row.gram) !== -1; }).map(function (k) { return k.word; }) };
+      }).filter(function (c) { return c.words.length > 0; });
+      if (!cands.length) throw new Error("NO_FASTER");
+      return [{ name: FASTER, cands: cands }];
     });
   }
 
@@ -309,6 +346,13 @@
       input.disabled = true;
       return;
     }
+    if (err && err.message === "NO_FASTER") {
+      // 他では速い bigram は、ふだんのモードの記録をほかの言語・配列と比べて選ぶので、まだなければ案内する
+      textEl.textContent = "この言語・配列が遅い方になっている bigram はまだありません。ほかの言語・配列とあわせて、ふだんのモードで打つと出ます（それぞれの言語・配列で " +
+        WeakWords.BIGRAM_MIN + " 回以上打った bigram を比べます）。";
+      input.disabled = true;
+      return;
+    }
     console.error(err);
     textEl.textContent = location.protocol === "file:"
       ? "お題を読み込めませんでした。index.html を直接開くと読み込めないため、サーバー経由（例: http://localhost:8000）で開いてください。"
@@ -332,6 +376,11 @@
         ? words.map(function (r) { return { display: src.displays.get(r) || r, reading: r }; })
         : words);
       current = { name: "weak", text: words.length ? made.text : "", lines: made.lines };
+    } else if (mode === FASTER) {
+      // 他では速い bigram：候補からランダムに10個の bigram を選び、それぞれを含む単語を1語ずつ5回続けて並べる
+      const picks = WeakWords.chooseFaster(sources[0].cands);
+      const made = wordText(WeakWords.practiceWords(picks.map(function (p) { return p.word; })));
+      current = { name: FASTER, text: made.text, lines: made.lines, picks: picks };
     } else {
       let i;
       do {
@@ -342,6 +391,8 @@
     }
     return current;
   }
+
+  let modeLoadId = 0; // setMode の読み込みの番号（古い読み込みの結果で上書きしないため）
 
   // モードを切り替えて、そのモードのお題を読み込み直す
   function setMode(newMode) {
@@ -354,9 +405,14 @@
     input.disabled = true;
     resultEl.hidden = true;
     textEl.textContent = "お題を読み込み中…";
+    const myId = ++modeLoadId;
     return loadSources()
-      .then(function () { reset(true); })
-      .catch(showLoadError);
+      .then(function (list) {
+        if (myId !== modeLoadId) return; // あとから別のモード・配列に切り替えていたら、古い読み込みの結果は使わない
+        sources = list;
+        reset(true);
+      })
+      .catch(function (err) { if (myId === modeLoadId) showLoadError(err); });
   }
 
   function reset(next) {
@@ -409,6 +465,7 @@
     rhythmWhatEl.textContent = lang === "ja" ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
     rhythmNoteEl.textContent = "修正の時間を含まないので、結果の平均 IKI より小さくなる";
     weakResultEl.hidden = true;
+    fasterResultEl.hidden = true;
     resultEl.hidden = true;
     board.classList.remove("finished");
 
@@ -628,6 +685,7 @@
     if (PRACTICE_MODES.indexOf(mode) !== -1) showPracticeResult();
     else rankingTabEl.hidden = false;
     if (mode === "weak") showWeakResult();
+    if (mode === FASTER) showFasterResult();
     saveSession(r);
   }
 
@@ -689,6 +747,77 @@
     weakResultEl.hidden = false;
   }
 
+  // 他では速い bigram の練習の結果：練習した bigram ごとに、今回の IKI・記録の IKI（遅い方）・目標（速い方）の表を出す
+  function showFasterResult() {
+    // 今回の IKI は、この回の打鍵から IKI のページと同じ決まりで求める（js/ngram.js）。お題のどこに出てきても数える
+    const grams = NGram.accumulate(new Map(), 2, events);
+    const values = intervals.filter(function (v) { return v !== null; });
+    const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
+    const groupName = function (g) { return LANG_NAME[g.lang] + "・" + (g.layout === "qwerty" ? "QWERTY" : g.layout); };
+    const table = document.createElement("table");
+    table.className = "bg-table";
+    const hr = document.createElement("tr");
+    // bigram の単語ごとの文字数と、終わったときに間違ったまま残っている文字の数（未修正の間違い。直したミスは数えない）
+    const states = typedStates();
+    const spans = new Map(); // 単語（読み）→ { length, misses }
+    let start = 0;
+    target.split(" ").forEach(function (w) {
+      const e = spans.get(w) || { length: 0, misses: 0 };
+      for (let i = start; i < start + w.length; i++) {
+        e.length++;
+        if (!states[i]) e.misses++;
+      }
+      spans.set(w, e);
+      start += w.length + 1;
+    });
+    const minAccuracy = Settings.get("rankMinAccuracy");
+    ["bigram", "単語", "今回の IKI(ms)", "達成", "ミス回数", "記録の IKI(ms)", "目標の IKI(ms)", "目標の言語・配列"].forEach(function (t) {
+      const th = document.createElement("th");
+      th.textContent = t;
+      hr.appendChild(th);
+    });
+    table.appendChild(document.createElement("thead")).appendChild(hr);
+    const body = table.appendChild(document.createElement("tbody"));
+    (current.picks || []).forEach(function (p) {
+      const tr = document.createElement("tr");
+      const cell = function (className, text) {
+        const td = document.createElement("td");
+        if (className) td.className = className;
+        td.textContent = text;
+        tr.appendChild(td);
+        return td;
+      };
+      cell("ww-word", p.row.gram);
+      const word = cell("ww-word", typeof p.word === "string" ? p.word : "");
+      if (typeof p.word !== "string") {
+        word.textContent = p.word.display !== p.word.reading ? p.word.display + " " : p.word.reading;
+        if (p.word.display !== p.word.reading) {
+          const reading = document.createElement("span");
+          reading.className = "ww-reading";
+          reading.textContent = p.word.reading;
+          word.appendChild(reading);
+        }
+      }
+      const e = grams.get(p.row.gram);
+      const avg = e ? e.values.reduce(function (a, b) { return a + b; }, 0) / e.values.length : null;
+      const iki = cell("bg-avg", avg === null ? "-" : String(Math.round(avg)));
+      if (avg !== null && base) iki.style.color = Rhythm.color(avg, base);
+      // 達成：今回の IKI が目標（速い方の平均）以下で、その bigram の単語の正確率が設定の基準以上
+      const span = spans.get(typeof p.word === "string" ? p.word : p.word.reading) || { length: 0, misses: 0 };
+      const reached = avg !== null && avg <= p.row.fast.avg && Store.accuracy(span.length, span.misses) >= minAccuracy;
+      const mark = cell("faster-reached", reached ? "✓" : "");
+      if (reached) mark.title = "今回の IKI が目標以下で、正確率が " + minAccuracy + "% 以上";
+      cell("", String(span.misses));
+      cell("", String(Math.round(p.row.slow.avg)));
+      cell("", String(Math.round(p.row.fast.avg)));
+      cell("ww-text", groupName(p.row.fast));
+      body.appendChild(tr);
+    });
+    fasterResultTableEl.textContent = "";
+    fasterResultTableEl.appendChild(table);
+    fasterResultEl.hidden = false;
+  }
+
   // 日本語の「キーごとの間隔」のグラフの元：最後に残ったかなごとに、そのかなを打ったキーと間隔
   // 間隔は、そのキーを押した時刻と直前のキー（Backspace を含む）の時刻の差。最初のキーは null
   function keyColumns() {
@@ -703,7 +832,7 @@
   // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他", weak: "苦手な単語" };
+  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram" };
 
   // 今回のレベルと文字/秒。正確率が基準未満なら「-」
   function renderLevel(session) {
@@ -1109,8 +1238,8 @@
 
   keyLayoutEl.addEventListener("change", function () {
     try { localStorage.setItem(KEY_LAYOUT_STORAGE, keyLayoutEl.value); } catch (e) { /* 無視 */ }
-    // 苦手な単語は配列ごとに数えるので、配列を変えたら選び直す
-    if (mode === "weak") setMode(mode);
+    // 苦手な単語・他では速い bigram は配列ごとに数えるので、配列を変えたら選び直す
+    if (mode === "weak" || mode === FASTER) setMode(mode);
     else reset(false);
   });
 

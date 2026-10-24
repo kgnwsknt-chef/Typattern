@@ -9,6 +9,7 @@
   --accent: #1a6fd8;
   --error: #d93036;
   --error-bg: rgba(217, 48, 54, 0.15);
+  --reached: #2a8f3a; /* 目標に届いた印（他では速い bigram の結果の ✓） */
   /* 間隔グラフの色相（速い=青 → 平均=緑 → 遅い=赤）。js/rhythm.js が読む */
   --rh-hue-fast: 215;
   --rh-hue-avg: 120;
@@ -883,6 +884,33 @@ a.text-btn {
   max-width: 520px;
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+.weak-result-table.faster-result-table {
+  max-width: 760px;
+  overflow-x: auto; /* 狭い画面では折り返さずに横にスクロールする */
+}
+
+.faster-result-table .bg-table th,
+.faster-result-table .bg-table td {
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+/* 目標の言語・配列の列は左寄せ */
+.faster-result-table .bg-table th:last-child {
+  text-align: left;
+}
+
+/* 今回の IKI が目標に届いた bigram の印 */
+.faster-result-table .bg-table th:nth-child(4),
+.faster-result-table .bg-table td.faster-reached {
+  text-align: center;
+}
+
+.faster-reached {
+  color: var(--reached);
+  font-weight: bold;
 }
 
 .ww-reading {

@@ -183,5 +183,21 @@ const Typer = (function () {
     };
   }
 
-  return { create: create };
+  // 読み text を手引きの打ち方（それぞれのかなの一覧の最初）で打ったときのキーの並び。打てないかながあれば null
+  // （他では速い bigram の練習で、bigram を含む単語を探すのに使う。docs/weak-words.md）
+  function keysOf(text, optionsFn) {
+    let out = "";
+    let p = 0;
+    let doubled;
+    while (p < text.length) {
+      const o = constrain(optionsFn(text, p), doubled)[0];
+      if (!o) return null;
+      out += o.seq;
+      p += o.len;
+      doubled = o.doubled;
+    }
+    return out;
+  }
+
+  return { create: create, keysOf: keysOf };
 })();

@@ -131,7 +131,8 @@ const WeakWords = (function () {
   // 言語・配列で差のある bigram。groups は "言語\t配列" → NGram.accumulate(…, 2, …) の map
   // bigram ごとに、BIGRAM_MIN 回以上出てきた言語・配列が2つ以上あれば、一番速いものを基準にして、ほかのそれぞれを1行にする
   // 行 { gram, diff, kind: "lang"・"layout"・"both", slow: { lang, layout, avg, count }, fast: 同じ形 }。差の大きい順に LIST_SIZE 行
-  function bigramGaps(groups) {
+  // slowOf を渡すと、遅い方がその言語・配列（{ lang, layout }）の行だけにする（他では速い bigram の練習の候補）
+  function bigramGaps(groups, slowOf) {
     const byGram = new Map(); // bigram → [{ lang, layout, avg, count }]
     groups.forEach(function (map, key) {
       const k = key.split("\t");
@@ -148,6 +149,7 @@ const WeakWords = (function () {
       const fast = list.reduce(function (a, b) { return b.avg < a.avg ? b : a; });
       list.forEach(function (slow) {
         if (slow === fast || slow.avg <= fast.avg) return;
+        if (slowOf && (slow.lang !== slowOf.lang || slow.layout !== slowOf.layout)) return;
         const kind = slow.layout === fast.layout ? "lang" : slow.lang === fast.lang ? "layout" : "both";
         out.push({ gram: gram, diff: slow.avg - fast.avg, kind: kind, slow: slow, fast: fast });
       });
@@ -155,6 +157,39 @@ const WeakWords = (function () {
     return out.sort(function (a, b) {
       return b.diff - a.diff || b.slow.count - a.slow.count || (a.gram < b.gram ? -1 : a.gram > b.gram ? 1 : 0);
     }).slice(0, LIST_SIZE);
+  }
+
+  // 他では速い bigram の練習の候補（Promise）：練習モード以外の記録（言語・配列ごとに直近 recentRuns() 回）から、
+  // 遅い方が lang・keyLayout になっている bigramGaps の行を、差の大きい方から LIST_SIZE 個
+  function loadFasterCandidates(lang, keyLayout) {
+    return Store.getAllSessions().then(function (sessions) {
+      const picked = recentPerGroup(sessions.filter(function (s) { return !s.practice; }));
+      const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
+      const groups = new Map();
+      return Store.eachRaw(new Set(byId.keys()), function (raw) {
+        const s = byId.get(raw.id);
+        const key = s.lang + "\t" + s.keyLayout;
+        if (!groups.has(key)) groups.set(key, new Map());
+        NGram.accumulate(groups.get(key), 2, raw.events);
+      }).then(function () { return bigramGaps(groups, { lang: lang, layout: keyLayout }); });
+    });
+  }
+
+  // 他では速い bigram の練習で打つものを選ぶ。cands は { row: bigramGaps の行, words: その bigram を含む単語 } の並び
+  // ランダムに PRACTICE_WORDS 個の bigram を選び、それぞれ含む単語からランダムに1語（ほかの bigram と同じ単語は避ける。
+  // 選べる単語がなければ、その bigram は使わず次の候補へ）。返り値 [{ row, word }]（単語は英語は文字列、日本語は { display, reading }）
+  function chooseFaster(cands) {
+    const key = function (w) { return typeof w === "string" ? w : w.reading; };
+    const used = new Set();
+    const out = [];
+    shuffle(cands).forEach(function (c) {
+      if (out.length >= PRACTICE_WORDS) return;
+      const w = shuffle(c.words).find(function (x) { return !used.has(key(x)); });
+      if (w === undefined) return;
+      used.add(key(w));
+      out.push({ row: c.row, word: w });
+    });
+    return out;
   }
 
   // 言語・配列の、直近 recentRuns() 回の単語モードの記録から候補の行を求める（Promise）
@@ -199,6 +234,6 @@ const WeakWords = (function () {
     MIN_COUNT: MIN_COUNT, LIST_SIZE: LIST_SIZE, PRACTICE_WORDS: PRACTICE_WORDS, REPEAT: REPEAT, BIGRAM_MIN: BIGRAM_MIN,
     add: add, rows: rows, slowList: slowList, missList: missList, choose: choose,
     practiceWords: practiceWords, results: results, load: load, loadDisplays: loadDisplays, recentRuns: recentRuns,
-    recentPerGroup: recentPerGroup, bigramGaps: bigramGaps
+    recentPerGroup: recentPerGroup, bigramGaps: bigramGaps, loadFasterCandidates: loadFasterCandidates, chooseFaster: chooseFaster
   };
 })();
