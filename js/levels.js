@@ -32,11 +32,11 @@ const Levels = (function () {
     return chars / level.maxSec;
   }
 
-  // その回の文字/秒 ＝ (お題の文字数 − 1) ÷ 経過秒数。ミスや Backspace の時間も含む。
+  // 文字/秒 ＝ (最後に残った正しい文字の数 − 1) ÷ 経過秒数。ミスや Backspace の時間も含む。
   // 英語は 1000 ÷ 平均 IKI と同じ。日本語の文字数はかなの数
-  function rateOf(textLength, timeSec) {
-    if (textLength < 2 || !(timeSec > 0)) return null;
-    return (textLength - 1) / timeSec;
+  function rateOf(correctChars, timeSec) {
+    if (correctChars < 2 || !(timeSec > 0)) return null;
+    return (correctChars - 1) / timeSec;
   }
 
   // 文字/秒からレベルを求める。J より遅い（206秒以上に当たる）・求められないときは null
@@ -48,8 +48,9 @@ const Levels = (function () {
   }
 
   // 記録（概要）の文字/秒
+  // 記録（概要）の文字/秒。正しい文字の数は、お題の文字数から直さなかった間違いを引いたもの
   function rateOfSession(s) {
-    return rateOf(s.textLength, s.result.timeSec);
+    return rateOf(s.textLength - (s.result.uncorrected || 0), s.result.timeSec);
   }
 
   // 記録（概要）のレベル。練習モードの回と、正確率が MIN_ACCURACY（95%）未満なら null

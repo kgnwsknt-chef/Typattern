@@ -626,8 +626,9 @@
     paceEl.hidden = !goal;
     if (!goal) return;
     const chars = Levels.charsFor(lang);
+    // 出し始めは進んだ文字数で決め、ペースは今の入力のうちお題と合っている文字の数で求める（間違えたまま進んだ文字は数えない）
     const progressed = typedStates().length;
-    const rate = startTime && (progressed >= PACE_MIN_CHARS || finished) ? Levels.rateOf(progressed, r.sec) : null;
+    const rate = startTime && (progressed >= PACE_MIN_CHARS || finished) ? Levels.rateOf(correctCount(), r.sec) : null;
     const now = performance.now();
     if (rate === null) {
       paceShown = null;
@@ -1303,17 +1304,14 @@
   // バージョン表示と、記録の書き出し・読み込み（全ページ共通）
   PageFooter.init();
 
-  // モードの選択。URL に ?short があれば短い文章、なければ前に選んだモード（初めては文章）で始める
+  // モードの選択。前に選んだモード（初めては文章）で始める
   let initialMode = "normal";
   try {
     const saved = localStorage.getItem(MODE_STORAGE);
     if (saved && modeEl.querySelector('option[value="' + saved + '"]')) initialMode = saved;
   } catch (e) { /* 既定のモードを使う */ }
-  if (new URLSearchParams(location.search).has("short")) initialMode = "short";
   modeEl.addEventListener("change", function () {
     try { localStorage.setItem(MODE_STORAGE, modeEl.value); } catch (e) { /* 無視 */ }
-    // ?short は最初のモードを決めるだけなので、切り替えたら URL から外す
-    if (location.search) history.replaceState(null, "", location.pathname);
     setMode(modeEl.value);
   });
 
