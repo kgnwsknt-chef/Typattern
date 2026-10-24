@@ -49,6 +49,7 @@
     levelLabel: document.getElementById("res-level-label")
   };
   const levelStatusEl = document.getElementById("level-status");
+  const skippedNoteEl = document.getElementById("skipped-note"); // かな配列で、割り当て表にないので飛ばした文字の知らせ
   const rankingEl = document.getElementById("ranking");
   const rankingTitleEl = document.getElementById("ranking-title");
   const keyLayoutEl = document.getElementById("key-layout");
@@ -109,7 +110,9 @@
   let preKeys = [];    // 計測開始前に押したキー { code, number, time }。開始したら events に移す
   const heldShifts = new Set(); // 今押されている Shift キーの e.code
   let typer = null;    // 日本語のときの入力の状態（js/typer.js）。英語では null
-  let showRomajiGuide = false; // ローマ字の手引きを出すか（日本語のローマ字入力のときだけ。かな配列では出さない）
+  let showRomajiGuide = false; // ローマ字の手引きを出すか（日本語のローマ字入力で、設定の「手引き」が ON のときだけ。かな配列では出さない）
+  let romajiLine = false;      // 日本語のお題の2行目をローマ字で出すか（ローマ字入力で、設定の「日本語のお題の2行目」がローマ字のとき）
+  const statsEl = document.querySelector(".stats"); // 打っている間の数字の行（設定の「数字の行」で隠せる）
   const kanaLayouts = {}; // 登録したかな配列（配列名 → KanaLayout.create の結果）
   const engLayouts = {};  // 登録した英語の配列（配列名 → KanaLayout.engMap の結果 { toChar, toKey }）。英語と、日本語のローマ字で使う
   let imeOn = false;   // IME がオンのまま打たれたか（日本語のとき、注意を出す）
@@ -461,17 +464,22 @@
     // 日本語：QWERTY と英語の配列ならローマ字、かな配列ならその割り当て表で判定する（英語の配列は、押したキーを文字に直してからローマ字の判定にかける）
     const kana = kanaLayouts[keyLayoutEl.value];
     typer = lang !== "ja" ? null : Typer.create(target, kana ? kana.options : Romaji.options);
-    showRomajiGuide = lang === "ja" && !kana;
+    const romajiInput = lang === "ja" && !kana;
+    // 手引きとお題の2行目のローマ字は、ローマ字で打つときだけ。どちらも設定で選ぶ（docs/settings.md）
+    showRomajiGuide = romajiInput && Settings.get("showGuide");
+    romajiLine = romajiInput && Settings.get("jaSecondLine") === "romaji";
+    statsEl.hidden = !Settings.get("showStats");
     imeOn = false;
     input.value = "";
     input.maxLength = target.length;
     input.disabled = false;
-    guideEl.textContent = lang !== "ja" ? GUIDE_EN : showRomajiGuide ? GUIDE_JA : GUIDE_KANA;
+    guideEl.textContent = lang !== "ja" ? GUIDE_EN : romajiInput ? GUIDE_JA : GUIDE_KANA;
     speedUnitEls.forEach(function (el) { el.textContent = lang === "ja" ? "かな/分" : "WPM"; });
     // 「キーごとの間隔」の説明。日本語は押したキーごとの間隔（かなは下の段に書く）
     rhythmWhatEl.textContent = lang === "ja" ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
     rhythmNoteEl.textContent = "修正の時間を含まないので、結果の平均 IKI より小さくなる";
     weakResultEl.hidden = true;
+    skippedNoteEl.hidden = true;
     fasterResultEl.hidden = true;
     resultEl.hidden = true;
     board.classList.remove("finished");
@@ -496,7 +504,8 @@
         display.className = "ja-display";
         display.textContent = l.display;
         const reading = document.createElement("div");
-        reading.className = "ja-reading";
+        // 2行目：よみがな、またはローマ字（かなごとの span に、render でキーの並びを書く）
+        reading.className = "ja-reading" + (romajiLine ? " ja-romaji" : "");
         addChars(reading, l.reading, true);
         frag.appendChild(display);
         frag.appendChild(reading);
@@ -525,6 +534,14 @@
 
   function render() {
     const states = typedStates();
+    if (romajiLine) {
+      // お題の2行目をローマ字で出すとき：かなごとに、打ち終えたかなは打ったキー、これから打つかなは手引きと同じ打ち方
+      const plan = typer.plan();
+      for (let i = 0; i < charEls.length; i++) {
+        const s = plan[i] === " " ? "␣" : plan[i];
+        if (charEls[i].textContent !== s) charEls[i].textContent = s;
+      }
+    }
     for (let i = 0; i < charEls.length; i++) {
       let cls = "";
       if (i < states.length) {
@@ -695,7 +712,21 @@
     else rankingTabEl.hidden = false;
     if (mode === "weak") showWeakResult();
     if (mode === FASTER) showFasterResult();
+    showSkippedNote();
     saveSession(r);
+  }
+
+  // かな配列：割り当て表にないのでミスとして飛ばした文字を、結果の数字の下に赤字で知らせる（お題に出てきた順。同じ文字はまとめて回数）
+  function showSkippedNote() {
+    const counts = new Map();
+    if (typer) {
+      typer.units.forEach(function (u) {
+        if (u.skipped) counts.set(target[u.pos], (counts.get(target[u.pos]) || 0) + 1);
+      });
+    }
+    skippedNoteEl.hidden = counts.size === 0;
+    skippedNoteEl.textContent = counts.size === 0 ? "" : "割り当て表にない文字があったので、ミスとして飛ばしました：" +
+      Array.from(counts, function (c) { return "「" + c[0] + "」" + c[1] + " 回"; }).join("・");
   }
 
   // 練習モードの結果：順位・レベル・ランキングのタブを出さない（練習モードの回はレベルの達成度・ランキングに入らない）

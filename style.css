@@ -105,6 +105,13 @@ body {
   color: var(--sub);
 }
 
+/* かな配列：割り当て表にないのでミスとして飛ばした文字の知らせ（結果画面） */
+.skipped-note {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--error);
+}
+
 .text-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
@@ -249,6 +256,13 @@ body {
   font-size: 15px;
   line-height: 1.7;
   margin-bottom: 14px;
+}
+
+/* 2行目をローマ字で出すとき：よみがなと同じ1行（40 かなほど）に収まるよう、等幅ではない（横幅の狭い）フォントにする。
+   かなごとのまとまりの間はあけない（単語の間は ␣）。それでも長い行は2行目の中で折り返す */
+.text.ja .ja-romaji {
+  font-family: var(--font);
+  overflow-wrap: anywhere;
 }
 
 .text .ok {

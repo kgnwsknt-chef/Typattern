@@ -12,7 +12,10 @@ const Settings = (function () {
     rankMinAccuracy: { type: "number", def: 95, min: 50, max: 100, step: 1, unit: "%" },   // ランキングに載せる正確率の下限(%)
     idleStopSec: { type: "number", def: 60, min: 30, max: 600, step: 10, unit: "秒" },    // タイピング中、入力がないまま止めるまでの秒数
     weakRecentRuns: { type: "number", def: 30, min: 10, max: 200, step: 10, unit: "回" }, // 苦手な単語を数える、直近の単語モードの記録の回数
-    indicator: { type: "boolean", def: true }                                   // タイピング中のインジケーター（目標のレベルとの差）を出すか
+    indicator: { type: "boolean", def: true },                                  // タイピング中のインジケーター（目標のレベルとの差）を出すか
+    showStats: { type: "boolean", def: true },                                  // タイピング中、数字の行（平均 IKI・正確率・秒・ミス）を出すか
+    showGuide: { type: "boolean", def: true },                                  // 日本語のローマ字入力で、次に打つローマ字の手引きを出すか
+    jaSecondLine: { type: "choice", def: "kana", choices: ["kana", "romaji"] }  // 日本語のお題の2行目：よみがな か ローマ字（ローマ字で打つときだけ）
   };
 
   function load() {
@@ -27,6 +30,7 @@ const Settings = (function () {
   function normalize(name, value) {
     const item = ITEMS[name];
     if (item.type === "boolean") return typeof value === "boolean" ? value : item.def;
+    if (item.type === "choice") return item.choices.indexOf(value) !== -1 ? value : item.def;
     const n = Number(value);
     if (value === null || value === "" || !isFinite(n)) return item.def;
     const stepped = Math.round(n / item.step) * item.step;

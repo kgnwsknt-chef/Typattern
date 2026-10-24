@@ -144,6 +144,21 @@ const Typer = (function () {
       return { typed: pending, rest: o.seq.slice(pending.length), ahead: ahead };
     }
 
+    // お題のかなごとのキーの並び（お題の2行目をローマ字で出すのに使う）。長さはお題と同じ
+    //   打ち終えたかなは実際に打ったキー、これから打つかなは手引きと同じ打ち方。まとめて打つかな（しゃ = sha）は最初のかなに並び全体、残りは ""
+    function plan() {
+      const out = new Array(text.length).fill("");
+      units.forEach(function (u) { out[u.pos] = u.keys; });
+      let o = current().filter(function (x) { return x.seq.indexOf(pending) === 0; })[0];
+      let p = pos;
+      while (o && p < text.length) {
+        out[p] = o.seq;
+        p += o.len;
+        o = constrain(optionsFn(text, p), o.doubled)[0];
+      }
+      return out;
+    }
+
     // 次に押すと正解になるキー（US キーボードの文字）の一覧と、手引きが示すキー（ミスタイプのページで使う）
     //   keys：正解になるキーすべて。preferred：手引きの打ち方で次に押すキー。next：その次のキー（なければ null）。pending：今のかなに打ちかけのキー
     //   打ち方がないかな（かな配列にないかな）は、press と同じく飛ばした先のかなで考える
@@ -184,6 +199,7 @@ const Typer = (function () {
       press: press,
       backspace: backspace,
       guide: guide,
+      plan: plan,
       expect: expect,
       units: units,
       get pos() { return pos; },

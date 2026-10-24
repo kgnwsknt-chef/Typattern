@@ -28,14 +28,33 @@
     <!-- 並びはページの順（タイピング・記録・IKI・苦手な単語）。その下に「初期値に戻す」、横線を引いて「登録」と「データ」（設定の項目ではないもの）。項目はそれを使うページのところに置く -->
     <section class="stats-section settings-section">
       <h2 class="stats-title">タイピング</h2>
+      <!-- 表示の項目はタイピング画面の上からの順。その後に画面の部品ではない項目、最後に結果画面の項目 -->
       <div class="setting">
-        <label class="setting-label" for="s-idle">入力がないときに止めるまで</label>
-        <span class="setting-input"><input id="s-idle" class="layout-select setting-number" type="number" data-setting="idleStopSec"> 秒</span>
-        <p class="setting-help">打ち始めてから、この秒数のあいだ何もキーを押さなかったら停止します。停止した回は記録せず、続きからは打てません（もう一度（Esc）か次のお題（Shift+Enter）を選びます）。<span class="setting-range"></span></p>
+        <label class="setting-label setting-check"><input id="s-stats" type="checkbox" data-setting="showStats"> 数字の行を表示する</label>
+        <p class="setting-help">打っている間、お題の上に平均 IKI（WPM・かな/分）・正確率・秒・ミスを出します。OFF にすると、打っている間は隠します（結果画面の数字はいつも出します）。初期値は ON。</p>
       </div>
       <div class="setting">
         <label class="setting-label setting-check"><input id="s-indicator" type="checkbox" data-setting="indicator"> インジケーターを表示する</label>
         <p class="setting-help">打っている間、お題の上の 20 マスの帯で、今のペースが次の目標のレベルにどれだけ近いかを示します（目標のペースなら満タンの青。遅れ1秒ごとに1マス短くなり、真ん中より長ければ黄、それより短いと赤。正確率 95% 未満では、青は黒に、黄・赤は暗い色になる）。初期値は ON。</p>
+      </div>
+      <div class="setting">
+        <label class="setting-label setting-check"><input id="s-guide" type="checkbox" data-setting="showGuide"> 手引きを表示する</label>
+        <p class="setting-help">日本語をローマ字で打つとき、お題の上に次に打つローマ字を出します。OFF でも、IME がオンのときの注意は出します（英語とかな配列では、もともと出しません）。初期値は ON。</p>
+      </div>
+      <div class="setting">
+        <label class="setting-label" for="s-ja-second">日本語のお題の2行目</label>
+        <span class="setting-input">
+          <select id="s-ja-second" class="layout-select" data-setting="jaSecondLine">
+            <option value="kana">よみがな</option>
+            <option value="romaji">ローマ字</option>
+          </select>
+        </span>
+        <p class="setting-help">日本語のお題で、表示する文（漢字など）の下に出す行。間違いの赤と今の位置の印はこの行に付きます。ローマ字は、ローマ字で打つとき（QWERTY・英語の配列）だけ効き、かな配列ではよみがなを出します。ローマ字は、打ち終えたかなは打ったキー、これから打つかなは手引きと同じ打ち方で出します。初期値はよみがな。</p>
+      </div>
+      <div class="setting">
+        <label class="setting-label" for="s-idle">入力がないときに止めるまで</label>
+        <span class="setting-input"><input id="s-idle" class="layout-select setting-number" type="number" data-setting="idleStopSec"> 秒</span>
+        <p class="setting-help">打ち始めてから、この秒数のあいだ何もキーを押さなかったら停止します。停止した回は記録せず、続きからは打てません（もう一度（Esc）か次のお題（Shift+Enter）を選びます）。<span class="setting-range"></span></p>
       </div>
       <div class="setting">
         <label class="setting-label" for="s-rhythm">キーごとの間隔の棒の最大</label>
