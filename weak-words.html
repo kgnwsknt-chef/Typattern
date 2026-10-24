@@ -62,6 +62,12 @@
         </div>
       </div>
     </section>
+
+    <section class="stats-section">
+      <h3 class="hm-title">言語・配列で差のある bigram（差の大きい順）</h3>
+      <p class="rhythm-legend">同じキーの組（bigram）を、言語・配列ごとに比べる ／ 練習モード以外のすべてのモードの記録（期間を指定しなければ、言語・配列ごとに直近の回だけ。回数は設定の「苦手な単語を数える回数」）を使い、絞り込みの言語・配列は効かせない ／ それぞれの言語・配列で5回以上出てきた bigram を比べ、一番速い言語・配列を基準に、遅い方を1行ずつ出す ／ 違い = 遅い方と速い方で違うもの（言語・配列・言語と配列）／ 差 = 遅い方の IKI − 速い方の IKI。速く打てている言語・配列があるので、遅い方も練習すれば速くなると見込める</p>
+      <div id="ww-bigram" class="ngram-scroll ww-table ww-bigram"></div>
+    </section>
   </main>
 
   <script src="js/store.js?v=71"></script>
@@ -69,6 +75,7 @@
   <script src="js/settings.js?v=71"></script>
   <script src="js/page-footer.js?v=71"></script>
   <script src="js/filters.js?v=71"></script>
+  <script src="js/ngram.js?v=71"></script>
   <script src="js/weak-words.js?v=71"></script>
   <script src="js/weak-words-page.js?v=71"></script>
 </body>

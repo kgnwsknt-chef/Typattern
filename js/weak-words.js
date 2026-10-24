@@ -115,6 +115,48 @@ const WeakWords = (function () {
     return Settings.get("weakRecentRuns");
   }
 
+  // 記録（古い順）のうち、言語・配列ごとに新しい方から recentRuns() 回だけを残す（並びは古い順のまま）
+  function recentPerGroup(sessions) {
+    const n = recentRuns();
+    const counts = new Map();
+    return sessions.slice().reverse().filter(function (s) {
+      const key = s.lang + "\t" + s.keyLayout;
+      counts.set(key, (counts.get(key) || 0) + 1);
+      return counts.get(key) <= n;
+    }).reverse();
+  }
+
+  const BIGRAM_MIN = 5; // 言語・配列で差のある bigram：その言語・配列で比べるのに必要な出現回数
+
+  // 言語・配列で差のある bigram。groups は "言語\t配列" → NGram.accumulate(…, 2, …) の map
+  // bigram ごとに、BIGRAM_MIN 回以上出てきた言語・配列が2つ以上あれば、一番速いものを基準にして、ほかのそれぞれを1行にする
+  // 行 { gram, diff, kind: "lang"・"layout"・"both", slow: { lang, layout, avg, count }, fast: 同じ形 }。差の大きい順に LIST_SIZE 行
+  function bigramGaps(groups) {
+    const byGram = new Map(); // bigram → [{ lang, layout, avg, count }]
+    groups.forEach(function (map, key) {
+      const k = key.split("\t");
+      map.forEach(function (e, gram) {
+        if (e.values.length < BIGRAM_MIN) return;
+        const avg = e.values.reduce(function (a, b) { return a + b; }, 0) / e.values.length;
+        if (!byGram.has(gram)) byGram.set(gram, []);
+        byGram.get(gram).push({ lang: k[0], layout: k[1], avg: avg, count: e.values.length });
+      });
+    });
+    const out = [];
+    byGram.forEach(function (list, gram) {
+      if (list.length < 2) return;
+      const fast = list.reduce(function (a, b) { return b.avg < a.avg ? b : a; });
+      list.forEach(function (slow) {
+        if (slow === fast || slow.avg <= fast.avg) return;
+        const kind = slow.layout === fast.layout ? "lang" : slow.lang === fast.lang ? "layout" : "both";
+        out.push({ gram: gram, diff: slow.avg - fast.avg, kind: kind, slow: slow, fast: fast });
+      });
+    });
+    return out.sort(function (a, b) {
+      return b.diff - a.diff || b.slow.count - a.slow.count || (a.gram < b.gram ? -1 : a.gram > b.gram ? 1 : 0);
+    }).slice(0, LIST_SIZE);
+  }
+
   // 言語・配列の、直近 recentRuns() 回の単語モードの記録から候補の行を求める（Promise）
   function load(lang, keyLayout) {
     return Store.getAllSessions().then(function (sessions) {
@@ -154,8 +196,9 @@ const WeakWords = (function () {
   }
 
   return {
-    MIN_COUNT: MIN_COUNT, LIST_SIZE: LIST_SIZE, PRACTICE_WORDS: PRACTICE_WORDS, REPEAT: REPEAT,
+    MIN_COUNT: MIN_COUNT, LIST_SIZE: LIST_SIZE, PRACTICE_WORDS: PRACTICE_WORDS, REPEAT: REPEAT, BIGRAM_MIN: BIGRAM_MIN,
     add: add, rows: rows, slowList: slowList, missList: missList, choose: choose,
-    practiceWords: practiceWords, results: results, load: load, loadDisplays: loadDisplays, recentRuns: recentRuns
+    practiceWords: practiceWords, results: results, load: load, loadDisplays: loadDisplays, recentRuns: recentRuns,
+    recentPerGroup: recentPerGroup, bigramGaps: bigramGaps
   };
 })();

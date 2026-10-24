@@ -856,6 +856,24 @@ a.text-btn {
   text-align: left;
 }
 
+/* 言語・配列で差のある bigram の表：違い・言語・配列の列は左寄せ */
+.bg-table td.ww-text,
+.ww-bigram .bg-table th:nth-child(3),
+.ww-bigram .bg-table th:nth-child(4),
+.ww-bigram .bg-table th:nth-child(7) {
+  text-align: left;
+}
+
+.ww-bigram {
+  max-width: 900px;
+}
+
+.ww-bigram .bg-table th,
+.ww-bigram .bg-table td {
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
 /* 苦手な単語の練習の結果（結果画面の、キーごとの間隔のタブの上） */
 .weak-result {
   margin: 14px 0 18px;
