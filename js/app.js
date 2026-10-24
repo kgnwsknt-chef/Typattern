@@ -1048,7 +1048,7 @@
   }
 
   // 日本語：キーを押したときの処理。入力欄は使わず、e.code から US キーボードの文字を求めてローマ字の判定にかける
-  function handleJaKey(e, now) {
+  function handleJpKey(e, now) {
     if (finished) return;
     // IME がオンだと key が "Process" になる。かなに変換されてしまうので受け付けず、注意を出す
     if (e.key === "Process" || e.isComposing) {
@@ -1195,7 +1195,7 @@
       heldShifts.add(e.code);
     }
     if (typer) {
-      handleJaKey(e, now);
+      handleJpKey(e, now);
       return;
     }
     const eng = engLayouts[keyLayoutEl.value];

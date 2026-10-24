@@ -98,9 +98,10 @@ const Typer = (function () {
       return { pos: at, judge: judge, confirmed: confirmed };
     }
 
-    // Backspace。打ちかけがあればキーを1つ消し、なければ最後に確定したまとまりを消す。
-    // 最後が飛ばしたかなのときは、飛ばしたかなと、その前に打ったまとまりを一緒に消す（飛ばしたかなだけ消しても、また飛ばすため）
-    // 返り値は消したまとまりの一覧（前から順。打ちかけのキーを消したときは空）
+    // Backspace。打ちかけがあればキーを1つ消し、なければ最後に確定したかなを1文字消す（IME と同じ）。
+    // 「しゃ」のように2文字以上まとめて打ったまとまりは、後ろの1文字だけ消す。キーは残ったかなのまとまりに残す（かなごとに分けられないため）
+    // 最後が飛ばしたかなのときは、飛ばしたかなと、その前に打ったかな1文字を一緒に消す（飛ばしたかなだけ消しても、また飛ばすため）
+    // 返り値は消したまとまりの一覧（前から順。打ちかけのキーを消したときは空）。後ろの1文字だけ消したときは、その1文字の { pos, len: 1 }
     function backspace(time) {
       lastTime = time;
       if (pending) {
@@ -112,7 +113,15 @@ const Typer = (function () {
       }
       const removed = [];
       while (units.length && units[units.length - 1].skipped) removed.unshift(units.pop());
-      if (units.length) removed.unshift(units.pop());
+      if (units.length) {
+        const last = units[units.length - 1];
+        if (last.len > 1) {
+          last.len--;
+          removed.unshift({ pos: last.pos + last.len, len: 1, keys: "", keyList: [], correct: last.correct });
+        } else {
+          removed.unshift(units.pop());
+        }
+      }
       if (removed.length) pos = removed[0].pos;
       return removed;
     }
