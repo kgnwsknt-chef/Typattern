@@ -1180,7 +1180,7 @@
     if (value.length >= target.length) finish();
   });
 
-  // キャレットは常に末尾。矢印キー等での移動とペーストを禁止
+  // カーソル（文字を入力する位置）は常に末尾。矢印キー等での移動とペーストを禁止
   const blockedKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Enter", "Tab"];
   input.addEventListener("keydown", function (e) {
     lastActivity = performance.now(); // どのキーでも「入力あり」とみなす
