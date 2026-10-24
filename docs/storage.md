@@ -69,7 +69,7 @@
 | `textId` | お題の題材名（`texts/index.json` の名前。例 `qwerty`）。単語モードは単語リスト名（例 `basic1000`）。追加したお題は、その名前（`texts` の `name`）。苦手な単語の練習は `"weak"`、他では速い bigram の練習は `"faster-other-setup"` |
 | `practice` | 練習モード（苦手な単語・他では速い bigram）の回だけ `true`。ふだんのモードの回は持たない（ないときは練習モードではない）。練習モードの回は、レベルの達成度・ランキング・記録のページの推移には入れず、IKI・ミスタイプのページには入れる（`docs/practice.md`）。この項目を足したときも、ないときに読めるので `schemaVersion` は 4 のまま |
 | `textLength` | お題の文字数（日本語は読みのかなの数） |
-| `result` | 結果の数値。`wpm` `accuracy` は小数第1位（`accuracy` は最後にお題と合っていた文字の割合で、直したミスは含めない）、`timeSec` は ms 単位。`avgIki` は平均 IKI ＝ 経過時間 ÷（文字数 − 1）で 0.1ms 単位（文字数が1以下なら `null`）。`uncorrected` は終了時に直さず残った間違いの数。日本語では `wpm` は `null` で、代わりに `kanaPerMin`（かな/分、小数第1位）と `correctKeys`（最後に残った正しいかなを打ったキーの数。平均 IKI の分母）を持ち、`avgIki` ＝ 経過時間 ÷（`correctKeys` − 1）。`keystrokes` は日本語では押したキーの数（Shift・Backspace を除く）、`misses` は間違えたキーの数。定義は `docs/measurement.md` |
+| `result` | 結果の数値。`wpm` `accuracy` は小数第1位（`accuracy` は最後にお題と合っていた文字の割合で、直したミスは含めない）、`timeSec` は ms 単位。`avgIki` は平均 IKI ＝ 経過時間 ÷（最後に残った正しい文字の数 − 1）で 0.1ms 単位（正しい文字の数が1以下なら `null`）。`uncorrected` は終了時に直さず残った間違いの数。日本語では `wpm` は `null` で、代わりに `kanaPerMin`（かな/分、小数第1位）と `correctKeys`（最後に残った正しいかなを打ったキーの数。平均 IKI の分母）を持ち、`avgIki` ＝ 経過時間 ÷（`correctKeys` − 1）。`keystrokes` は日本語では押したキーの数（Shift・Backspace を除く）、`misses` は間違えたキーの数。定義は `docs/measurement.md` |
 
 ## 生データ（`raws`）：1回1件、約3〜10KB
 

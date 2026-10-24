@@ -588,8 +588,8 @@
     const r = calc();
     // 打ち始め直後は値が極端に跳ねるので、2秒経つまで平均 IKI と WPM は出さない
     const show = finished || r.sec >= 2;
-    // 途中の平均 IKI は、ここまでに進んだ文字数（日本語は正しく打ったキーの数）で割る（最後まで打つと結果の値と同じになる）
-    const iki = Store.avgIki(r.sec, typer ? correctKeys() : input.value.length);
+    // 途中の平均 IKI は、今の入力のうちお題と合っている文字の数（日本語は正しく打ったキーの数）で割る（最後まで打つと結果の値と同じになる）
+    const iki = Store.avgIki(r.sec, typer ? correctKeys() : correctCount());
     stat.iki.textContent = show && iki !== null ? Math.round(iki) : "-";
     stat.wpm.textContent = show ? Math.round(r.wpm) : "-";
     stat.acc.textContent = Math.floor(r.acc);
@@ -669,8 +669,8 @@
 
     const r = calc();
     r.uncorrected = target.length - correctCount(); // 直さずに残した間違いの数
-    // 平均 IKI：英語は文字あたり、日本語はキーあたり（正しく打ったキーの数で割る）
-    r.avgIki = Store.avgIki(Math.round(r.sec * 1000) / 1000, typer ? correctKeys() : target.length);
+    // 平均 IKI：キーあたり。日本語は正しく打ったキーの数、英語は最後に残った正しい文字の数（1文字1キー。Shift は数えない）で割る
+    r.avgIki = Store.avgIki(Math.round(r.sec * 1000) / 1000, typer ? correctKeys() : correctCount());
     res.iki.textContent = r.avgIki === null ? "-" : r.avgIki.toFixed(1);
     res.wpm.textContent = Math.round(r.wpm);
     res.acc.textContent = r.acc.toFixed(1);

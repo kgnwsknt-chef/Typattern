@@ -39,9 +39,6 @@ const Trend = (function () {
     legendEl.textContent += " ／ 「英語・単語 SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
     if (selectedId) legendEl.textContent += " ／ 緑の縦線：ランキングで選んだ回";
     legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
-    // 平均 IKI は、英語は文字あたり、日本語はキーあたり。両方が混ざっているときは注意を出す
-    const langs = new Set(list.map(function (s) { return s.lang; }));
-    if (langs.size > 1) legendEl.textContent += " ／ ※英語と日本語が混ざっています（平均 IKI は英語が文字あたり、日本語がキーあたり）";
 
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "trend-svg", role: "img", "aria-label": "成績の推移" });
 
