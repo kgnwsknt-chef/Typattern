@@ -542,6 +542,7 @@
         if (charEls[i].textContent !== s) charEls[i].textContent = s;
       }
     }
+    const typed = typedMarks();
     for (let i = 0; i < charEls.length; i++) {
       let cls = "";
       if (i < states.length) {
@@ -552,8 +553,33 @@
       if (charEls[i].className !== cls) {
         charEls[i].className = cls;
       }
+      // 間違えたまま残っている位置の上に、実際に打ったものを小さく出す（style.css の [data-typed]）
+      const mark = (cls === "ng" || cls === "current") && typed && typed[i] ? typed[i] : null;
+      if (mark) {
+        if (charEls[i].dataset.typed !== mark) charEls[i].dataset.typed = mark;
+      } else if (charEls[i].dataset.typed !== undefined) {
+        delete charEls[i].dataset.typed;
+      }
     }
     renderRomajiGuide();
+  }
+
+  // 間違えたまま残っている位置ごとに、実際に打ったもの（docs/measurement.md の「ミス」）。出さないときは null
+  //   英語：打った文字。日本語：打ったキー（かな配列は割り当て表でかなにしたもの）。お題の2行目がローマ字のときも、
+  //   2行目には打つべきだった打ち方を出し（Typer の plan）、打ったキーはその上に出す
+  function typedMarks() {
+    const visible = function (s) { return s.replace(/ /g, "␣"); };
+    if (!typer) return Array.from(input.value, visible);
+    const kana = kanaLayouts[keyLayoutEl.value];
+    const marks = [];
+    typer.units.forEach(function (u) {
+      if (u.correct || u.skipped || !u.keys) return;
+      const asKana = kana ? kana.get(u.keys) : null;
+      marks[u.pos] = visible(asKana || u.keys);
+    });
+    // 打ちかけのかなに間違えたキーがあれば、打ちかけのキーをそのかなの上に出す（打ち終えるまで次のかなに進まないため）
+    if (typer.pendingWrong) marks[typer.pos] = visible(typer.pending);
+    return marks;
   }
 
   // 日本語：次に打つローマ字の手引き。打ちかけ（灰色）・今のかなの残り（青）・その先（薄く）
@@ -1131,6 +1157,11 @@
     if (eng && ch !== null) ch = eng.toChar(ch);
     const r = typer.press(ch || "\u0000", now);
     pushKey(e.code, number, now, r.pos, r.judge);
+    // ミスは間違えたキーの数（1つのかなで2回間違えれば2）。そのかなに「ミスあり」の印を付ける
+    if (r.judge === 0 && r.pos < target.length) {
+      misses++;
+      missed[r.pos] = true;
+    }
     r.confirmed.forEach(function (u) {
       // "+" の時刻は、そのかなを生んだ最後のキーの時刻（次のキーで確定した「ん」も n の時刻）
       const t = round1(u.time - startTime);
@@ -1145,8 +1176,8 @@
         if (!missed[u.pos]) misses++;
         missed[u.pos] = true;
       } else if (!u.correct) {
-        misses++;
-        missed[u.pos] = true;
+        // 間違えたキーのあったかな（ミスの数は、キーを押したときに数えている）
+        for (let j = 0; j < u.len; j++) missed[u.pos + j] = true;
       }
     });
     lastKeyTime = now;

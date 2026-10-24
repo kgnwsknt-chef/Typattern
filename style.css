@@ -275,6 +275,43 @@ body {
   border-radius: 2px;
 }
 
+/* 間違えたまま残っている文字の上に、実際に打ったものを小さく赤で出す（js/app.js の typedMarks） */
+.text .ng[data-typed],
+.text .current[data-typed] {
+  position: relative;
+}
+
+.text .ng[data-typed]::before,
+.text .current[data-typed]::before {
+  content: attr(data-typed);
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 0.7em;
+  line-height: 1;
+  color: var(--error);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* 日本語の2行目（よみがな）は文字が小さいので、上に出す打ったものは少し大きめにする。
+   表示する文の行と重ならないよう、2行目の上を少しあける */
+.text.ja .ja-reading .ng[data-typed]::before,
+.text.ja .ja-reading .current[data-typed]::before {
+  font-size: 0.85em;
+}
+
+.text.ja .ja-reading {
+  padding-top: 5px;
+}
+
+/* 英語：打った文字を上に出す余白のぶん、行の間を少し広げる */
+.text:not(.ja) {
+  line-height: 2.3;
+}
+
 /* 現在位置のキャレット */
 .text .current {
   box-shadow: -2px 0 0 var(--accent);
