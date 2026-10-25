@@ -75,6 +75,7 @@ become
 bed
 before
 begin
+beginning
 behind
 believe
 bell
@@ -161,11 +162,11 @@ chain
 chair
 chance
 change
+channel
 charge
 cheap
 check
 cheese
-chest
 chicken
 chief
 child
@@ -438,6 +439,7 @@ ill
 inch
 inside
 iron
+jazz
 job
 join
 joint
@@ -477,7 +479,6 @@ leave
 left
 leg
 lemon
-lend
 less
 let
 letter
@@ -647,7 +648,6 @@ popular
 port
 pot
 potato
-pound
 pour
 power
 press
@@ -670,6 +670,7 @@ quiet
 quite
 rabbit
 race
+radii
 radio
 rain
 raise
@@ -709,6 +710,7 @@ round
 route
 row
 royal
+rubber
 rule
 run
 rush
@@ -739,7 +741,6 @@ set
 seven
 shade
 shake
-shall
 shape
 share
 sharp
@@ -818,14 +819,12 @@ spring
 square
 staff
 stage
-stair
 stamp
 stand
 star
 start
 state
 stay
-steam
 steel
 step
 stick
@@ -841,6 +840,7 @@ student
 study
 style
 sugar
+suggest
 suit
 summer
 sun
@@ -857,10 +857,8 @@ tax
 tea
 teach
 team
-tear
 tell
 ten
-tent
 term
 test
 thank
@@ -902,6 +900,7 @@ trade
 train
 tree
 trick
+trigger
 trip
 trouble
 truck
@@ -923,6 +922,7 @@ until
 upper
 use
 usual
+vacuum
 valley
 value
 very
