@@ -64,10 +64,10 @@
 | `finishedAt` | 打ち終わりの日時（UTC, ISO 8601）。打ち始めは `finishedAt - result.timeSec` で求められるので持たない |
 | `appVersion` | 記録したときのアプリのバージョン |
 | `lang` | お題の言語（`en` 英語・`ja` 日本語） |
-| `mode` | `"normal"`（文章）・`"words"`（単語）・`"other"`（その他。追加したお題で、文章の長さに入らないもの。`docs/text-manager.md`）。`"weak"`（苦手な単語の練習。練習モード。`docs/weak-words.md`）・`"faster-other-setup"`（他では速い bigram の練習。練習モード。`docs/weak-words.md`）。値は小文字の英語で、2語以上はハイフンでつなぐ（大文字が混ざると書き間違えても気づきにくいため）。IndexedDB の索引に true/false は使えないため文字列にしている |
+| `mode` | `"normal"`（文章）・`"words"`（単語）・`"other"`（その他。追加したお題で、文章の長さに入らないもの。`docs/text-manager.md`）。`"weak"`（苦手な単語の練習。練習モード。`docs/weak-words.md`）・`"faster-other-setup"`（他では速い bigram の練習。練習モード。`docs/weak-words.md`）・`"iki-measurement"`（IKI 測定。練習モード。`docs/iki-measurement.md`）。値は小文字の英語で、2語以上はハイフンでつなぐ（大文字が混ざると書き間違えても気づきにくいため）。IndexedDB の索引に true/false は使えないため文字列にしている |
 | `keyLayout` | キー配列。`"qwerty"`（英語は QWERTY、日本語はローマ字入力）か、登録した配列の配列名（`layouts` の `id`。かな配列は日本語だけ。英語の配列は英語と、日本語のローマ字入力）。画面上部の「配列」で選ぶ |
-| `textId` | お題の題材名（`texts/index.json` の名前。例 `honeybee`）。単語モードは単語リスト名（例 `basic1000`）。追加したお題は、その名前（`texts` の `name`）。苦手な単語の練習は `"weak"`、他では速い bigram の練習は `"faster-other-setup"` |
-| `practice` | 練習モード（苦手な単語・他では速い bigram）の回だけ `true`。ふだんのモードの回は持たない（ないときは練習モードではない）。練習モードの回は、レベルの達成度・ランキング・記録のページの推移には入れず、IKI・ミスタイプのページには入れる（`docs/practice.md`）。この項目を足したときも、ないときに読めるので `schemaVersion` は 4 のまま |
+| `textId` | お題の題材名（`texts/index.json` の名前。例 `honeybee`）。単語モードは単語リスト名（例 `basic1000`）。追加したお題は、その名前（`texts` の `name`）。苦手な単語の練習は `"weak"`、他では速い bigram の練習は `"faster-other-setup"`、IKI 測定は `"iki-measurement"` |
+| `practice` | 練習モード（苦手な単語・他では速い bigram・IKI 測定）の回だけ `true`。ふだんのモードの回は持たない（ないときは練習モードではない）。練習モードの回は、レベルの達成度・ランキング・記録のページの推移には入れず、IKI・ミスタイプのページには入れる（`docs/practice.md`）。この項目を足したときも、ないときに読めるので `schemaVersion` は 4 のまま |
 | `textLength` | お題の文字数（日本語は読みのかなの数） |
 | `result` | 結果の数値。`wpm` は WPM（語/分。1語＝5文字）で小数第1位。`accuracy` は % で小数第1位（最後にお題と合っていた文字の割合で、直したミスは含めない）。`timeSec` は秒（小数第3位まで。ms の細かさ）。`keystrokes` は打鍵の回数。`misses` はミスの回数。`uncorrected` は終了時に直さず残った間違いの数（文字。日本語はかな）。`avgIki` は平均 IKI（ms。0.1ms 単位）＝ 経過時間 ÷（最後に残った正しい文字の数 − 1）（正しい文字の数が1以下なら `null`）。日本語では `wpm` は `null` で、代わりに `kanaPerMin`（かな/分、小数第1位）と `correctKeys`（最後に残った正しいかなを打ったキーの回数。平均 IKI の分母）を持ち、`avgIki` ＝ 経過時間 ÷（`correctKeys` − 1）。`keystrokes` は日本語では押したキーの回数（Shift・Backspace を除く）、`misses` は間違えたキーの回数。定義は `docs/measurement.md` |
 

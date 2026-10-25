@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern</title>
-  <link rel="stylesheet" href="style.css?v=81">
+  <link rel="stylesheet" href="style.css?v=82">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -37,6 +37,7 @@
           <option value="other">その他（追加したお題）</option>
           <option value="weak">苦手な単語（練習モード）</option>
           <option value="faster-other-setup">他では速い bigram（練習モード）</option>
+          <option value="iki-measurement">IKI 測定（練習モード）</option>
         </select>
       </label>
       <!-- 苦手な単語のモードのときだけ出す（docs/weak-words.md） -->
@@ -128,6 +129,13 @@
         <div id="faster-result-table" class="weak-result-table faster-result-table"></div>
       </div>
 
+      <!-- IKI 測定のとき：語ごとの1〜5回目の IKI（docs/iki-measurement.md） -->
+      <div id="iki-result" class="weak-result" hidden>
+        <h3 class="hm-title">語ごとの IKI（1〜5回目）</h3>
+        <p class="rhythm-legend">その回に語の2文字目から打った、文字ごとの最後の打鍵の間隔の平均（ms/文字。1文字目は直前のスペースからの間隔なので入れない）／ 1回目は慣れる前なので、IKI のページには入れない（灰色）／ 平均 = 2〜5回目の平均 ／ ミス = 間違えたキーがあった回の数 ／ 色はこの回の全部の間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い</p>
+        <div id="iki-result-table" class="weak-result-table"></div>
+      </div>
+
       <div class="tabs" role="tablist">
         <button type="button" class="tab" role="tab" id="tab-rhythm" data-tab="rhythm" aria-controls="panel-rhythm" aria-selected="true">キーごとの間隔</button>
         <button type="button" class="tab" role="tab" id="tab-ranking" data-tab="ranking" aria-controls="panel-ranking" aria-selected="false">ランキング</button>
@@ -145,18 +153,19 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=81"></script>
-  <script src="js/keys.js?v=81"></script>
-  <script src="js/romaji.js?v=81"></script>
-  <script src="js/typer.js?v=81"></script>
-  <script src="js/kana-layout.js?v=81"></script>
-  <script src="js/settings.js?v=81"></script>
-  <script src="js/page-footer.js?v=81"></script>
-  <script src="js/rhythm.js?v=81"></script>
-  <script src="js/ranking.js?v=81"></script>
-  <script src="js/levels.js?v=81"></script>
-  <script src="js/ngram.js?v=81"></script>
-  <script src="js/weak-words.js?v=81"></script>
-  <script src="js/app.js?v=81"></script>
+  <script src="js/store.js?v=82"></script>
+  <script src="js/keys.js?v=82"></script>
+  <script src="js/romaji.js?v=82"></script>
+  <script src="js/typer.js?v=82"></script>
+  <script src="js/kana-layout.js?v=82"></script>
+  <script src="js/settings.js?v=82"></script>
+  <script src="js/page-footer.js?v=82"></script>
+  <script src="js/rhythm.js?v=82"></script>
+  <script src="js/ranking.js?v=82"></script>
+  <script src="js/levels.js?v=82"></script>
+  <script src="js/ngram.js?v=82"></script>
+  <script src="js/iki-measurement.js?v=82"></script>
+  <script src="js/weak-words.js?v=82"></script>
+  <script src="js/app.js?v=82"></script>
 </body>
 </html>

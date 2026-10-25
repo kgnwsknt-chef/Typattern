@@ -15,8 +15,12 @@ const Settings = (function () {
     indicator: { type: "boolean", def: true },                                  // タイピング中のインジケーター（目標のレベルとの差）を出すか
     showStats: { type: "boolean", def: true },                                  // タイピング中、数字の行（平均 IKI・正確率・秒・ミス）を出すか
     showGuide: { type: "boolean", def: true },                                  // 日本語のローマ字入力で、次に打つローマ字の手引きを出すか
-    jaSecondLine: { type: "choice", def: "kana", choices: ["kana", "romaji"] }  // 日本語のお題の2行目：よみがな か ローマ字（ローマ字で打つときだけ）
+    jaSecondLine: { type: "choice", def: "kana", choices: ["kana", "romaji"] }, // 日本語のお題の2行目：よみがな か ローマ字（ローマ字で打つときだけ）
+    ikiMeasurementChars: { type: "keys", def: "qwertyuiopasdfghjklzxcvbnm;',./" },  // IKI 測定モードで語に使う文字（Shift なしで打てる QWERTY の文字）
+    ikiMeasurementPick: { type: "choice", def: "least", choices: ["least", "random"] } // IKI 測定モードの語の作り方：少ない bigram（B）か 文字列から（A）
   };
+  // "keys" の項目で使える文字（Shift なしで打てる QWERTY の文字。スペースは除く）
+  const KEY_CHARS = "`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./";
 
   function load() {
     try {
@@ -31,6 +35,15 @@ const Settings = (function () {
     const item = ITEMS[name];
     if (item.type === "boolean") return typeof value === "boolean" ? value : item.def;
     if (item.type === "choice") return item.choices.indexOf(value) !== -1 ? value : item.def;
+    if (item.type === "keys") {
+      // 使えない文字を除き、重なった文字はまとめる（大文字は小文字にする）。2文字未満なら初期値
+      if (typeof value !== "string") return item.def;
+      const chars = [];
+      Array.from(value.toLowerCase()).forEach(function (c) {
+        if (KEY_CHARS.indexOf(c) !== -1 && chars.indexOf(c) === -1) chars.push(c);
+      });
+      return chars.length >= 2 ? chars.join("") : item.def;
+    }
     const n = Number(value);
     if (value === null || value === "" || !isFinite(n)) return item.def;
     const stepped = Math.round(n / item.step) * item.step;

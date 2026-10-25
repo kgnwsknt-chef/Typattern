@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern 設定</title>
-  <link rel="stylesheet" href="style.css?v=81">
+  <link rel="stylesheet" href="style.css?v=82">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -90,6 +90,25 @@
       </div>
     </section>
 
+    <section class="stats-section settings-section">
+      <h2 class="stats-title">IKI 測定</h2>
+      <div class="setting">
+        <label class="setting-label" for="s-iki-pick">語の作り方</label>
+        <span class="setting-input">
+          <select id="s-iki-pick" class="layout-select" data-setting="ikiMeasurementPick">
+            <option value="least">少ない bigram</option>
+            <option value="random">文字列から</option>
+          </select>
+        </span>
+        <p class="setting-help">タイピング画面の「IKI 測定」モードで打つ語の作り方。「少ない bigram」は、下の文字でできる bigram のうち、記録の中で回数の少ないもの（全部の言語・配列をまとめて数えます）を使って語を作ります。「文字列から」は、下の文字からランダムに語を作ります。どちらも、1語は3〜6文字で、文字は3種類まで、同じ文字が続くのは3つまでです。初期値は少ない bigram。</p>
+      </div>
+      <div class="setting">
+        <label class="setting-label" for="s-iki-chars">測る文字</label>
+        <span class="setting-input"><input id="s-iki-chars" class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-setting="ikiMeasurementChars"></span>
+        <p class="setting-help">IKI 測定モードの語に使う文字。Shift なしで打てる QWERTY の文字（英字・数字・記号）を並べて書きます。スペースと、それ以外の文字は除き、同じ文字は1つにまとめます。2文字未満なら初期値に戻します。IKI 測定モードでは、言語は英語、配列は QWERTY になります。初期値は英字 26 文字と <code>;</code> <code>'</code> <code>,</code> <code>.</code> <code>/</code>。</p>
+      </div>
+    </section>
+
     <div class="trial-bar settings-bar">
       <span id="settings-msg" class="trial-last" aria-live="polite"></span>
       <button id="settings-reset" class="text-btn" type="button">初期値に戻す</button>
@@ -133,9 +152,9 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=81"></script>
-  <script src="js/settings.js?v=81"></script>
-  <script src="js/page-footer.js?v=81"></script>
-  <script src="js/settings-page.js?v=81"></script>
+  <script src="js/store.js?v=82"></script>
+  <script src="js/settings.js?v=82"></script>
+  <script src="js/page-footer.js?v=82"></script>
+  <script src="js/settings-page.js?v=82"></script>
 </body>
 </html>

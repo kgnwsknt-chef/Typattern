@@ -47,15 +47,17 @@
         return;
       }
 
-      const ids = new Set(picked.map(function (s) { return s.id; }));
+      const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
+      const ids = new Set(byId.keys());
       const bigrams = new Map();
       let strokes = 0; // 総打鍵数：選んだ記録の、押したキー（events の "k" の行）の数。Shift・Backspace・間違えたキーも数える
       const trigrams = new Map();
       ngramSummaryEl.textContent = "集計中…";
       return Store.eachRaw(ids, function (raw) {
-        // 押したキーの記録（events の "k" の行）から数える。英語も日本語も同じ
-        NGram.accumulate(bigrams, 2, raw.events, tags.get(raw.id));
-        NGram.accumulate(trigrams, 3, raw.events, tags.get(raw.id));
+        // 押したキーの記録（events の "k" の行）から数える。英語も日本語も同じ。IKI 測定モードの回は、各語の1回目を数えない
+        const skip = IkiMeasurement.skipOf(byId.get(raw.id), raw);
+        NGram.accumulate(bigrams, 2, raw.events, tags.get(raw.id), skip);
+        NGram.accumulate(trigrams, 3, raw.events, tags.get(raw.id), skip);
         raw.events.forEach(function (e) { if (e[1] === "k") strokes++; });
       }).then(function () {
         if (myId !== loadId) return;

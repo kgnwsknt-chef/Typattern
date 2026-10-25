@@ -444,7 +444,8 @@ const NGram = (function () {
 
   // 生データの events から、押したキーの並び [{ t, label, ok }] を作る（Shift は並びに入れない）
   //   ok：n-gram に使えるキーか。間違えたキー・Backspace・スペース・文字のないキー・Shift と同時に押したキーは false
-  function keySequence(events) {
+  //   skip：数えない位置の集まり（IKI 測定モードの1回目。js/iki-measurement.js）。その位置を打ったキーも false
+  function keySequence(events, skip) {
     const seq = [];
     const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
@@ -458,7 +459,8 @@ const NGram = (function () {
           return;
         }
         const label = Keys.label(e[2]);
-        const ok = e[4] === 1 && shiftDown.size === 0 && label !== null && e[2] !== Keys.SPACE && e[2] !== Keys.BACKSPACE;
+        const ok = e[4] === 1 && shiftDown.size === 0 && label !== null && e[2] !== Keys.SPACE && e[2] !== Keys.BACKSPACE &&
+          !(skip && skip.has(e[3]));
         seq.push({ t: e[0], label: label, ok: ok });
         if (!hasUp) shiftDown.clear();
       }
@@ -470,8 +472,9 @@ const NGram = (function () {
   // （複数回分を同じ map に足せば、全記録の集計になる）
   // tag を渡すと、値ごとにどの回の記録かを覚えておく（IKI の推移に使う。{ run: 何回目か, day: "YYYY-MM-DD", at: 打ち終わりの日時 }）
   // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis_iki.md を参照
-  function accumulate(map, n, events, tag) {
-    const seq = keySequence(events);
+  // skip を渡すと、その位置を打ったキーが絡むものは除く（IKI 測定モードの1回目。IkiMeasurement.skipOf）
+  function accumulate(map, n, events, tag, skip) {
+    const seq = keySequence(events, skip);
     for (let end = n - 1; end < seq.length; end++) {
       const start = end - n + 1;
       let ok = true;

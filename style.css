@@ -1875,3 +1875,15 @@ a.text-btn {
 .tm-section .trial-bar .filter {
   white-space: nowrap;
 }
+
+.setting-text {
+  width: 22em;
+  max-width: 100%;
+  font-family: var(--mono);
+}
+
+/* IKI 測定の結果：1回目の列は IKI のページに入れないので灰色にする */
+.bg-table .iki-first {
+  color: var(--typed);
+  font-weight: normal;
+}

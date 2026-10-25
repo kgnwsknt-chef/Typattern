@@ -75,8 +75,15 @@
   const FASTER = "faster-other-setup";
   const fasterResultEl = document.getElementById("faster-result");
   const fasterResultTableEl = document.getElementById("faster-result-table");
+  // IKI 測定のモード（docs/iki-measurement.md）：設定の文字から作った語を、押すキーの位置（QWERTY の文字）で打つ。結果は語ごとの1〜5回目の IKI
+  const IKI = IkiMeasurement.MODE;
+  const ikiResultEl = document.getElementById("iki-result");
+  const ikiResultTableEl = document.getElementById("iki-result-table");
+  const GUIDE_IKI = "語を、押すキーの位置（QWERTY の文字）で打ちます。このモードの間、言語は英語、配列は QWERTY です。IME はオフにしてください。各語を5回ずつ打ちます（1回目は IKI のページに入れません）。";
+  // 押したキーの QWERTY の文字を、そのまま入力の文字にする（IKI 測定。英語の配列の割り当て表と同じ形）
+  const QWERTY_KEYS = { toChar: function (c) { return c; } };
   // 練習モード（記録に practice: true を付け、レベルの達成度・ランキング・記録のページの推移に入れないモード）
-  const PRACTICE_MODES = ["weak", FASTER];
+  const PRACTICE_MODES = ["weak", FASTER, IKI];
   const paceEl = document.getElementById("pace");
   const paceTextEl = document.getElementById("pace-text");
   // インジケーターの帯のマス（Levels.PACE_STEPS 個）。左から順に、届いている段まで色を付ける
@@ -148,6 +155,7 @@
   function loadSources() {
     if (mode === "weak") return loadWeakSources();
     if (mode === FASTER) return loadFasterSources();
+    if (mode === IKI) return loadIkiSources();
     const builtin = mode === "words" ? loadWordlists()
       : mode === "other" ? Promise.resolve([]) // 「その他」は追加したお題だけ
       : loadTexts();
@@ -204,6 +212,22 @@
       }).filter(function (c) { return c.words.length > 0; });
       if (!cands.length) throw new Error("NO_FASTER");
       return [{ name: FASTER, cands: cands }];
+    });
+  }
+
+  // IKI 測定のモード：「少ない bigram」で使う、記録の中の bigram の回数（全部の言語・配列をまとめる。IKI 測定の回は各語の1回目を数えない）。
+  // sources は1つだけ { name: IKI, counts: bigram → 回数 }。語は、お題を出すたびに設定から作る（pickText）
+  function loadIkiSources() {
+    return Store.getAllSessions().then(function (sessions) {
+      const byId = new Map(sessions.map(function (s) { return [s.id, s]; }));
+      const grams = new Map();
+      return Store.eachRaw(new Set(byId.keys()), function (raw) {
+        NGram.accumulate(grams, 2, raw.events, null, IkiMeasurement.skipOf(byId.get(raw.id), raw));
+      }).then(function () {
+        const counts = new Map();
+        grams.forEach(function (e, g) { counts.set(g, e.values.length); });
+        return [{ name: IKI, counts: counts }];
+      });
     });
   }
 
@@ -391,6 +415,10 @@
       const picks = WeakWords.chooseFaster(sources[0].cands);
       const made = wordText(WeakWords.practiceWords(picks.map(function (p) { return p.word; })));
       current = { name: FASTER, text: made.text, lines: made.lines, picks: picks };
+    } else if (mode === IKI) {
+      // IKI 測定：設定の文字と作り方で10語を作り、それぞれ5回続けて並べる（日本語のときも、表示する文の行は作らない）
+      const words = IkiMeasurement.chooseWords(Settings.get("ikiMeasurementChars"), Settings.get("ikiMeasurementPick"), sources[0].counts);
+      current = { name: IKI, text: IkiMeasurement.textOf(words) };
     } else {
       let i;
       do {
@@ -406,8 +434,26 @@
 
   // モードを切り替えて、そのモードのお題を読み込み直す
   function setMode(newMode) {
+    const wasIki = mode === IKI;
     mode = newMode;
     modeEl.value = mode;
+    // IKI 測定は英語・QWERTY で打つ：言語を英語、配列を QWERTY にして選べなくする（ブラウザが覚えた言語・配列は変えない）。
+    // ほかのモードに戻したら、覚えている言語・配列に戻す
+    if (mode === IKI) {
+      lang = "en";
+      langEl.value = lang;
+      keyLayoutEl.value = "qwerty";
+    } else if (wasIki) {
+      try {
+        const saved = localStorage.getItem(LANG_STORAGE);
+        if (saved && langEl.querySelector('option[value="' + saved + '"]')) lang = saved;
+      } catch (e) { /* 今の言語のまま */ }
+      langEl.value = lang;
+      restoreKeyLayout();
+      updateKeyLayoutOptions();
+    }
+    langEl.disabled = mode === IKI;
+    keyLayoutEl.disabled = mode === IKI;
     weakKindLabelEl.hidden = mode !== "weak"; // 「練習するもの」は苦手な単語のときだけ出す
     sources = [];
     current = null;
@@ -462,9 +508,11 @@
     setGoal();
 
     // 日本語：QWERTY と英語の配列ならローマ字、かな配列ならその割り当て表で判定する（英語の配列は、押したキーを文字に直してからローマ字の判定にかける）
+    // IKI 測定は、日本語のときも英語と同じく1文字1キーで打つ（押したキーの QWERTY の文字で判定する）
+    const jp = lang === "ja" && mode !== IKI;
     const kana = kanaLayouts[keyLayoutEl.value];
-    typer = lang !== "ja" ? null : Typer.create(target, kana ? kana.options : Romaji.options);
-    const romajiInput = lang === "ja" && !kana;
+    typer = !jp ? null : Typer.create(target, kana ? kana.options : Romaji.options);
+    const romajiInput = jp && !kana;
     // 手引きとお題の2行目のローマ字は、ローマ字で打つときだけ。どちらも設定で選ぶ（docs/settings.md）
     showRomajiGuide = romajiInput && Settings.get("showGuide");
     romajiLine = romajiInput && Settings.get("jaSecondLine") === "romaji";
@@ -473,20 +521,21 @@
     input.value = "";
     input.maxLength = target.length;
     input.disabled = false;
-    guideEl.textContent = lang !== "ja" ? GUIDE_EN : romajiInput ? GUIDE_JA : GUIDE_KANA;
-    speedUnitEls.forEach(function (el) { el.textContent = lang === "ja" ? "かな/分" : "WPM"; });
+    guideEl.textContent = mode === IKI ? GUIDE_IKI : !jp ? GUIDE_EN : romajiInput ? GUIDE_JA : GUIDE_KANA;
+    speedUnitEls.forEach(function (el) { el.textContent = jp ? "かな/分" : "WPM"; });
     // 「キーごとの間隔」の説明。日本語は押したキーごとの間隔（かなは下の段に書く）
-    rhythmWhatEl.textContent = lang === "ja" ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
+    rhythmWhatEl.textContent = jp ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
     rhythmNoteEl.textContent = "修正の時間を含まないので、結果の平均 IKI より小さくなる";
     weakResultEl.hidden = true;
     skippedNoteEl.hidden = true;
     fasterResultEl.hidden = true;
+    ikiResultEl.hidden = true;
     resultEl.hidden = true;
     board.classList.remove("finished");
 
     // お題を1文字ずつ span にする。日本語は、1行ごとに表示する文を上に、読みを下に並べる
     textEl.textContent = "";
-    textEl.classList.toggle("ja", lang === "ja");
+    textEl.classList.toggle("ja", jp);
     const frag = document.createDocumentFragment();
     charEls = [];
     function addChars(parent, str, wide) {
@@ -738,6 +787,7 @@
     else rankingTabEl.hidden = false;
     if (mode === "weak") showWeakResult();
     if (mode === FASTER) showFasterResult();
+    if (mode === IKI) showIkiResult();
     showSkippedNote();
     saveSession(r);
   }
@@ -888,6 +938,56 @@
     fasterResultEl.hidden = false;
   }
 
+  // IKI 測定の結果：語ごとに、1〜5回目の IKI と2〜5回目の平均、ミスのあった回数の表を出す。
+  // あわせて、この回の bigram（各語の1回目は数えない）を「少ない bigram」の回数に足す（次のお題から使う）
+  function showIkiResult() {
+    const values = intervals.filter(function (v) { return v !== null; });
+    const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
+    const table = document.createElement("table");
+    table.className = "bg-table";
+    const hr = document.createElement("tr");
+    const heads = ["語"];
+    for (let i = 1; i <= IkiMeasurement.REPEAT; i++) heads.push(i + "回目");
+    heads.push("平均", "ミス");
+    heads.forEach(function (t, i) {
+      const th = document.createElement("th");
+      th.textContent = t;
+      if (i === 1) th.className = "iki-first";
+      hr.appendChild(th);
+    });
+    table.appendChild(document.createElement("thead")).appendChild(hr);
+    const body = table.appendChild(document.createElement("tbody"));
+    IkiMeasurement.results(target, intervals, missed).forEach(function (w) {
+      const tr = document.createElement("tr");
+      const cell = function (className, text) {
+        const td = document.createElement("td");
+        if (className) td.className = className;
+        td.textContent = text;
+        tr.appendChild(td);
+        return td;
+      };
+      cell("ww-word", w.word);
+      w.reps.forEach(function (v, i) {
+        const td = cell(i === 0 ? "bg-avg iki-first" : "bg-avg", v === null ? "-" : String(Math.round(v)));
+        if (i > 0 && v !== null && base) td.style.color = Rhythm.color(v, base);
+      });
+      const avg = cell("bg-avg", w.avg === null ? "-" : String(Math.round(w.avg)));
+      if (w.avg !== null && base) avg.style.color = Rhythm.color(w.avg, base);
+      cell("", w.misses + " / " + w.reps.length);
+      body.appendChild(tr);
+    });
+    ikiResultTableEl.textContent = "";
+    ikiResultTableEl.appendChild(table);
+    ikiResultEl.hidden = false;
+
+    if (sources[0] && sources[0].counts) {
+      const counts = sources[0].counts;
+      NGram.accumulate(new Map(), 2, events, null, IkiMeasurement.firstRepPositions(target)).forEach(function (e, g) {
+        counts.set(g, (counts.get(g) || 0) + e.values.length);
+      });
+    }
+  }
+
   // 日本語の「キーごとの間隔」のグラフの元：最後に残ったかなごとに、そのかなを打ったキーと間隔
   // 間隔は、そのキーを押した時刻と直前のキー（Backspace を含む）の時刻の差。最初のキーは null
   function keyColumns() {
@@ -902,7 +1002,7 @@
   // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram" };
+  const MODE_NAME = { normal: "文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram", "iki-measurement": "IKI 測定" };
 
   // 今回のレベルと文字/秒。正確率が基準未満なら「-」
   function renderLevel(session) {
@@ -1264,7 +1364,8 @@
       handleJpKey(e, now);
       return;
     }
-    const eng = engLayouts[keyLayoutEl.value];
+    // IKI 測定は、どの配列でも押したキーの QWERTY の文字で打つ
+    const eng = mode === IKI ? QWERTY_KEYS : engLayouts[keyLayoutEl.value];
     if (eng && handleEngKey(e, now, eng)) return;
     if (!Keys.isShift(e.code)) keyTime = now; // Shift だけでは入力欄は変わらない
     logKey(e, now);

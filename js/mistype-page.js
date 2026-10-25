@@ -65,6 +65,11 @@
       mtSummaryEl.textContent = picked.length ? "集計中…" : "";
       return Store.eachRaw(new Set(byId.keys()), function (raw) {
         const s = byId.get(raw.id);
+        // IKI 測定の回は、どの言語・配列でも押したキーの QWERTY の文字で打つので、英語・QWERTY と同じく数える
+        if (s.mode === "iki-measurement") {
+          Mistype.add(acc, raw, "en", null, null, tags.get(raw.id), null);
+          return;
+        }
         let optionsFn = null;
         let shifts = null;
         const l = kana[raw.keyLayout];
