@@ -19,6 +19,7 @@
   この番号は各ページ左上の「Typattern」のすぐ横にバージョンとして「v0.番号」の形で表示される（例: ?v=28 → v0.28）。
 
 ## 作業の進め方
+- **変更する前に GitHub とそろっているか確かめる**：ローカルのファイルを変更する前に、`git fetch` で GitHub 上の `main` のコミットがローカルと同じかを確かめる。違う場合（GitHub 上で直したなど）は、変更を始める前に pull することを利用者に勧める。
 - **公開の手順**：`gh-pages` は `main` を早送りで進めて公開する（`git push origin main:gh-pages`）。コミット・プッシュ・公開は、利用者の指示があったときだけ行う。
 - **`?v=` を上げるタイミング**：公開する変更のまとまりごとに1回上げる。まだ公開していない変更の途中では、重ねて上げない。
 - **`?v=` をそろえるページ**：次の8つの HTML（ページを足したら、ここにも足す）。`index.html`・`stats.html`・`analysis_iki.html`・`mistype.html`・`weak-words.html`・`settings.html`・`layouts.html`・`text-manager.html`。まとめて上げるときは（N を今の番号、M を N+1 にして）
