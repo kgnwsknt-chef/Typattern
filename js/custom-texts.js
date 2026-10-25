@@ -7,6 +7,8 @@ const CustomTexts = (function () {
   const RANGES = { normal: [240, 360], short: [70, 110] };
   // 単語リストは、全部の語をスペースでつないだ長さがこれ以上必要（単語モードのお題 約300文字を作れるように）
   const WORDS_MIN_TOTAL = 300;
+  // 文章の長さの下限（文字数。日本語は読みのかなの数）。数文字では1回のつまずきで平均 IKI が大きく変わり、測る意味が薄いため
+  const TEXT_MIN_LENGTH = 30;
   const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他" };
 
   // 英語でよくある、US キーボードで打てない文字の置き換え
@@ -129,7 +131,11 @@ const CustomTexts = (function () {
           "で、単語モードのお題（約300文字）を作るには " + WORDS_MIN_TOTAL + " 以上必要です");
       }
     }
-    if (out.length < 2 && !errors.length) err(null, kind === "words" ? "単語が2語以上必要です" : "お題が短すぎます（2文字以上必要です）");
+    if (kind === "words") {
+      if (out.length < 2 && !errors.length) err(null, "単語が2語以上必要です");
+    } else if (out.length < TEXT_MIN_LENGTH && !errors.length) {
+      err(null, "お題が短すぎます（" + out.length + (lang === "ja" ? "かな" : "文字") + "。" + TEXT_MIN_LENGTH + (lang === "ja" ? "かな" : "文字") + "以上必要です）");
+    }
     out.mode = modeFor(kind, out.length);
     return out;
   }
