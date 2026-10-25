@@ -102,7 +102,6 @@ board
 boat
 body
 boil
-bone
 book
 born
 borrow
@@ -124,6 +123,7 @@ brief
 bright
 bring
 broad
+bronze
 brother
 brown
 brush
@@ -296,6 +296,7 @@ example
 except
 exhibit
 exist
+exotic
 expect
 explain
 extra
@@ -347,6 +348,7 @@ focus
 follow
 food
 foot
+football
 force
 forget
 fork
@@ -412,11 +414,9 @@ hide
 high
 highly
 highway
-hill
 history
 hit
 hold
-hole
 home
 hook
 hope
@@ -560,6 +560,7 @@ name
 nature
 near
 need
+neighbor
 neutron
 never
 new
@@ -585,6 +586,7 @@ offer
 office
 offset
 often
+ohm
 oil
 okay
 old
@@ -595,6 +597,8 @@ open
 order
 other
 our
+outdoor
+outgoing
 output
 outside
 oven
@@ -610,6 +614,7 @@ pair
 paper
 park
 part
+partner
 party
 pass
 past
@@ -674,7 +679,6 @@ quiet
 quite
 quote
 rabbit
-race
 radii
 radio
 rain
@@ -692,18 +696,14 @@ reject
 reply
 rest
 return
-rice
 rich
-ride
 right
-ring
 rise
 risk
 river
 road
 rock
 role
-roll
 roof
 room
 root
@@ -834,7 +834,9 @@ strong
 student
 study
 style
+subgroup
 submit
+subway
 suffer
 sugar
 suggest
@@ -938,7 +940,6 @@ wall
 want
 war
 warm
-wash
 waste
 watch
 water
@@ -946,7 +947,6 @@ wave
 way
 weak
 wealth
-wear
 weather
 wedding
 week
