@@ -122,7 +122,8 @@ const Levels = (function () {
   }
 
   // インジケーターの帯の長さ（0〜PACE_STEPS 段）。今のペースで基準の量（英語 400文字・日本語 280文字）を打つと
-  // 何秒かかるかを求め、目標の秒数（maxSec）未満なら満タン。届かなければ、遅れ1秒ごとに1段ずつ短くする
+  // 何秒かかるかを求め、目標の秒数（maxSec）未満なら満タン。届かなければ、遅れ1秒ごとに1段ずつ短くする。
+  // どれだけ遅れても1段は残す（一番左のマスを赤にして、打っている間は灰色にしない）
   const PACE_STEPS = 20;
 
   // インジケーターの色（docs/levels.md）。帯の長さ steps で決める
@@ -137,7 +138,7 @@ const Levels = (function () {
   function paceSteps(rate, target, chars) {
     const sec = chars / rate;
     if (sec < target.maxSec) return PACE_STEPS;
-    return Math.max(0, PACE_STEPS - 1 - Math.floor(sec - target.maxSec));
+    return Math.max(1, PACE_STEPS - 1 - Math.floor(sec - target.maxSec));
   }
 
   // 達成レベルに数えないモード（その他・練習モード）で打ったときの目標は、文章の目標を使う
