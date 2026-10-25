@@ -10,6 +10,8 @@ const Store = (function () {
   const SCHEMA_VERSION = 4; // 記録1件の形式の版（4：events にキーの行 "k" を足し、"+" の時刻を「その文字を生んだ最後のキーの時刻」にした）
   const EXPORT_APP = "typattern"; // 書き出しファイルの app 欄
   const RANK_INDEX = "rank"; // [lang, mode, keyLayout, result.avgIki]
+  // なくしたモード。その記録は消さずに残し（書き出しにも入れる）、ページでは読まない。決まりは docs/storage.md
+  const RETIRED_MODES = ["short"];
   // 正確率がこれ未満の記録はランキングに載せない（記録は残す）。設定のページで変えられる（js/settings.js の rankMinAccuracy。初期値 95）
   function rankMinAccuracy() {
     return Settings.get("rankMinAccuracy");
@@ -164,10 +166,17 @@ const Store = (function () {
     });
   }
 
-  // 全概要を古い順に返す
-  function getAllSessions() {
+  // 全概要を古い順に返す（なくしたモードの記録も含む。書き出し用）
+  function readAllSessions() {
     return tx("sessions", "readonly", function (t) {
       return t.objectStore("sessions").index("finishedAt").getAll();
+    });
+  }
+
+  // ページで使う概要を古い順に返す（なくしたモードの記録は除く）
+  function getAllSessions() {
+    return readAllSessions().then(function (all) {
+      return all.filter(function (s) { return RETIRED_MODES.indexOf(s.mode) === -1; });
     });
   }
 
@@ -206,7 +215,7 @@ const Store = (function () {
 
   // その配列で打った記録の数（記録に使われた配列は上書き・削除させない）
   function countSessionsWithLayout(id) {
-    return getAllSessions().then(function (all) {
+    return readAllSessions().then(function (all) {
       return all.filter(function (s) { return s.keyLayout === id; }).length;
     });
   }
@@ -214,8 +223,20 @@ const Store = (function () {
   // ---- お題のページで追加したお題（texts） ----
   // 1件 { id: "言語/名前", name, lang, kind: "text"|"words", mode, length, text, lines, words, source, savedAt }。形式は docs/storage.md
 
+  // 短い文章（"short"）で保存したお題は、読んだときに "other" に書き換えて保存し直す
   function getAllTexts() {
-    return tx("texts", "readonly", function (t) { return t.objectStore("texts").getAll(); });
+    return tx("texts", "readonly", function (t) { return t.objectStore("texts").getAll(); }).then(function (all) {
+      const retired = all.filter(retiredText);
+      if (!retired.length) return all;
+      retired.forEach(function (x) { x.mode = "other"; });
+      return tx("texts", "readwrite", function (t) {
+        retired.forEach(function (x) { t.objectStore("texts").put(x); });
+      }).then(function () { return all; });
+    });
+  }
+
+  function retiredText(x) {
+    return x.kind === "text" && RETIRED_MODES.indexOf(x.mode) !== -1;
   }
 
   // 同じ id があれば上書きする（上書きしてよいかは呼ぶ側で確かめる）
@@ -229,7 +250,7 @@ const Store = (function () {
 
   // 書き出すファイルの中身（記録・登録したキー配列・追加したお題）
   function exportData() {
-    return Promise.all([getAllSessions(), getAllRaws(), getAllLayouts(), getAllTexts()]).then(function (all) {
+    return Promise.all([readAllSessions(), getAllRaws(), getAllLayouts(), getAllTexts()]).then(function (all) {
       return {
         app: EXPORT_APP,
         schemaVersion: SCHEMA_VERSION,
@@ -300,6 +321,7 @@ const Store = (function () {
     const texts = Array.isArray(data.texts) ? data.texts.filter(function (x) {
       return x && typeof x.id === "string" && typeof x.source === "string";
     }) : [];
+    texts.forEach(function (x) { if (retiredText(x)) x.mode = "other"; });
     return Promise.all([
       tx("sessions", "readonly", function (t) { return t.objectStore("sessions").getAllKeys(); }),
       getAllLayouts(),

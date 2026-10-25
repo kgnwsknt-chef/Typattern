@@ -3,13 +3,13 @@
 const CustomTexts = (function () {
   "use strict";
 
-  // 長さで振り分けるモード（英語は文字数、日本語は読みのかなの数。組み込みのお題の約300・約90文字に2割の幅）
-  const RANGES = { normal: [240, 360], short: [70, 110] };
+  // 長さで振り分けるモード（英語は文字数、日本語は読みのかなの数。組み込みのお題の約300文字に2割の幅）
+  const RANGES = { normal: [240, 360] };
   // 単語リストは、全部の語をスペースでつないだ長さがこれ以上必要（単語モードのお題 約300文字を作れるように）
   const WORDS_MIN_TOTAL = 300;
   // 文章の長さの下限（文字数。日本語は読みのかなの数）。数文字では1回のつまずきで平均 IKI が大きく変わり、測る意味が薄いため
   const TEXT_MIN_LENGTH = 30;
-  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他" };
+  const MODE_NAME = { normal: "文章", words: "単語", other: "その他" };
 
   // 英語でよくある、US キーボードで打てない文字の置き換え
   const EN_FIXES = [
@@ -24,7 +24,6 @@ const CustomTexts = (function () {
   function modeFor(kind, length) {
     if (kind === "words") return "words";
     if (length >= RANGES.normal[0] && length <= RANGES.normal[1]) return "normal";
-    if (length >= RANGES.short[0] && length <= RANGES.short[1]) return "short";
     return "other";
   }
 

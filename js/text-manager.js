@@ -63,7 +63,7 @@
     modeBox.hidden = true;
   }
 
-  // 確かめた文章が長さから文章・短い文章に当たるときは、そのモードで使うか「その他」で使うかを選べるようにする
+  // 確かめた文章が長さから文章に当たるときは、そのモードで使うか「その他」で使うかを選べるようにする
   // （単語リストはいつも単語、長さが当たらない文章はいつもその他なので、選ぶものはない）
   function offerModes(lang, kind, auto) {
     if (kind !== "text" || auto === "other") return;
@@ -96,20 +96,13 @@
     msgEl.classList.toggle("tm-warn", checked.kind === "text" && p.mode === "other");
   }
 
-  // 長さが文章・短い文章のどちらにも当たらず「その他」になる理由（例「文章（240〜360文字）まで 20文字足りません」）
+  // 長さが文章に当たらず「その他」になる理由（例「文章（240〜360文字）まで 20文字足りないため、その他になります」）
   function otherReason(lang, length) {
     const unit = lang === "ja" ? "かな" : "文字";
     const n = CustomTexts.RANGES.normal;
-    const s = CustomTexts.RANGES.short;
-    const range = function (name, r) { return name + "（" + r[0] + "〜" + r[1] + unit + "）"; };
-    if (length < s[0]) {
-      return range("短い文章", s) + "まで " + (s[0] - length) + unit + "足りないため、その他になります";
-    }
-    if (length < n[0]) {
-      return range("短い文章", s) + "より " + (length - s[1]) + unit + "多く、" + range("文章", n) + "まで " + (n[0] - length) + unit +
-        "足りないため、その他になります";
-    }
-    return range("文章", n) + "より " + (length - n[1]) + unit + "多いため、その他になります";
+    const range = "文章（" + n[0] + "〜" + n[1] + unit + "）";
+    if (length < n[0]) return range + "まで " + (n[0] - length) + unit + "足りないため、その他になります";
+    return range + "より " + (length - n[1]) + unit + "多いため、その他になります";
   }
 
   // 最初から入っているお題の名前を読む（texts/index.json と wordlists/index.json）
@@ -123,7 +116,7 @@
     });
   }
 
-  // 最初から入っているお題の中身を読む（閲覧用）。文章（.txt）・短い文章（_short.txt）・単語リスト
+  // 最初から入っているお題の中身を読む（閲覧用）。文章（.txt）・単語リスト
   // 読み取りは追加したお題と同じ（CustomTexts.parse）。モードは長さではなくファイルで決まる
   function loadBuiltinTexts() {
     const get = function (path) {
@@ -132,11 +125,9 @@
     const jobs = [];
     ["en", "ja"].forEach(function (lang) {
       (builtinIndex.texts[lang] || []).forEach(function (name) {
-        [["normal", ".txt"], ["short", "_short.txt"]].forEach(function (m) {
-          jobs.push(get("texts/" + lang + "/" + name + m[1]).then(function (src) {
-            return src === null ? null : builtinItem(lang, "text", name, m[0], src);
-          }));
-        });
+        jobs.push(get("texts/" + lang + "/" + name + ".txt").then(function (src) {
+          return src === null ? null : builtinItem(lang, "text", name, "normal", src);
+        }));
       });
       (builtinIndex.wordlists[lang] || []).forEach(function (name) {
         jobs.push(get("wordlists/" + lang + "/" + name + ".txt").then(function (src) {

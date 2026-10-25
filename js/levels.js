@@ -16,7 +16,7 @@ const Levels = (function () {
     return rows.map(function (r, i) { return { name: r[0], maxSec: r[1], category: r[2], index: i }; });
   })();
 
-  // 達成レベルに数えるモード（短い文章は短くて速く出やすいので数えない。その回のレベルは出す）
+  // 達成レベルに数えるモード（その他は長さがまちまちなので数えない。練習モードは数えない）
   const COUNTED_MODES = ["normal", "words"];
 
   // レベルを出す正確率の下限(%)。ランキングの基準（設定で変えられる）とは別に、95% で固定する
@@ -59,7 +59,7 @@ const Levels = (function () {
     return fromRate(rateOfSession(s), charsFor(s.lang));
   }
 
-  // 達成レベル：その言語・モードの記録のうち、一番よいレベル（なければ null）。短い文章は数えない
+  // 達成レベル：その言語・モードの記録のうち、一番よいレベル（なければ null）。COUNTED_MODES 以外は数えない
   function achieved(sessions, lang, mode) {
     if (COUNTED_MODES.indexOf(mode) === -1) return null;
     let best = null;
@@ -104,7 +104,7 @@ const Levels = (function () {
   }
 
   // 達成レベルが上がった回の一覧（記録の id → { lang, mode, level }）。sessions は古い順。
-  // 言語・モードの組ごとに、それまでの達成レベルを初めて超えた回。短い文章は数えない
+  // 言語・モードの組ごとに、それまでの達成レベルを初めて超えた回。COUNTED_MODES 以外は数えない
   function levelUps(sessions) {
     const best = {};
     const ups = new Map();
@@ -140,7 +140,7 @@ const Levels = (function () {
     return Math.max(0, PACE_STEPS - 1 - Math.floor(sec - target.maxSec));
   }
 
-  // 短い文章で打ったときの目標は、文章の目標を使う
+  // 達成レベルに数えないモード（その他・練習モード）で打ったときの目標は、文章の目標を使う
   function targetMode(mode) {
     return COUNTED_MODES.indexOf(mode) === -1 ? "normal" : mode;
   }

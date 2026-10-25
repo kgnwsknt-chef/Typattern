@@ -3,7 +3,7 @@
 
   // お題の言語（"en" 英語 / "ja" 日本語）。画面上部の「言語」で選ぶ
   let lang = "en";
-  // お題ファイルの置き場所。texts/<言語>/<題材名>.txt、短縮版は <題材名>_short.txt
+  // お題ファイルの置き場所。texts/<言語>/<題材名>.txt
   function textDir() { return "texts/" + lang + "/"; }
   // 単語モードの単語リストの置き場所。wordlists/<言語>/<リスト名>.txt（1行1語、# の行は読み飛ばす）
   function wordlistDir() { return "wordlists/" + lang + "/"; }
@@ -89,7 +89,7 @@
   }
 
   // 状態
-  // 記録のモード（"normal" 文章 / "short" 短い文章 / "words" 単語 / "other" その他＝追加したお題で長さが文章・短い文章に当たらないもの）。ランキングはモードごとに分ける
+  // 記録のモード（"normal" 文章 / "words" 単語 / "other" その他＝追加したお題で長さが文章に当たらないもの、ほかに練習モード）。ランキングはモードごとに分ける
   let mode = "normal";
   let sources = []; // 今のモードのお題の元。文章は { name, text }、単語は { name, words }
   let current = null; // 今のお題 { name, text }。やり直しでは同じものを使う
@@ -150,7 +150,7 @@
     if (mode === FASTER) return loadFasterSources();
     const builtin = mode === "words" ? loadWordlists()
       : mode === "other" ? Promise.resolve([]) // 「その他」は追加したお題だけ
-      : loadTexts(mode === "short" ? "_short.txt" : ".txt");
+      : loadTexts();
     return Promise.all([builtin, loadCustomTexts()]).then(function (v) {
       const list = v[0].concat(v[1]);
       if (list.length === 0) {
@@ -224,14 +224,14 @@
   }
 
   // texts/index.json に書かれた題材のお題をすべて読み込む
-  function loadTexts(suffix) {
+  function loadTexts() {
     const dir = textDir();
     return fetchText("texts/index.json")
       .then(function (json) {
         const names = JSON.parse(json)[lang] || [];
         return Promise.all(names.map(function (name) {
-          // 短縮版がない題材は飛ばす（失敗しても他の題材は使う）
-          return fetchText(dir + name + suffix)
+          // 読めない題材は飛ばす（失敗しても他の題材は使う）
+          return fetchText(dir + name + ".txt")
             .catch(function (err) {
               console.warn(err);
               return "";
@@ -345,7 +345,7 @@
   function showLoadError(err) {
     if (err && err.message === "NO_OTHER") {
       // 「その他」は追加したお題だけなので、まだなければ追加のしかたを案内する
-      textEl.textContent = (lang === "ja" ? "日本語" : "英語") + "の「その他」のお題はまだありません。「設定」のページから開く「お題」のページで、文章（240〜360文字、70〜110文字のどちらにも入らない長さ）を追加すると、ここで打てます。";
+      textEl.textContent = (lang === "ja" ? "日本語" : "英語") + "の「その他」のお題はまだありません。「設定」のページから開く「お題」のページで、文章（240〜360文字に入らない長さ）を追加すると、ここで打てます。";
       input.disabled = true;
       return;
     }
@@ -651,7 +651,7 @@
 
   // ---- インジケーター（決まりは docs/levels.md の「打っている間のインジケーター」） ----
 
-  // 目標：この言語・モードの達成レベルの次（短い文章・その他は文章の目標）。一番上を達成していれば null
+  // 目標：この言語・モードの達成レベルの次（その他・練習モードは文章の目標）。一番上を達成していれば null
   // 設定で消しているとき・記録をまだ読み込んでいないときも null（出さない）
   function setGoal() {
     goal = allSessions && Settings.get("indicator")
@@ -902,7 +902,7 @@
   // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram" };
+  const MODE_NAME = { normal: "文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram" };
 
   // 今回のレベルと文字/秒。正確率が基準未満なら「-」
   function renderLevel(session) {

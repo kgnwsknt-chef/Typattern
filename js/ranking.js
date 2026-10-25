@@ -3,7 +3,7 @@ const Ranking = (function () {
   "use strict";
 
   const LANG_LABEL = { en: "英語", ja: "日本語" };
-  const MODE_LABEL = { normal: "文章", short: "短い文章", words: "単語", other: "その他" };
+  const MODE_LABEL = { normal: "文章", words: "単語", other: "その他" };
 
   // 区分（言語・モード・配列）の表示名（例: 英語・文章・QWERTY、日本語・文章・tsukimisou-v2）
   // 登録した配列は、利用者が付けた配列名のまま出す
@@ -89,7 +89,7 @@ const Ranking = (function () {
   }
 
   // その回のレベルと文字/秒（例「SB（6.78）」）。レベルがなければ「-」（js/levels.js、docs/levels.md）
-  // 短い文章は達成レベルに数えないので、ランキングでもレベルを出さない（空欄）
+  // 達成レベルに数えないモード（その他）は、ランキングでもレベルを出さない（空欄）
   function levelText(s) {
     if (Levels.COUNTED_MODES.indexOf(s.mode) === -1) return "";
     const level = Levels.ofSession(s);

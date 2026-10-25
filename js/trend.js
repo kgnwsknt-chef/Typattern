@@ -254,7 +254,7 @@ const Trend = (function () {
   // ---- 補助 ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", short: "短い文章", words: "単語", other: "その他" };
+  const MODE_NAME = { normal: "文章", words: "単語", other: "その他" };
 
   // その回のレベルと文字/秒（docs/levels.md）
   function levelTip(s) {

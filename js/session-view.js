@@ -111,7 +111,7 @@ const SessionView = (function () {
       "ミス " + r.misses + "（未修正 " + r.uncorrected + "）",
       r.timeSec.toFixed(1) + " 秒"
     ];
-    // 短い文章は達成レベルに数えないので、ランキングと同じくレベルを出さない
+    // 達成レベルに数えないモード（その他）は、ランキングと同じくレベルを出さない
     if (Levels.COUNTED_MODES.indexOf(session.mode) !== -1) {
       parts.push("レベル " + (level ? level.name : "-") + (rate !== null ? "（" + rate.toFixed(2) + " 文字/秒）" : ""));
     }
