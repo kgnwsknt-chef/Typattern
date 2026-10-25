@@ -122,7 +122,8 @@
   }
 
   function redrawHeatmaps() {
-    const opts = { selected: bigramTable.selected(), onSelect: function (r) { bigramTable.show(r.gram); } };
+    // W A S D で動かしたとき（byKey）はページをスクロールしない。データのないマスに止まったら（r が null）分布を消す
+    const opts = { selected: bigramTable.selected(), keyMove: true, onSelect: function (r, byKey) { bigramTable.show(r ? r.gram : null, byKey); } };
     NGram.drawHeatmap(hmCountEl, hmRows, "count", hmBase, opts);
     NGram.drawHeatmap(hmIkiEl, hmRows, "iki", hmBase, opts);
   }

@@ -145,12 +145,13 @@ const NGram = (function () {
 
     // 表の行や、表の外（bigram の2次元ヒストグラムのマス）から選ぶ（同じものをもう一度選んでも閉じない）
     // 選んだときは、表の中をその行までスクロールし、分布が見えるところまでページをスクロールする
-    function show(gram) {
+    // keepPage なら、ページはスクロールしない（2次元ヒストグラムをキーで動かしたとき）。gram が null なら選択を外して分布を消す
+    function show(gram, keepPage) {
       select(gram);
       if (selected === null) return;
       const tr = containerEl.querySelector("tr.bg-selected");
       if (tr) containerEl.scrollTop += tr.getBoundingClientRect().top - containerEl.getBoundingClientRect().top - containerEl.clientHeight / 2;
-      if (distEl) distEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      if (distEl && !keepPage) distEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
 
     // 表と分布・推移を描き直す（推移の横軸を切り替えたとき）
@@ -358,7 +359,27 @@ const NGram = (function () {
     yTitle.setAttribute("transform", "rotate(90 12 " + T + ")");
     svg.appendChild(yTitle);
 
-    // マス
+    // マス。データのあるマスはクリック（または Enter）で onSelect(行)。
+    // opts.keyMove（IKI のページ）なら、Tab で入れるのは1マスだけ（選んでいるマス、なければ前にキーで止まったマス、
+    // なければ rows の最初の bigram のマス）で、そこから W A S D（押したキーの位置 e.code）で上下左右に動かす
+    // （W・S は2キー目、A・D は1キー目。端では反対の端に回る）。動いた先にデータがあれば onSelect(行, true)、
+    // なければ onSelect(null, true)（選択を外す）。矢印キーはブラウザに任せる
+    const keyMove = !!(opts.keyMove && opts.onSelect);
+    const inGrid = function (g) { return !!g && keys.indexOf(g[0]) !== -1 && keys.indexOf(g[1]) !== -1; };
+    const cursor = sel || (inGrid(el._hmCursor) ? el._hmCursor : rows[0].gram);
+    const rectOf = new Map();
+    const MOVES = { KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0] };
+    function move(e, xi, yi) {
+      const mv = MOVES[e.code];
+      if (!keyMove || !mv || e.ctrlKey || e.altKey || e.metaKey) return false;
+      e.preventDefault();
+      const g = keys[(xi + mv[0] + n) % n] + keys[(yi + mv[1] + n) % n];
+      el._hmCursor = g;
+      opts.onSelect(cells.get(g) || null, true); // 選び直すと図が描き直される
+      const next = el._hmRects && el._hmRects.get(g);
+      if (next) next.focus();
+      return true;
+    }
     keys.forEach(function (first, xi) {
       keys.forEach(function (second, yi) {
         const r = cells.get(first + second);
@@ -372,12 +393,24 @@ const NGram = (function () {
           : kind === "miss" ? r.count + " 回中 " + r.misses + " 回押し間違い（" + (r.rate * 100).toFixed(1) + "%）"
           : r.count + " 回・平均 " + Math.round(r.avg) + " ms");
         rect.appendChild(tip);
-        if (r && opts.onSelect) {
-          rect.setAttribute("class", "hm-cell hm-click");
-          rect.setAttribute("tabindex", "0");
-          rect.addEventListener("click", function () { opts.onSelect(r); });
+        if (opts.onSelect && (r || keyMove)) {
+          // keyMove なら、データのないマスもキーで止まれるようにフォーカスできる（クリック・Enter では何もしない）
+          rect.setAttribute("class", r ? "hm-cell hm-click" : "hm-cell hm-nav");
+          rect.setAttribute("tabindex", !keyMove || first + second === cursor ? "0" : "-1");
+          rectOf.set(first + second, rect);
+          if (r) {
+            rect.addEventListener("click", function () {
+              el._hmCursor = r.gram;
+              opts.onSelect(r);
+            });
+          }
           rect.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onSelect(r); }
+            if (move(e, xi, yi)) return;
+            if (r && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              el._hmCursor = r.gram;
+              opts.onSelect(r);
+            }
           });
         }
         svg.appendChild(rect);
@@ -398,6 +431,10 @@ const NGram = (function () {
     if (opts.selected && cells.has(opts.selected)) {
       const sx = keys.indexOf(opts.selected[0]), sy = keys.indexOf(opts.selected[1]);
       svg.appendChild(svgEl("rect", { x: L + sx * C, y: T + sy * C, width: C, height: C, class: "hm-selected" }));
+    } else if (keyMove && inGrid(el._hmCursor)) {
+      // W A S D でデータのないマスに止まっているとき：そのマスを点線の枠で囲む（隣のマスに線が隠れないよう、最後に描く）
+      const cx = keys.indexOf(el._hmCursor[0]), cy = keys.indexOf(el._hmCursor[1]);
+      svg.appendChild(svgEl("rect", { x: L + cx * C, y: T + cy * C, width: C, height: C, class: "hm-cursor" }));
     }
 
     // 凡例（色の帯と目盛り）
@@ -418,6 +455,7 @@ const NGram = (function () {
     svg.appendChild(svgText(L + lw, ly + lh + 11, labels[2], "end"));
 
     el.appendChild(svg);
+    el._hmRects = rectOf; // キーで動いた後、描き直した図の同じマスにフォーカスを戻すのに使う
   }
 
   // 回数の色。f = 回数 ÷ 一番多い回数（0〜1）。白に近い青 → 濃い青
