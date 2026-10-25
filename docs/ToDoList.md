@@ -29,6 +29,10 @@
 
 - ファイル同期：記録の保存先は IndexedDB を本体にしたまま、パソコンの Chrome・Edge では File System Access API で実ファイルにも同期する機能を足す。
 
+## 文書の整理
+
+- メジャーバージョンを上げる（v1.0 など）ときは、その前に全部の文書（`docs/`・README・CLAUDE.md）を見直す（重複・古い説明・並びの順）。
+
 ## 公開前の残り
 
 - リンクカード（OGP）・説明文（meta description）・ファビコン。
