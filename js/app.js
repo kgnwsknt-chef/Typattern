@@ -868,14 +868,18 @@
       const avg = e ? e.values.reduce(function (a, b) { return a + b; }, 0) / e.values.length : null;
       const iki = cell("bg-avg", avg === null ? "-" : String(Math.round(avg)));
       if (avg !== null && base) iki.style.color = Rhythm.color(avg, base);
-      // 達成：今回の IKI が目標（速い方の平均）以下で、その bigram の単語の正確率が設定の基準以上
+      // 達成：今回の IKI が目標以下で、その bigram の単語の正確率が設定の基準以上
+      // 目標 ＝ 速い方の「平均 ＋ SD」と「平均 × 1.5」の小さい方（ばらつきが大きくても、平均の 1.5 倍で頭打ち）
+      const goalIki = WeakWords.fasterGoal(p.row.fast);
       const span = spans.get(typeof p.word === "string" ? p.word : p.word.reading) || { length: 0, misses: 0 };
-      const reached = avg !== null && avg <= p.row.fast.avg && Store.accuracy(span.length, span.misses) >= minAccuracy;
+      const reached = avg !== null && avg <= goalIki && Store.accuracy(span.length, span.misses) >= minAccuracy;
       const mark = cell("faster-reached", reached ? "✓" : "");
       if (reached) mark.title = "今回の IKI が目標以下で、正確率が " + minAccuracy + "% 以上";
       cell("", String(span.misses));
       cell("", String(Math.round(p.row.slow.avg)));
-      cell("", String(Math.round(p.row.fast.avg)));
+      const goalCell = cell("", String(Math.round(goalIki)));
+      goalCell.title = "速い方の平均 " + Math.round(p.row.fast.avg) + " ms ＋ SD " + Math.round(p.row.fast.sd) + " ms と、平均 × 1.5（" +
+        Math.round(p.row.fast.avg * 1.5) + " ms）の小さい方";
       cell("ww-text", groupName(p.row.fast));
       body.appendChild(tr);
     });

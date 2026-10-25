@@ -125,7 +125,7 @@
       <!-- 他では速い bigram の練習のとき：bigram ごとの IKI（docs/weak-words.md の「他では速い bigram の練習」） -->
       <div id="faster-result" class="weak-result" hidden>
         <h3 class="hm-title">bigram ごとの IKI</h3>
-        <p class="rhythm-legend">今回の IKI = この回にその bigram を打った間隔の平均（間違えたキーなどが絡む組は除く。お題のどこに出てきても数える）／ 記録の IKI = この言語・配列のふだんの記録での平均 ／ 目標の IKI = いちばん速く打てている言語・配列（目標の言語・配列）での平均 ／ 達成 = 今回の IKI が目標の IKI 以下で、その bigram の単語の正確率が設定の「ランキングに載せる正確率」以上なら ✓ ／ ミス回数 = その bigram の単語で、間違ったまま残した文字の数（直したミスは数えない）／ 色はこの回の全部の間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い</p>
+        <p class="rhythm-legend">今回の IKI = この回にその bigram を打った間隔の平均（間違えたキーなどが絡む組は除く。お題のどこに出てきても数える）／ 記録の IKI = この言語・配列のふだんの記録での平均 ／ 目標の IKI = いちばん速く打てている言語・配列（目標の言語・配列）での「平均 ＋ SD（ばらつき）」と「平均 × 1.5」の小さい方 ／ 達成 = 今回の IKI が目標の IKI 以下で、その bigram の単語の正確率が設定の「ランキングに載せる正確率」以上なら ✓ ／ ミス回数 = その bigram の単語で、間違ったまま残した文字の数（直したミスは数えない）／ 色はこの回の全部の間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い</p>
         <div id="faster-result-table" class="weak-result-table faster-result-table"></div>
       </div>
 

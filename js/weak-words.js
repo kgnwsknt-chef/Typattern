@@ -130,17 +130,24 @@ const WeakWords = (function () {
 
   // 言語・配列で差のある bigram。groups は "言語\t配列" → NGram.accumulate(…, 2, …) の map
   // bigram ごとに、BIGRAM_MIN 回以上出てきた言語・配列が2つ以上あれば、一番速いものを基準にして、ほかのそれぞれを1行にする
-  // 行 { gram, diff, kind: "lang"・"layout"・"both", slow: { lang, layout, avg, count }, fast: 同じ形 }。差の大きい順に LIST_SIZE 行
-  // slowOf を渡すと、遅い方がその言語・配列（{ lang, layout }）の行だけにする（他では速い bigram の練習の候補）
+  // 行 { gram, diff, kind: "lang"・"layout"・"both", slow: { lang, layout, avg, sd, count }, fast: 同じ形 }。差の大きい順に LIST_SIZE 行
+  // slowOf を渡すと、遅い方がその言語・配列（{ lang, layout }）の行だけにし、遅い方がもう目標（fasterGoal）以下の行も外す（他では速い bigram の練習の候補）
+  // 他では速い bigram の練習の目標の IKI：速い方の「平均 ＋ SD」と「平均 × 1.5」の小さい方（docs/weak-words.md）
+  function fasterGoal(fast) {
+    return Math.min(fast.avg + fast.sd, fast.avg * 1.5);
+  }
+
   function bigramGaps(groups, slowOf) {
-    const byGram = new Map(); // bigram → [{ lang, layout, avg, count }]
+    const byGram = new Map(); // bigram → [{ lang, layout, avg, sd, count }]
     groups.forEach(function (map, key) {
       const k = key.split("\t");
       map.forEach(function (e, gram) {
         if (e.values.length < BIGRAM_MIN) return;
         const avg = e.values.reduce(function (a, b) { return a + b; }, 0) / e.values.length;
+        // 1回ごとの IKI の標本標準偏差（n-1 で割る。BIGRAM_MIN 回以上あるので求められる）。他では速い bigram の練習の目標に使う
+        const sd = Math.sqrt(e.values.reduce(function (a, v) { return a + (v - avg) * (v - avg); }, 0) / (e.values.length - 1));
         if (!byGram.has(gram)) byGram.set(gram, []);
-        byGram.get(gram).push({ lang: k[0], layout: k[1], avg: avg, count: e.values.length });
+        byGram.get(gram).push({ lang: k[0], layout: k[1], avg: avg, sd: sd, count: e.values.length });
       });
     });
     const out = [];
@@ -150,6 +157,7 @@ const WeakWords = (function () {
       list.forEach(function (slow) {
         if (slow === fast || slow.avg <= fast.avg) return;
         if (slowOf && (slow.lang !== slowOf.lang || slow.layout !== slowOf.layout)) return;
+        if (slowOf && slow.avg <= fasterGoal(fast)) return; // もう速い方のばらつきの範囲に入っている（追いついている）
         const kind = slow.layout === fast.layout ? "lang" : slow.lang === fast.lang ? "layout" : "both";
         out.push({ gram: gram, diff: slow.avg - fast.avg, kind: kind, slow: slow, fast: fast });
       });
@@ -234,6 +242,6 @@ const WeakWords = (function () {
     MIN_COUNT: MIN_COUNT, LIST_SIZE: LIST_SIZE, PRACTICE_WORDS: PRACTICE_WORDS, REPEAT: REPEAT, BIGRAM_MIN: BIGRAM_MIN,
     add: add, rows: rows, slowList: slowList, missList: missList, choose: choose,
     practiceWords: practiceWords, results: results, load: load, loadDisplays: loadDisplays, recentRuns: recentRuns,
-    recentPerGroup: recentPerGroup, bigramGaps: bigramGaps, loadFasterCandidates: loadFasterCandidates, chooseFaster: chooseFaster
+    recentPerGroup: recentPerGroup, fasterGoal: fasterGoal, bigramGaps: bigramGaps, loadFasterCandidates: loadFasterCandidates, chooseFaster: chooseFaster
   };
 })();
