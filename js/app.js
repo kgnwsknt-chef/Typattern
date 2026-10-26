@@ -887,9 +887,13 @@
       start += w.length + 1;
     });
     const minAccuracy = Settings.get("rankMinAccuracy");
-    ["bigram", "単語", "今回の IKI(ms)", "達成", "ミス回数", "記録の IKI(ms)", "目標の IKI(ms)", "目標の言語・配列"].forEach(function (t) {
+    // 「(ms)」は改行して2行にし、列の幅を狭める
+    ["bigram", "単語", "今回の IKI\n(ms)", "達成", "ミス回数", "記録の IKI\n(ms)", "目標の IKI\n(ms)", "目標の言語・配列"].forEach(function (t) {
       const th = document.createElement("th");
-      th.textContent = t;
+      t.split("\n").forEach(function (s, i) {
+        if (i) th.appendChild(document.createElement("br"));
+        th.appendChild(document.createTextNode(s));
+      });
       hr.appendChild(th);
     });
     table.appendChild(document.createElement("thead")).appendChild(hr);
