@@ -2045,3 +2045,98 @@ a.text-btn {
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
 }
+
+/* キー配列習得の「覚えたかなの図」（js/kana-mandala.js。docs/layout-learning.md） */
+.kmd {
+  display: block;
+  width: 100%;
+  max-width: 700px;
+  height: auto;
+}
+
+.kmd .kmd-guide {
+  fill: none;
+  stroke: #d3d1c7;
+  stroke-width: 0.5;
+  stroke-dasharray: 2 4;
+}
+
+.kmd .kmd-part,
+.kmd .kmd-full {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.kmd .kmd-part {
+  stroke: #85b7eb;
+  stroke-width: 1.8;
+}
+
+.kmd .kmd-full {
+  stroke: #378add;
+  stroke-width: 3.5;
+}
+
+.kmd .kmd-petal {
+  fill: none;
+  stroke: #d3d1c7;
+  stroke-width: 0.5;
+  stroke-dasharray: 3 3;
+}
+
+.kmd .kmd-petal-full {
+  fill: #e6f1fb;
+  stroke: #378add;
+  stroke-width: 1.5;
+}
+
+.kmd text.kmd-on,
+.kmd text.kmd-off,
+.kmd text.kmd-no {
+  font-size: 11px;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.kmd circle.kmd-on {
+  fill: #e6f1fb;
+  stroke: #185fa5;
+}
+
+.kmd text.kmd-on {
+  fill: #0c447c;
+  font-weight: 600;
+}
+
+.kmd circle.kmd-off {
+  fill: #f1efe8;
+  stroke: #b4b2a9;
+  stroke-width: 0.5;
+}
+
+.kmd text.kmd-off {
+  fill: #888780;
+}
+
+.kmd circle.kmd-no {
+  fill: none;
+  stroke: #888780;
+  stroke-width: 0.5;
+  stroke-dasharray: 2 2;
+  opacity: 0.45;
+}
+
+.kmd text.kmd-no {
+  fill: #888780;
+  opacity: 0.45;
+}
+
+.kmd .kmd-note {
+  font-size: 12px;
+  fill: var(--sub);
+}
+
+.kmd .kmd-count {
+  font-size: 14px;
+  fill: var(--text);
+}
