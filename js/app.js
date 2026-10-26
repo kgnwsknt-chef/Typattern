@@ -904,16 +904,8 @@
         return td;
       };
       cell("ww-word", p.row.gram);
-      const word = cell("ww-word", typeof p.word === "string" ? p.word : "");
-      if (typeof p.word !== "string") {
-        word.textContent = p.word.display !== p.word.reading ? p.word.display + " " : p.word.reading;
-        if (p.word.display !== p.word.reading) {
-          const reading = document.createElement("span");
-          reading.className = "ww-reading";
-          reading.textContent = p.word.reading;
-          word.appendChild(reading);
-        }
-      }
+      // 単語は表示する語だけ（読みは出さない）
+      cell("ww-word", typeof p.word === "string" ? p.word : p.word.display);
       const e = grams.get(p.row.gram);
       const avg = e ? e.values.reduce(function (a, b) { return a + b; }, 0) / e.values.length : null;
       const iki = cell("bg-avg", avg === null ? "-" : String(Math.round(avg)));
