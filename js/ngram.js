@@ -374,11 +374,16 @@ const NGram = (function () {
       if (!keyMove || !mv || e.ctrlKey || e.altKey || e.metaKey) return false;
       e.preventDefault();
       const g = keys[(xi + mv[0] + n) % n] + keys[(yi + mv[1] + n) % n];
-      el._hmCursor = g;
-      opts.onSelect(cells.get(g) || null, true); // 選び直すと図が描き直される
-      const next = el._hmRects && el._hmRects.get(g);
-      if (next) next.focus();
+      choose(g, cells.get(g) || null, true);
       return true;
+    }
+    // マスを選ぶ。選び直すと図が描き直されてフォーカスが外れるので、keyMove なら描き直した図の同じマスにフォーカスを戻す
+    // （クリックした後も、続けて W A S D で動かせるように）
+    function choose(g, r, byKey) {
+      if (keyMove) el._hmCursor = g;
+      opts.onSelect(r, byKey);
+      const next = keyMove && el._hmRects && el._hmRects.get(g);
+      if (next) next.focus({ preventScroll: true });
     }
     keys.forEach(function (first, xi) {
       keys.forEach(function (second, yi) {
@@ -398,18 +403,12 @@ const NGram = (function () {
           rect.setAttribute("class", r ? "hm-cell hm-click" : "hm-cell hm-nav");
           rect.setAttribute("tabindex", !keyMove || first + second === cursor ? "0" : "-1");
           rectOf.set(first + second, rect);
-          if (r) {
-            rect.addEventListener("click", function () {
-              el._hmCursor = r.gram;
-              opts.onSelect(r);
-            });
-          }
+          if (r) rect.addEventListener("click", function () { choose(r.gram, r, false); });
           rect.addEventListener("keydown", function (e) {
             if (move(e, xi, yi)) return;
             if (r && (e.key === "Enter" || e.key === " ")) {
               e.preventDefault();
-              el._hmCursor = r.gram;
-              opts.onSelect(r);
+              choose(r.gram, r, false);
             }
           });
         }
