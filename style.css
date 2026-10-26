@@ -24,6 +24,12 @@
   --finger-2: #bfe5c0;
   --finger-3: #f5dcae;
   --finger-4: #e2c6ef;
+  /* 苦手な単語のページの bigram の分布の比べ：遅い方・速い方・そのほかの言語・配列の色 */
+  --cmp-slow: #d93036;
+  --cmp-fast: #1a6fd8;
+  --cmp-3: #2a8f3a;
+  --cmp-4: #e07b00;
+  --cmp-5: #8a3fd1;
   --kb-key-border: #b9b3a6;
   --kb-func: #e4dfd3;
   /* bigram の2次元ヒストグラム：データのないマス（回数 0・平均 IKI なし）の色 */
@@ -2001,4 +2007,41 @@ a.text-btn {
 .setting-help.tm-warn {
   color: var(--error);
   font-weight: 600;
+}
+
+/* 苦手な単語のページ：選んだ bigram の IKI の分布を、言語・配列ごとに半透明の棒で重ねる */
+.ww-compare:not(:empty) {
+  margin-bottom: 12px;
+}
+
+.cmp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.cmp-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cmp-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.6;
+}
+
+.cmp-bar {
+  opacity: 0.45;
+}
+
+.cmp-mean {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
 }

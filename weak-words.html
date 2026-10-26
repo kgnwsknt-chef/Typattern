@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern 苦手な単語</title>
-  <link rel="stylesheet" href="style.css?v=92">
+  <link rel="stylesheet" href="style.css?v=93">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -65,18 +65,20 @@
 
     <section class="stats-section">
       <h3 class="hm-title">言語・配列で差のある bigram（差の大きい順）</h3>
-      <p class="rhythm-legend">同じキーの組（bigram）を、言語・配列ごとに比べる ／ 練習モード以外のすべてのモードの記録（期間を指定しなければ、言語・配列ごとに直近の回だけ。回数は設定の「苦手な単語を数える回数」）を使い、絞り込みの言語・配列は効かせない ／ それぞれの言語・配列で5回以上出てきた bigram を比べ、一番速い言語・配列を基準に、遅い方を1行ずつ出す ／ 違い = 遅い方と速い方で違うもの（言語・配列・言語と配列）／ 差 = 遅い方の IKI − 速い方の IKI。速く打てている言語・配列があるので、遅い方も練習すれば速くなると見込める</p>
+      <p class="rhythm-legend">同じキーの組（bigram）を、言語・配列ごとに比べる ／ 練習モード以外のすべてのモードの記録（期間を指定しなければ、言語・配列ごとに直近の回だけ。回数は設定の「苦手な単語を数える回数」）を使い、絞り込みの言語・配列は効かせない ／ それぞれの言語・配列で5回以上出てきた bigram を比べ、一番速い言語・配列を基準に、遅い方を1行ずつ出す ／ 違い = 遅い方と速い方で違うもの（言語・配列・言語と配列）／ 差 = 遅い方の IKI − 速い方の IKI。速く打てている言語・配列があるので、遅い方も練習すれば速くなると見込める ／ 行をクリックで、表の上にその bigram の IKI の分布を言語・配列ごとに重ねて表示（縦軸は頻度の割合）</p>
+      <!-- 表で選んだ bigram の IKI の分布を、言語・配列ごとに重ねて比べる（初めは表の一番上の行） -->
+      <div id="ww-bigram-dist" class="ngram-dist ww-compare"></div>
       <div id="ww-bigram" class="ngram-scroll ww-table ww-bigram"></div>
     </section>
   </main>
 
-  <script src="js/store.js?v=92"></script>
-  <script src="js/keys.js?v=92"></script>
-  <script src="js/settings.js?v=92"></script>
-  <script src="js/page-footer.js?v=92"></script>
-  <script src="js/filters.js?v=92"></script>
-  <script src="js/ngram.js?v=92"></script>
-  <script src="js/weak-words.js?v=92"></script>
-  <script src="js/weak-words-page.js?v=92"></script>
+  <script src="js/store.js?v=93"></script>
+  <script src="js/keys.js?v=93"></script>
+  <script src="js/settings.js?v=93"></script>
+  <script src="js/page-footer.js?v=93"></script>
+  <script src="js/filters.js?v=93"></script>
+  <script src="js/ngram.js?v=93"></script>
+  <script src="js/weak-words.js?v=93"></script>
+  <script src="js/weak-words-page.js?v=93"></script>
 </body>
 </html>
