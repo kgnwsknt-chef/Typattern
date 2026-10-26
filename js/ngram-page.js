@@ -149,7 +149,7 @@
       nodes: [
         node("alternation（左右交互）", ["alternation"], 0, "左右の手が違う"),
         node("repeat（連打）", ["repeat"], 0, "同じキーを続けて打つ"),
-        node("SFB（同指異鍵）", ["sfb-0", "sfb-1", "sfb-2"], 0, "同じ指で、別のキーを続けて打つ"),
+        node("SFB（同指異鍵）", ["sfb-0", "sfb-1", "sfb-2"], 0, "same-finger bigram。同じ指で、別のキーを続けて打つ"),
         node("同じ行", ["sfb-0"], 1, "同じ行のキーへ横に動く（例 fg）"),
         node("1行違い", ["sfb-1"], 1, "行が1つ違う（例 ed）"),
         node("2行以上違い", ["sfb-2"], 1, "行が2つ以上違う（例 ec）"),
