@@ -166,7 +166,7 @@ const NGram = (function () {
   //   mode："run"（回数）か "day"（日付）。runs：絞り込んだ記録の数（横軸の回数の最大）。firstDay・lastDay：最初と最後の記録の日（"YYYY-MM-DD"）
   let trend = { mode: "run", runs: 0, firstDay: null, lastDay: null };
   // el に1つの行 { gram（見出しの名前）, values, tags, count, avg, sd } の IKI の分布を描き、記録の回数があればその下に推移も描く
-  // （bigram・trigram の表で使う。IKI のページの「指と段で分けた bigram・trigram」は分布だけ。drawDistribution）
+  // （bigram・trigram の表で使う。IKI のページの「指と行(row)で分けた bigram・trigram」は分布だけ。drawDistribution）
   function showDist(el, row, label, baseAvg) {
     drawDistribution(el, row, label, baseAvg);
     if (trend.runs && row.tags && row.tags[0]) drawTrend(el, row, label);

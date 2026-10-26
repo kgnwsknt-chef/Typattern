@@ -75,7 +75,7 @@
         const bi = allBi.filter(keep);
         const allTri = NGram.toRows(trigrams);
         const tri = allTri.filter(keep);
-        drawClasses(allBi, allTri, base); // 指と段で分けた分類は「回数」で絞らない
+        drawClasses(allBi, allTri, base); // 指と行(row)で分けた分類は「回数」で絞らない
         bigramTable.renderRows(bigramEl, bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
         drawKeyIki(allBi, base, kana);
@@ -131,13 +131,13 @@
     NGram.drawHeatmap(hmIkiEl, hmRows, "iki", hmBase, opts);
   }
 
-  // ---- 指と段で分けた bigram・trigram（分類は js/finger-map.js。決まりは docs/analysis_iki.md） ----
+  // ---- 指と行(row)で分けた bigram・trigram（分類は js/finger-map.js。決まりは docs/analysis_iki.md） ----
 
   // 表の行：{ name, ids: 合わせる分類の名前, level: 字下げ（0 はその表の見出しの行、1・2 はすぐ上の行の内訳）, desc: 定義（マウスを乗せると出す） }
   function node(name, ids, level, desc) { return { name: name, ids: ids, level: level || 0, desc: desc || "" }; }
   const PAIRS = ["12", "13", "14", "23", "24", "34"]; // 指の組（内側の指・外側の指）
   const pairName = function (p) { return FingerMap.FINGER_NAME[p[0]] + "と" + FingerMap.FINGER_NAME[p[1]]; };
-  const NONE = node("分類しない", ["none"], 0, "数字の段など、上段・ホーム段・下段以外のキーを含む組");
+  const NONE = node("分類しない", ["none"], 0, "指を割り当てていないキー（初期値では数字キーの行など）を含む組");
   function staggerNodes(side, name, desc) {
     const ids = PAIRS.map(function (p) { return "stagger-" + side + "-" + p; });
     return [node(name, ids, 1, desc)].concat(PAIRS.map(function (p, i) { return node(pairName(p), [ids[i]], 2); }));
@@ -150,9 +150,9 @@
         node("alternation（左右交互）", ["alternation"], 0, "左右の手が違う"),
         node("repeat（連打）", ["repeat"], 0, "同じキーを続けて打つ"),
         node("SFB（同指異鍵）", ["sfb-0", "sfb-1", "sfb-2"], 0, "同じ指で、別のキーを続けて打つ"),
-        node("同じ段", ["sfb-0"], 1, "同じ段のキーへ横に動く（例 fg）"),
-        node("1段", ["sfb-1"], 1, "段が1つ違う（例 ed）"),
-        node("2段", ["sfb-2"], 1, "上段と下段（例 ec）"),
+        node("同じ行", ["sfb-0"], 1, "同じ行のキーへ横に動く（例 fg）"),
+        node("1行", ["sfb-1"], 1, "行が1つ違う（例 ed）"),
+        node("2行以上", ["sfb-2"], 1, "行が2つ以上違う（例 ec）"),
         node("roll（ロール）", ["roll-in", "roll-out"], 0, "同じ手の別の指で続けて打つ"),
         node("内向き", ["roll-in"], 1, "小指 → 人差し指の向き（例 sd）"),
         node("外向き", ["roll-out"], 1, "人差し指 → 小指の向き（例 ds）"),
@@ -162,17 +162,18 @@
     biFeat: {
       el: document.getElementById("bc-feat"),
       idsOf: function (g) { return FingerMap.bigramBase(g) === "none" ? ["none"] : FingerMap.bigramFeatures(g); },
-      nodes: [node("段違い", PAIRS.map(function (p) { return "stagger-inner-" + p; })
-        .concat(PAIRS.map(function (p) { return "stagger-outer-" + p; })), 0, "同じ手の別の指で、段が違う")]
-        .concat(staggerNodes("inner", "内側の指が奥", "2つの指のうち、人差し指に近い方の指が奥の段（例 rd・se）"))
-        .concat(staggerNodes("outer", "外側の指が奥", "2つの指のうち、小指に近い方の指が奥の段（例 ko・in）"))
+      nodes: [node("行(row)違い", PAIRS.map(function (p) { return "stagger-inner-" + p; })
+        .concat(PAIRS.map(function (p) { return "stagger-outer-" + p; })), 0, "同じ手の別の指で、行が違う")]
+        .concat(staggerNodes("inner", "内側の指が奥", "2つの指のうち、人差し指に近い方の指が奥の行（例 rd・se）"))
+        .concat(staggerNodes("outer", "外側の指が奥", "2つの指のうち、小指に近い方の指が奥の行（例 ko・in）"))
         .concat([
-          node("scissors", ["hsb", "fsb"], 0, "隣の指で、短い方の指が奥の段（人差し指と中指は人差し指、中指と薬指は薬指、薬指と小指は小指が短い）"),
-          node("HSB（1段）", ["hsb"], 1, "half scissor bigram。段が1つ違う（例 dr・ko・pl）"),
-          node("FSB（2段）", ["fsb"], 1, "full scissor bigram。上段と下段（例 cr）"),
-          node("LSB（横の伸ばし）", ["lsb-12", "lsb-34"], 0, "lateral stretch bigram。隣の指の片方が、ホームの列から横に伸ばす"),
-          node("人差し指と中指", ["lsb-12"], 1, "人差し指が中央の列（t g b・y h n）を打つ（例 te・gd）"),
-          node("薬指と小指", ["lsb-34"], 1, "小指が外側の列（[ ] \\ '）を打つ（例 l'）"),
+          node("scissors", ["hsb", "fsb"], 0, "隣の指で、短い方の指が奥の行（人差し指と中指は人差し指、中指と薬指は薬指、薬指と小指は小指が短い）"),
+          node("HSB（1行）", ["hsb"], 1, "half scissor bigram。行が1つ違う（例 dr・ko・pl）"),
+          node("FSB（2行）", ["fsb"], 1, "full scissor bigram。上の行と下の行（例 cr）"),
+          node("LSB（横の伸ばし）", ["lsb-12", "lsb-23", "lsb-34"], 0, "lateral stretch bigram。隣の指で、2つのキーの列の離れ方が、2つの指のホームの列の離れ方より大きい"),
+          node("人差し指と中指", ["lsb-12"], 1, "初期値の割り当てでは、人差し指が中央の列（t g b・y h n）を打つ組（例 te・gd）"),
+          node("中指と薬指", ["lsb-23"], 1, "初期値の割り当てでは入る組はない（割り当てを変えたときに入る）"),
+          node("薬指と小指", ["lsb-34"], 1, "初期値の割り当てでは、小指が外側の列（[ ] \\ '）を打つ組（例 l'）"),
           NONE
         ])
     },

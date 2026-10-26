@@ -19,6 +19,11 @@
   --kb-postfix: #8a3fd1;
   /* キー配列の配列図：文字キー（白より少しだけ暗い）・その枠・機能キー（Shift・Tab など） */
   --kb-key: #fbfaf6;
+  /* 設定のページの指の割り当ての配列図：指ごとの色（人差し指・中指・薬指・小指） */
+  --finger-1: #b9d4f5;
+  --finger-2: #bfe5c0;
+  --finger-3: #f5dcae;
+  --finger-4: #e2c6ef;
   --kb-key-border: #b9b3a6;
   --kb-func: #e4dfd3;
   /* bigram の2次元ヒストグラム：データのないマス（回数 0・平均 IKI なし）の色 */
@@ -1898,7 +1903,7 @@ a.text-btn {
   font-weight: normal;
 }
 
-/* IKI のページの「指と段で分けた bigram・trigram」の表。字下げした行は、すぐ上の行の内訳 */
+/* IKI のページの「指と行(row)で分けた bigram・trigram」の表。字下げした行は、すぐ上の行の内訳 */
 .fc-table {
   margin-bottom: 16px;
   overflow-x: auto;
@@ -1929,7 +1934,7 @@ a.text-btn {
   text-align: left;
 }
 
-/* 指と段で分けた bigram・trigram：左に表、右にクリックした分類の分布と推移。狭い画面では分布を表の上に出す */
+/* 指と行(row)で分けた bigram・trigram：左に表、右にクリックした分類の分布と推移。狭い画面では分布を表の上に出す */
 .fc-block {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 290px);
@@ -1962,4 +1967,38 @@ a.text-btn {
   .fc-dist {
     position: static;
   }
+}
+
+/* 設定のページ：指の割り当ての入力欄（左手・右手を1行ずつ） */
+.finger-grid {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.finger-hand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.finger-hand-name {
+  width: 3em;
+  color: var(--sub);
+}
+
+.finger-input .setting-text {
+  width: 7em;
+}
+
+.setting-text.tm-warn-input {
+  border-color: var(--error);
+  background: var(--error-bg);
+}
+
+.setting-help.tm-warn {
+  color: var(--error);
+  font-weight: 600;
 }

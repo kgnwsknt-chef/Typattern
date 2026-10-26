@@ -1,35 +1,46 @@
-// キーごとの指の割り当て（ふつうのタッチタイピング）と、それを使った bigram・trigram の分類。
-// IKI のページ（js/ngram-page.js）で使う。決まりは docs/analysis_iki.md の「指と段で分けた bigram・trigram」
+// キーごとの指の割り当て（設定の「指の割り当て」。初期値はふつうのタッチタイピング）と、それを使った bigram・trigram の分類。
+// IKI のページ（js/ngram-page.js）で使う。決まりは docs/analysis_iki.md の「指と行(row)で分けた bigram・trigram」
 const FingerMap = (function () {
   "use strict";
 
-  // 分ける範囲は上段・ホーム段・下段の英字と記号のキーだけ（数字の段・スペースなどは分類しない）
-  // 指の番号：1 人差し指、2 中指、3 薬指、4 小指（内側から外側へ）。段：1 上段、2 ホーム段、3 下段（奥から手前へ）
-  const ROWS = ["qwertyuiop[]\\", "asdfghjkl;'", "zxcvbnm,./"];
-  const FINGERS = {
-    L: { 4: "qaz", 3: "wsx", 2: "edc", 1: "rtfgvb" },
-    R: { 1: "yuhjnm", 2: "ik,", 3: "ol.", 4: "p[]\\;'/" }
-  };
-  const CENTER = "tgbyhn";  // 人差し指が中央に伸ばす列
-  const OUTER = "[]\\'";     // 小指が外側に伸ばす列（左手の外側の列は数字の段だけなので、3段にはない）
+  // キーの行と列。行：0 数字キーの行、1 上の行、2 ホーム行、3 下の行（奥から手前へ）。
+  // 列：数字キーの行の ` を 0 とし、1・q・a・z が同じ列 1（5・t・g・b が 5、6・y・h・n が 6）。キーボードのずれ（スタッガー）は数えない
+  const ROWS = ["`1234567890-=", "qwertyuiop[]\\", "asdfghjkl;'", "zxcvbnm,./"];
   const FINGER_NAME = { 1: "人差し指", 2: "中指", 3: "薬指", 4: "小指" };
 
+  // 指の番号：1 人差し指、2 中指、3 薬指、4 小指（内側から外側へ）。割り当てていないキーは分類しない
   const info = {};
   ROWS.forEach(function (row, r) {
-    Array.from(row).forEach(function (ch) { info[ch] = { row: r + 1 }; });
+    Array.from(row).forEach(function (ch, i) { info[ch] = { row: r, col: r === 0 ? i : i + 1 }; });
   });
-  ["L", "R"].forEach(function (hand) {
-    Object.keys(FINGERS[hand]).forEach(function (f) {
-      Array.from(FINGERS[hand][f]).forEach(function (ch) {
-        info[ch].hand = hand;
-        info[ch].finger = Number(f);
-      });
+  const assigned = {};
+  const map = Settings.get("fingerMap");
+  Settings.FINGER_KEYS.forEach(function (f) {
+    Array.from(map[f]).forEach(function (ch) {
+      if (info[ch]) assigned[ch] = { hand: f[0], finger: Number(f[1]), row: info[ch].row, col: info[ch].col };
     });
   });
 
-  // キー（QWERTY の文字）の { hand, finger, row }。分けないキーは null
+  // 各指のホームの列（LSB に使う）：その指に割り当てたホーム行のキーの列。2つ以上あれば、
+  // 人差し指は外側の端、小指は内側の端（隣の指に近い方）、中指・薬指は真ん中（2つなら内側）。ホーム行のキーがなければ null
+  const homeCol = {};
+  ["L", "R"].forEach(function (hand) {
+    [1, 2, 3, 4].forEach(function (finger) {
+      // 外側へ向かって並べる（左手は列の大きい方が内側、右手は小さい方が内側）
+      const cols = Object.keys(assigned).filter(function (ch) {
+        const k = assigned[ch];
+        return k.hand === hand && k.finger === finger && k.row === 2;
+      }).map(function (ch) { return assigned[ch].col; })
+        .sort(function (a, b) { return hand === "L" ? b - a : a - b; });
+      let col = null;
+      if (cols.length) col = finger === 1 ? cols[cols.length - 1] : finger === 4 ? cols[0] : cols[Math.floor((cols.length - 1) / 2)];
+      homeCol[hand + finger] = col;
+    });
+  });
+
+  // キー（QWERTY の文字）の { hand, finger, row, col }。割り当てていないキーは null
   function keyOf(ch) {
-    return info[ch] || null;
+    return assigned[ch] || null;
   }
 
   // 隣の指の組で、短い方の指（scissors の決まり）。人差し指・中指は人差し指、中指・薬指は薬指、薬指・小指は小指
@@ -40,36 +51,39 @@ const FingerMap = (function () {
   }
 
   // bigram の分類（どれか1つ）："none" 分類しない／"alternation" 左右交互／"repeat" 同じキーの連打／
-  // "sfb-0"・"sfb-1"・"sfb-2" SFB（段の差）／"roll-in"・"roll-out" ロール（同じ手・別の指。小指 → 人差し指の向きが内向き）
+  // "sfb-0"・"sfb-1"・"sfb-2" SFB（行の差。2 は2行以上）／"roll-in"・"roll-out" ロール（同じ手・別の指。小指 → 人差し指の向きが内向き）
   function bigramBase(g) {
     const a = keyOf(g[0]), b = keyOf(g[1]);
     if (!a || !b) return "none";
     if (g[0] === g[1]) return "repeat";
     if (a.hand !== b.hand) return "alternation";
-    if (a.finger === b.finger) return "sfb-" + Math.abs(a.row - b.row);
+    if (a.finger === b.finger) return "sfb-" + Math.min(2, Math.abs(a.row - b.row));
     return a.finger > b.finger ? "roll-in" : "roll-out";
   }
 
   // bigram の特徴（重なってよい。同じ手・別の指の組だけ）。返り値は特徴の名前の並び
-  //   "stagger-inner-ab"・"stagger-outer-ab"：段違い（内側の指が奥／外側の指が奥。ab は指の組 例 "12" 人差し指と中指）
-  //   "hsb"・"fsb"：scissors（隣の指で、短い方の指が奥。1段・2段離れる）
-  //   "lsb-12"・"lsb-34"：LSB（人差し指が中央の列で中指と／小指が外側の列で薬指と）
+  //   "stagger-inner-ab"・"stagger-outer-ab"：行(row)違い（内側の指が奥／外側の指が奥。ab は指の組 例 "12" 人差し指と中指）
+  //   "hsb"・"fsb"：scissors（隣の指で、短い方の指が奥。1行・2行離れる）
+  //   "lsb-12"・"lsb-23"・"lsb-34"：LSB（隣の指で、2つのキーの列の離れ方が、2つの指のホームの列の離れ方より大きい）
   function bigramFeatures(g) {
     const a = keyOf(g[0]), b = keyOf(g[1]);
     if (!a || !b || a.hand !== b.hand || a.finger === b.finger) return [];
     const out = [];
     const inner = a.finger < b.finger ? a : b, outer = inner === a ? b : a;
     const pair = String(inner.finger) + outer.finger;
+    const adjacent = outer.finger - inner.finger === 1;
     if (a.row !== b.row) {
       out.push((inner.row < outer.row ? "stagger-inner-" : "stagger-outer-") + pair);
-      if (outer.finger - inner.finger === 1) {
+      if (adjacent) {
         const shorter = shorterOf(a, b), longer = shorter === a ? b : a;
-        if (shorter.row < longer.row) out.push(Math.abs(a.row - b.row) === 1 ? "hsb" : "fsb");
+        const rows = Math.abs(a.row - b.row);
+        if (shorter.row < longer.row && rows <= 2) out.push(rows === 1 ? "hsb" : "fsb");
       }
     }
-    const chOf = function (k) { return k === a ? g[0] : g[1]; };
-    if (pair === "12" && CENTER.indexOf(chOf(inner)) !== -1) out.push("lsb-12");
-    if (pair === "34" && OUTER.indexOf(chOf(outer)) !== -1) out.push("lsb-34");
+    if (adjacent) {
+      const hi = homeCol[a.hand + inner.finger], ho = homeCol[a.hand + outer.finger];
+      if (hi !== null && ho !== null && Math.abs(inner.col - outer.col) > Math.abs(hi - ho)) out.push("lsb-" + pair);
+    }
     return out;
   }
 

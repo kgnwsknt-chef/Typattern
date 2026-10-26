@@ -79,6 +79,29 @@
         <span class="setting-input"><input id="s-ngram" class="layout-select setting-number" type="number" data-setting="ngramMaxMs"> ms</span>
         <p class="setting-help">IKI のページで行（または2次元ヒストグラムのマス）をクリックしたときに出す IKI の分布。横軸は 0 からこの値までで、100 個の区間に分けます（区間の幅 = この値 ÷ 100）。これ以上の値は一番右の区間に入れます。<span class="setting-range"></span></p>
       </div>
+      <div class="setting">
+        <span class="setting-label">指の割り当て</span>
+        <p class="setting-help">IKI のページの「指と行(row)で分けた bigram・trigram」で、どのキーをどの指で打つかに使います。指ごとに、打つキー（QWERTY の文字。キーの位置）を並べて書きます。どの配列の記録も、押したキーの位置で分けます。割り当てていないキーを含む組は「分類しない」に入ります。同じキーを2つの指に書くと保存しません。各指のホーム行のキー（2つ以上なら、人差し指は外側の端、小指は内側の端）が、LSB（横の伸ばし）の基準の列になります。初期値は、ふつうのタッチタイピングの割り当て（数字キーの行は割り当てない）。</p>
+        <div class="finger-grid">
+          <div class="finger-hand">
+            <span class="finger-hand-name">左手</span>
+            <label class="finger-input">小指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="L4"></label>
+            <label class="finger-input">薬指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="L3"></label>
+            <label class="finger-input">中指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="L2"></label>
+            <label class="finger-input">人差し指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="L1"></label>
+          </div>
+          <div class="finger-hand">
+            <span class="finger-hand-name">右手</span>
+            <label class="finger-input">人差し指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="R1"></label>
+            <label class="finger-input">中指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="R2"></label>
+            <label class="finger-input">薬指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="R3"></label>
+            <label class="finger-input">小指 <input class="layout-select setting-text" type="text" spellcheck="false" autocomplete="off" data-finger="R4"></label>
+          </div>
+        </div>
+        <p id="finger-msg" class="setting-help" aria-live="polite"></p>
+        <!-- 割り当ての確かめ：キーを指ごとの色で塗り、指の名前を書く。割り当てていないキーは白 -->
+        <div class="kb-scroll"><div id="finger-map" class="kb km"></div></div>
+      </div>
     </section>
 
     <section class="stats-section settings-section">
@@ -153,7 +176,10 @@
   </main>
 
   <script src="js/store.js?v=89"></script>
+  <script src="js/keys.js?v=89"></script>
   <script src="js/settings.js?v=89"></script>
+  <script src="js/keyboard-shapes.js?v=89"></script>
+  <script src="js/key-map.js?v=89"></script>
   <script src="js/page-footer.js?v=89"></script>
   <script src="js/settings-page.js?v=89"></script>
 </body>

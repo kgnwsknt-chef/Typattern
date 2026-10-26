@@ -12,7 +12,72 @@
       if (el.type === "checkbox") el.checked = Settings.get(name);
       else el.value = Settings.get(name);
     });
+    fillFingers();
   }
+
+  // ---- 指の割り当て（8 本の指ごとの入力欄と、確かめるための配列図。決まりは docs/settings.md） ----
+  const fingerInputs = Array.from(document.querySelectorAll("[data-finger]"));
+  const fingerMsgEl = document.getElementById("finger-msg");
+  const fingerMapEl = document.getElementById("finger-map");
+  const HAND_NAME = { L: "左", R: "右" };
+  const FINGER_SHORT = { 1: "人", 2: "中", 3: "薬", 4: "小" };
+  const FINGER_LONG = { 1: "人差し指", 2: "中指", 3: "薬指", 4: "小指" };
+  const fingerName = function (f) { return HAND_NAME[f[0]] + "の" + FINGER_LONG[f[1]]; };
+  // 指と行(row)で分ける範囲の初期値（上の行・ホーム行・下の行）。割り当てていないものを知らせるのに使う
+  const MAIN_KEYS = "qwertyuiop[]\\asdfghjkl;'zxcvbnm,./";
+
+  function fillFingers() {
+    const map = Settings.get("fingerMap");
+    fingerInputs.forEach(function (el) { el.value = map[el.dataset.finger]; });
+    showFingers();
+  }
+
+  // 入力欄の今の内容を確かめ、配列図とメッセージを出す。返り値は { map, conflicts }
+  function showFingers() {
+    const raw = {};
+    fingerInputs.forEach(function (el) { raw[el.dataset.finger] = el.value; });
+    const map = Settings.parseFingers(raw);
+    const conflicts = Settings.fingerConflicts(map);
+    const bad = new Set(conflicts.map(function (c) { return c.key; }));
+    fingerInputs.forEach(function (el) {
+      el.classList.toggle("tm-warn-input", Array.from(map[el.dataset.finger]).some(function (c) { return bad.has(c); }));
+    });
+    const owner = {};
+    Settings.FINGER_KEYS.forEach(function (f) {
+      Array.from(map[f]).forEach(function (c) { if (!owner[c]) owner[c] = f; });
+    });
+    const missing = Array.from(MAIN_KEYS).filter(function (c) { return !owner[c]; });
+    fingerMsgEl.classList.toggle("tm-warn", conflicts.length > 0);
+    fingerMsgEl.textContent = conflicts.length
+      ? conflicts.map(function (c) { return "「" + c.key + "」が" + c.fingers.map(fingerName).join("と") + "の両方にあります"; }).join("。") +
+        "。1つの指にしてください（保存していません）。"
+      : missing.length ? "割り当てていないキー（このキーを含む組は「分類しない」）：" + missing.join(" ") : "";
+    KeyMap.draw(fingerMapEl, function (number) {
+      const c = Keys.label(number);
+      const f = c === null ? null : owner[c];
+      if (!f) return null;
+      return {
+        fill: bad.has(c) ? "var(--error-bg)" : "var(--finger-" + f[1] + ")",
+        value: HAND_NAME[f[0]] + FINGER_SHORT[f[1]],
+        title: c + "：" + (bad.has(c) ? "2つ以上の指に書いています" : fingerName(f))
+      };
+    });
+    return { map: map, conflicts: conflicts };
+  }
+
+  fingerInputs.forEach(function (el) {
+    el.addEventListener("input", showFingers); // 書いている間も配列図に出す
+    el.addEventListener("change", function () {
+      const r = showFingers();
+      if (r.conflicts.length) {
+        msgEl.textContent = "";
+        return;
+      }
+      Settings.set("fingerMap", r.map);
+      fingerInputs.forEach(function (x) { x.value = r.map[x.dataset.finger]; }); // 使えない文字を除いた形に直して出す
+      msgEl.textContent = "保存しました。";
+    });
+  });
 
   inputs.forEach(function (el) {
     const name = el.dataset.setting;

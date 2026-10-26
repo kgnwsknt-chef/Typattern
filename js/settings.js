@@ -17,8 +17,11 @@ const Settings = (function () {
     showGuide: { type: "boolean", def: true },                                  // 日本語のローマ字入力で、次に打つローマ字の手引きを出すか
     jaSecondLine: { type: "choice", def: "kana", choices: ["kana", "romaji"] }, // 日本語のお題の2行目：よみがな か ローマ字（ローマ字で打つときだけ）
     ikiMeasurementChars: { type: "keys", def: "qwertyuiopasdfghjklzxcvbnm;',./" },  // IKI 測定モードで語に使う文字（Shift なしで打てる QWERTY の文字）
-    ikiMeasurementPick: { type: "choice", def: "least", choices: ["least", "random"] } // IKI 測定モードの語の作り方：少ない bigram（B）か 文字列から（A）
+    ikiMeasurementPick: { type: "choice", def: "least", choices: ["least", "random"] }, // IKI 測定モードの語の作り方：少ない bigram（B）か 文字列から（A）
+    // 指の割り当て（IKI のページの「指と行(row)で分けた bigram・trigram」）。手（L・R）と指（1 人差し指〜4 小指）ごとに、打つキー（QWERTY の文字）
+    fingerMap: { type: "fingers", def: { L4: "qaz", L3: "wsx", L2: "edc", L1: "rtfgvb", R1: "yuhjnm", R2: "ik,", R3: "ol.", R4: "p[]\\;'/" } }
   };
+  const FINGER_KEYS = ["L4", "L3", "L2", "L1", "R1", "R2", "R3", "R4"];
   // "keys" の項目で使える文字（Shift なしで打てる QWERTY の文字。スペースは除く）
   const KEY_CHARS = "`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./";
 
@@ -44,10 +47,39 @@ const Settings = (function () {
       });
       return chars.length >= 2 ? chars.join("") : item.def;
     }
+    if (item.type === "fingers") {
+      // 使えない文字を除いて指ごとにそろえる。同じキーが2つの指にあれば、初期値にする（設定のページでは保存させない）
+      const parsed = parseFingers(value);
+      return parsed && fingerConflicts(parsed).length === 0 ? parsed : item.def;
+    }
     const n = Number(value);
     if (value === null || value === "" || !isFinite(n)) return item.def;
     const stepped = Math.round(n / item.step) * item.step;
     return Math.min(item.max, Math.max(item.min, stepped));
+  }
+
+  // 指の割り当てを { L4: "qaz", … } にそろえる（使えない文字は除き、同じ指の中で重なった文字は1つに。大文字は小文字に）。形が違えば null
+  function parseFingers(value) {
+    if (!value || typeof value !== "object") return null;
+    const out = {};
+    FINGER_KEYS.forEach(function (f) {
+      const chars = [];
+      Array.from(String(value[f] || "").toLowerCase()).forEach(function (c) {
+        if (KEY_CHARS.indexOf(c) !== -1 && chars.indexOf(c) === -1) chars.push(c);
+      });
+      out[f] = chars.join("");
+    });
+    return out;
+  }
+
+  // 2つ以上の指に書いたキー [{ key, fingers: ["L1", "L2"] }]
+  function fingerConflicts(map) {
+    const owners = {};
+    FINGER_KEYS.forEach(function (f) {
+      Array.from(map[f] || "").forEach(function (c) { (owners[c] = owners[c] || []).push(f); });
+    });
+    return Object.keys(owners).filter(function (c) { return owners[c].length > 1; })
+      .map(function (c) { return { key: c, fingers: owners[c] }; });
   }
 
   // 保存した値（なければ初期値）
@@ -68,5 +100,5 @@ const Settings = (function () {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* 無視 */ }
   }
 
-  return { ITEMS: ITEMS, get: get, set: set, reset: reset };
+  return { ITEMS: ITEMS, FINGER_KEYS: FINGER_KEYS, get: get, set: set, reset: reset, parseFingers: parseFingers, fingerConflicts: fingerConflicts };
 })();
