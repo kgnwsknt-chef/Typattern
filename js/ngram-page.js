@@ -151,8 +151,8 @@
         node("repeat（連打）", ["repeat"], 0, "同じキーを続けて打つ"),
         node("SFB（同指異鍵）", ["sfb-0", "sfb-1", "sfb-2"], 0, "同じ指で、別のキーを続けて打つ"),
         node("同じ行", ["sfb-0"], 1, "同じ行のキーへ横に動く（例 fg）"),
-        node("1行", ["sfb-1"], 1, "行が1つ違う（例 ed）"),
-        node("2行以上", ["sfb-2"], 1, "行が2つ以上違う（例 ec）"),
+        node("1行違い", ["sfb-1"], 1, "行が1つ違う（例 ed）"),
+        node("2行以上違い", ["sfb-2"], 1, "行が2つ以上違う（例 ec）"),
         node("roll（ロール）", ["roll-in", "roll-out"], 0, "同じ手の別の指で続けて打つ"),
         node("内向き", ["roll-in"], 1, "小指 → 人差し指の向き（例 sd）"),
         node("外向き", ["roll-out"], 1, "人差し指 → 小指の向き（例 ds）"),
@@ -168,8 +168,8 @@
         .concat(staggerNodes("outer", "外側の指が奥", "2つの指のうち、小指に近い方の指が奥の行（例 ko・in）"))
         .concat([
           node("scissors", ["hsb", "fsb"], 0, "隣の指で、短い方の指が奥の行（人差し指と中指は人差し指、中指と薬指は薬指、薬指と小指は小指が短い）"),
-          node("HSB（1行）", ["hsb"], 1, "half scissor bigram。行が1つ違う（例 dr・ko・pl）"),
-          node("FSB（2行）", ["fsb"], 1, "full scissor bigram。上の行と下の行（例 cr）"),
+          node("HSB（1行違い）", ["hsb"], 1, "half scissor bigram。行が1つ違う（例 dr・ko・pl）"),
+          node("FSB（2行違い）", ["fsb"], 1, "full scissor bigram。上の行と下の行（例 cr）"),
           node("LSB（横の伸ばし）", ["lsb-12", "lsb-23", "lsb-34"], 0, "lateral stretch bigram。隣の指で、2つのキーの列の離れ方が、2つの指のホームの列の離れ方より大きい"),
           node("人差し指と中指", ["lsb-12"], 1, "初期値の割り当てでは、人差し指が中央の列（t g b・y h n）を打つ組（例 te・gd）"),
           node("中指と薬指", ["lsb-23"], 1, "初期値の割り当てでは入る組はない（割り当てを変えたときに入る）"),
