@@ -6,7 +6,7 @@
 
 | モード | 状態 | 目的 | 決まり |
 | --- | --- | --- | --- |
-| 配列を学習するためのモード | これから考える | かな配列などの配列を覚える | 詳細はこれから決める |
+| キー配列習得 | 考えている途中 | かな配列などの新しいキー配列の割り当てを覚える。どこまで覚えたか（習得度）と達成項目を出す | [layout-learning.md](layout-learning.md) |
 | 苦手な単語 | 作った（`mode` は `weak`） | 単語モードの記録から求めた遅い単語・ミスの多い単語を、集中して練習する | [weak-words.md](weak-words.md) |
 | 他では速い bigram | 作る（`mode` は `faster-other-setup`） | 今の言語・配列では遅いが、ほかの言語・配列では速く打てている bigram を、その bigram を含む実際の単語で練習する | [weak-words.md](weak-words.md) の「他では速い bigram の練習」 |
 | IKI 測定 | 作った（`mode` は `iki-measurement`） | 実際の語では出てこない bigram や、回数が少なく値がぶれやすい bigram の IKI を、設定の文字から作った意味のない短い語で測る | [iki-measurement.md](iki-measurement.md) |
