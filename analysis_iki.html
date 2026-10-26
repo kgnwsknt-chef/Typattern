@@ -121,6 +121,30 @@
         </div>
       </div>
     </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">指と段で分けた bigram・trigram</h2>
+      <p class="rhythm-legend">押したキーを、ふつうのタッチタイピングの指の割り当てで手・指・段に直し、bigram・trigram を形で分けて集計（上段・ホーム段・下段のキーだけ。下の表と同じ記録・同じ除外で、「回数」の絞り込みは使わない）／ 割合 = 全部の bigram（trigram）を打った回数に対する割合 ／ 種類 = その分類に入った組の数 ／ 字下げした行は、すぐ上の行の内訳 ／ 「基本」の表は、どの組もどれか1つに入る（字下げしていない行の合計が 100%）。「特徴」の表は、同じ組がいくつもの行に入ることがある ／ 分類の名前にマウスを乗せると定義を表示 ／ 多い組 = その分類で回数の多い組（3つまで）／ 行をクリックで、その分類の IKI の分布を表示</p>
+      <!-- bigram と trigram を上下に分け、それぞれ左に表、右にクリックした分類の分布（狭い画面では表の上。推移は出さない） -->
+      <div class="fc-block">
+        <div class="fc-tables">
+          <h3 class="hm-title">bigram・基本</h3>
+          <div id="bc-base" class="fc-table"></div>
+          <h3 class="hm-title">bigram・特徴（同じ手・別の指の組）</h3>
+          <div id="bc-feat" class="fc-table"></div>
+        </div>
+        <div id="bc-dist" class="ngram-dist fc-dist"></div>
+      </div>
+      <div class="fc-block">
+        <div class="fc-tables">
+          <h3 class="hm-title">trigram・基本</h3>
+          <div id="tc-base" class="fc-table"></div>
+          <h3 class="hm-title">trigram・特徴</h3>
+          <div id="tc-feat" class="fc-table"></div>
+        </div>
+        <div id="tc-dist" class="ngram-dist fc-dist"></div>
+      </div>
+    </section>
   </main>
 
   <script src="js/store.js?v=89"></script>
@@ -133,6 +157,7 @@
   <script src="js/key-map.js?v=89"></script>
   <script src="js/point-trend.js?v=89"></script>
   <script src="js/ngram.js?v=89"></script>
+  <script src="js/finger-map.js?v=89"></script>
   <script src="js/iki-measurement.js?v=89"></script>
   <script src="js/filters.js?v=89"></script>
   <script src="js/ngram-page.js?v=89"></script>

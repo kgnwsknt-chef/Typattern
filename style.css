@@ -1897,3 +1897,69 @@ a.text-btn {
   color: var(--typed);
   font-weight: normal;
 }
+
+/* IKI のページの「指と段で分けた bigram・trigram」の表。字下げした行は、すぐ上の行の内訳 */
+.fc-table {
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.fc-table .bg-table th,
+.fc-table .bg-table td {
+  padding: 4px 8px;
+}
+
+.bg-table td.fc-name {
+  cursor: help;
+}
+
+.bg-table td.fc-l1 {
+  padding-left: 32px;
+  color: var(--sub);
+}
+
+.bg-table td.fc-l2 {
+  padding-left: 48px;
+  color: var(--sub);
+}
+
+.bg-table td.fc-top {
+  font-family: var(--mono);
+  white-space: pre;
+  text-align: left;
+}
+
+/* 指と段で分けた bigram・trigram：左に表、右にクリックした分類の分布と推移。狭い画面では分布を表の上に出す */
+.fc-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 290px);
+  grid-template-areas: "tables dist";
+  gap: 24px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+.fc-tables {
+  grid-area: tables;
+  min-width: 0;
+}
+
+.fc-dist {
+  grid-area: dist;
+  position: sticky;
+  top: 8px;
+}
+
+.bg-table td.fc-name {
+  white-space: nowrap;
+}
+
+@media (max-width: 1000px) {
+  .fc-block {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "dist" "tables";
+  }
+  .fc-dist {
+    position: static;
+  }
+}

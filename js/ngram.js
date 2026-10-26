@@ -136,10 +136,8 @@ const NGram = (function () {
 
       if (distEl) {
         const row = rows.find(function (r) { return r.gram === selected; });
-        if (row) {
-          drawDistribution(distEl, row, label, baseAvg);
-          if (trend.runs && row.tags && row.tags[0]) drawTrend(distEl, row, label); // 分布の下に、その n-gram の IKI の推移
-        } else distEl.textContent = "";
+        if (row) showDist(distEl, row, label, baseAvg);
+        else distEl.textContent = "";
       }
     }
 
@@ -167,6 +165,13 @@ const NGram = (function () {
   // 推移の横軸の決め方。setTrend で IKI のページから渡す
   //   mode："run"（回数）か "day"（日付）。runs：絞り込んだ記録の数（横軸の回数の最大）。firstDay・lastDay：最初と最後の記録の日（"YYYY-MM-DD"）
   let trend = { mode: "run", runs: 0, firstDay: null, lastDay: null };
+  // el に1つの行 { gram（見出しの名前）, values, tags, count, avg, sd } の IKI の分布を描き、記録の回数があればその下に推移も描く
+  // （bigram・trigram の表で使う。IKI のページの「指と段で分けた bigram・trigram」は分布だけ。drawDistribution）
+  function showDist(el, row, label, baseAvg) {
+    drawDistribution(el, row, label, baseAvg);
+    if (trend.runs && row.tags && row.tags[0]) drawTrend(el, row, label);
+  }
+
   function setTrend(t) {
     trend = t;
   }
@@ -203,8 +208,9 @@ const NGram = (function () {
   function drawDistribution(el, row, label, baseAvg) {
     el.textContent = "";
     const values = row.values;
-    const min = Math.min.apply(null, values);
-    const max = Math.max.apply(null, values);
+    // 値が多いとき（分類ごとにまとめた数万個など）でも動くよう、apply ではなく1つずつ比べる
+    let min = Infinity, max = -Infinity;
+    values.forEach(function (v) { if (v < min) min = v; if (v > max) max = v; });
 
     // 見出し
     const head = document.createElement("div");
@@ -555,5 +561,5 @@ const NGram = (function () {
     return el;
   }
 
-  return { create: create, accumulate: accumulate, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend };
+  return { create: create, accumulate: accumulate, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution };
 })();
