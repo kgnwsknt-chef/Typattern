@@ -27,6 +27,7 @@
   const missTrendEl = document.getElementById("miss-trend");
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
+  const loadingEl = document.getElementById("page-loading"); // 集計し終えるまで出す「Loading...」
   let lastAcc = null;
   let kbKana = null; // 配列図に割り当てを書くかな配列 { get, shifts }。QWERTY・「すべて」のときは null
   let pairRows = [];
@@ -43,6 +44,7 @@
   function update() {
     const myId = ++loadId;
     summaryEl.textContent = "集計中…";
+    loadingEl.hidden = false;
     Promise.all([Store.getAllSessions(), Store.getAllLayouts()]).then(function (v) {
       if (myId !== loadId) return;
       const picked = filters.pick(v[0]);
@@ -91,6 +93,8 @@
     }).catch(function (err) {
       console.error(err);
       summaryEl.textContent = "記録を読み込めませんでした: " + err.message;
+    }).then(function () {
+      if (myId === loadId) loadingEl.hidden = true;
     });
   }
 

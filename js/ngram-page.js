@@ -20,12 +20,14 @@
   const layoutFilterEl = document.getElementById("f-layout");
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
+  const loadingEl = document.getElementById("page-loading"); // 集計し終えるまで出す「Loading...」
   const trendEl = document.getElementById("f-trend"); // 分布の下の IKI の推移の横軸（回数・日付）
   let trendInfo = { mode: "run", runs: 0, firstDay: null, lastDay: null }; // NGram.setTrend に渡したもの
 
   function update() {
     const myId = ++loadId;
     summaryEl.textContent = "集計中…";
+    loadingEl.hidden = false;
     Promise.all([Store.getAllSessions(), Store.getAllLayouts()]).then(function (v) {
       if (myId !== loadId) return;
       const sessions = v[0];
@@ -85,6 +87,8 @@
     }).catch(function (err) {
       console.error(err);
       summaryEl.textContent = "記録を読み込めませんでした: " + err.message;
+    }).then(function () {
+      if (myId === loadId) loadingEl.hidden = true;
     });
   }
 

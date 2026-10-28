@@ -1162,6 +1162,23 @@ a.text-btn {
   max-width: 900px;
 }
 
+/* IKI・ミスタイプのページ：記録を読み込んで集計し終えるまで、画面の上の真ん中に出す */
+.page-loading {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--field-bg);
+  color: var(--sub);
+  font-size: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.page-loading[hidden] { display: none; }
+
 .stats-title {
   margin: 8px 0 12px;
   font-size: 18px;
