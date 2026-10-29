@@ -11,6 +11,7 @@
   const milestonesEl = document.getElementById("ll-milestones");
   const mandalaEl = document.getElementById("ll-mandala");
   const keymapEl = document.getElementById("ll-keymap");
+  const faceEl = document.getElementById("ll-face"); // キー配列の面（シフトなし・シフト面）
 
   function fetchText(path) {
     return fetch(path + "?v=" + ASSET_VERSION).then(function (r) {
@@ -55,7 +56,27 @@
     KanaMandala.draw(mandalaEl, LayoutLearning.mandalaOpts(p, learned));
 
     // キー配列：シフトなしの面のかなのキーに、覚えたかどうかの色を付ける
-    const kana = KeyMap.kanaOf(KanaLayout.create(layout.entries));
+    // キー配列：選んだ面（シフトなしの面・シフト面）で、各キーが出すかなを書き、覚えた単位のキーに色を付ける
+    const base = KeyMap.kanaOf(KanaLayout.create(layout.entries));
+    const faces = [""].concat(p.faces);
+    const prevFace = faceEl.value;
+    faceEl.textContent = "";
+    faces.forEach(function (f, i) {
+      const o = document.createElement("option");
+      o.value = f;
+      o.textContent = !f ? "シフトなしの面" : (p.faces.length === 1 ? "シフト面" : "シフト面" + i) + "（" + (f === "Shift" ? "Shift" : f + " のキー") + "）";
+      faceEl.appendChild(o);
+    });
+    faceEl.value = faces.indexOf(prevFace) !== -1 ? prevFace : "";
+    const face = faceEl.value;
+    // そのキーをその面で押したときのかな。前置シフトはシフトのキー → キー、後置シフトはキー → シフトのキーの順に押す
+    const faceGet = function (ch) {
+      if (!face) return base.get(ch);
+      if (face === "Shift") { const k = Keys.ofChar(ch); return k ? base.get(Keys.charOf(k.number, true)) : null; }
+      if (ch === face) return null;
+      return base.shifts.prefix.indexOf(face) !== -1 ? base.get(face + ch) : base.get(ch + face);
+    };
+    const kana = { get: faceGet, shifts: base.shifts };
     const fill = getComputedStyle(document.documentElement).getPropertyValue("--ll-learned").trim();
     KeyMap.draw(keymapEl, function (number) {
       const ch = Keys.charOf(number, false);
@@ -93,6 +114,7 @@
         if (saved && layouts.some(function (l) { return l.id === saved; })) layoutEl.value = saved;
       } catch (e) { /* 最初の配列を使う */ }
       layoutEl.addEventListener("change", render);
+      faceEl.addEventListener("change", render);
       render();
     })
     .catch(function (err) {

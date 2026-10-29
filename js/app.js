@@ -1052,7 +1052,12 @@
     // 達成項目：今回で達成になったもの（一度覚えた単位で決める。忘れても達成は消えない）
     const mb = LayoutLearning.milestones(src.plan, LayoutLearning.everSet(beforeStatus));
     LayoutLearning.milestones(src.plan, LayoutLearning.everSet(afterStatus)).forEach(function (m, i) {
-      if (m.done && !mb[i].done) add("「" + m.name + "」を達成！ ", "level-up");
+      if (!m.done || mb[i].done) return;
+      // 達成した達成項目は、結果の上に大きな帯で目立たせる（style.css の .ll-achieved）
+      const banner = document.createElement("div");
+      banner.className = "ll-achieved";
+      banner.textContent = "🎉 「" + m.name + "」を達成！";
+      learnResultBodyEl.appendChild(banner);
     });
     const newly = Array.from(after).filter(function (u) { return !before.has(u); });
     const lost = Array.from(before).filter(function (u) { return !after.has(u); });

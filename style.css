@@ -11,6 +11,10 @@
   --error-bg: rgba(217, 48, 54, 0.15);
   --reached: #2a8f3a; /* 目標に届いた印（他では速い bigram の結果の ✓。キー配列習得の達成項目の ✓ にも使う） */
   --ll-learned: #b9d7f3; /* キー配列習得のページの配列図で、覚えた単位のキーの色 */
+  /* キー配列習得の結果で、達成した達成項目の帯（背景・枠・文字） */
+  --ll-achieved-bg: #fff4c2;
+  --ll-achieved-border: #e0a800;
+  --ll-achieved-text: #7a4a00;
   /* 間隔グラフの色相（速い=青 → 平均=緑 → 遅い=赤）。js/rhythm.js が読む */
   --rh-hue-fast: 215;
   --rh-hue-avg: 120;
@@ -2077,6 +2081,25 @@ a.text-btn {
 .cmp-mean {
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
+}
+
+/* キー配列習得の結果で、今回達成した達成項目の帯（js/app.js の showLearnResult） */
+.ll-achieved {
+  margin: 8px 0 12px;
+  padding: 14px 20px;
+  border: 2px solid var(--ll-achieved-border);
+  border-radius: 10px;
+  background: var(--ll-achieved-bg);
+  color: var(--ll-achieved-text);
+  font-size: 26px;
+  font-weight: bold;
+  text-align: center;
+  animation: ll-achieved-pop 0.6s ease-out;
+}
+@keyframes ll-achieved-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
 }
 
 /* キー配列習得のページの達成項目（js/layout-learning-page.js） */

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern キー配列習得</title>
-  <link rel="stylesheet" href="style.css?v=99">
+  <link rel="stylesheet" href="style.css?v=100">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -45,21 +45,26 @@
 
     <section class="stats-section">
       <h2 class="stats-title">キー配列</h2>
-      <p class="rhythm-legend">シフトなしの面のかな。覚えた単位のキーに色を付ける（シフト面のかなは、上の図で見る）</p>
+      <div class="filters">
+        <label class="filter">面
+          <select id="ll-face" class="layout-select" title="シフトなしの面と、シフト面（シフトのキーごと）"></select>
+        </label>
+      </div>
+      <p class="rhythm-legend">選んだ面で、各キーが出すかな。覚えた単位のキーに色を付ける ／ シフト面では、そのシフトのキーと一緒に押したときのかな（前置シフトのキーはオレンジ、後置シフトのキーは紫の枠）／ キーにマウスを乗せると、直近の正確率と回数を出す</p>
       <div class="kb-scroll"><div id="ll-keymap" class="kb km"></div></div>
     </section>
   </main>
 
-  <script src="js/store.js?v=99"></script>
-  <script src="js/keys.js?v=99"></script>
-  <script src="js/settings.js?v=99"></script>
-  <script src="js/page-footer.js?v=99"></script>
-  <script src="js/keyboard-shapes.js?v=99"></script>
-  <script src="js/key-map.js?v=99"></script>
-  <script src="js/romaji.js?v=99"></script>
-  <script src="js/kana-layout.js?v=99"></script>
-  <script src="js/kana-mandala.js?v=99"></script>
-  <script src="js/layout-learning.js?v=99"></script>
-  <script src="js/layout-learning-page.js?v=99"></script>
+  <script src="js/store.js?v=100"></script>
+  <script src="js/keys.js?v=100"></script>
+  <script src="js/settings.js?v=100"></script>
+  <script src="js/page-footer.js?v=100"></script>
+  <script src="js/keyboard-shapes.js?v=100"></script>
+  <script src="js/key-map.js?v=100"></script>
+  <script src="js/romaji.js?v=100"></script>
+  <script src="js/kana-layout.js?v=100"></script>
+  <script src="js/kana-mandala.js?v=100"></script>
+  <script src="js/layout-learning.js?v=100"></script>
+  <script src="js/layout-learning-page.js?v=100"></script>
 </body>
 </html>
