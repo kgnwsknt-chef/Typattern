@@ -2102,6 +2102,26 @@ a.text-btn {
   100% { transform: scale(1); }
 }
 
+/* キー配列習得の結果で、今回覚えた単位の帯（js/app.js の showLearnResult。達成項目の帯より少し小さい） */
+.ll-learned-msg {
+  margin: 8px 0 12px;
+  padding: 10px 16px;
+  border: 2px solid var(--ll-done-border);
+  border-radius: 10px;
+  background: var(--ll-done-bg);
+  color: var(--ll-done-text);
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  animation: ll-achieved-pop 0.6s ease-out;
+}
+
+/* キー配列習得の結果で、忘れたとみなした単位の知らせ（赤字） */
+.ll-forgot {
+  color: var(--error);
+  font-weight: bold;
+}
+
 /* キー配列習得のページの達成項目（js/layout-learning-page.js） */
 .ll-milestones {
   display: grid;

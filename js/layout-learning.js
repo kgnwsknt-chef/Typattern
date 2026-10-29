@@ -18,6 +18,7 @@ const LayoutLearning = (function () {
   const FOREIGN = PAIRS.slice(36);
   const MIN_RECENT = 20;     // 覚えたかどうかを判定する、出てきた回数の下限
   const LEARNED_ACC = 95;    // 覚えたとする正確率（%）
+  const FORGET_ACC = 85;     // 覚えた単位を、忘れたとする正確率（%。これ未満で忘れた。覚えるときより低くして、たまたまの間違いでは忘れないようにする）
   const NEW_COUNT = 2;       // いつも足しておく新しい単位の数
   const NEW_WORDS = 20;      // 新しい単位1つごとの言葉の数
   const TARGET_LENGTH = 300; // 1回のお題の長さ（読みの文字数。スペースを含む）
@@ -169,13 +170,17 @@ const LayoutLearning = (function () {
         for (let j = i; j >= 0 && n < MIN_RECENT; j--) { n += rows[j][0]; ok += rows[j][1]; }
         return { count: n, acc: n >= MIN_RECENT ? ok / n * 100 : null };
       };
+      // 古い回から順に、まだ覚えていなければ LEARNED_ACC 以上で「覚えた」、覚えていれば FORGET_ACC 未満で「忘れた」にする
       let ever = false;
+      let learned = false;
       for (let i = 0; i < rows.length; i++) {
         const r = judge(i);
-        if (r.acc !== null && r.acc >= LEARNED_ACC) ever = true;
+        if (r.acc === null) continue;
+        if (!learned && r.acc >= LEARNED_ACC) { learned = true; ever = true; }
+        else if (learned && r.acc < FORGET_ACC) learned = false;
       }
       const now = judge(rows.length - 1);
-      out.set(u, { learned: now.acc !== null && now.acc >= LEARNED_ACC, everLearned: ever, count: now.count, acc: now.acc });
+      out.set(u, { learned: learned, everLearned: ever, count: now.count, acc: now.acc });
     });
     return out;
   }
@@ -396,7 +401,7 @@ const LayoutLearning = (function () {
   }
 
   return {
-    MODE: MODE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, NEW_WORDS: NEW_WORDS,
+    MODE: MODE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, FORGET_ACC: FORGET_ACC, NEW_WORDS: NEW_WORDS,
     loadLists: loadLists, plan: plan, segment: segment, tally: tally, status: status, learnedSet: learnedSet, everSet: everSet,
     state: state, chooseWords: chooseWords, milestones: milestones, mandalaOpts: mandalaOpts
   };

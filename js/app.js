@@ -1061,8 +1061,14 @@
     });
     const newly = Array.from(after).filter(function (u) { return !before.has(u); });
     const lost = Array.from(before).filter(function (u) { return !after.has(u); });
-    if (newly.length) add("今回覚えた単位：" + newly.map(function (u) { return "「" + u + "」"; }).join("") + " ");
-    if (lost.length) add("忘れたとみなした単位（優先して練習します）：" + lost.map(function (u) { return "「" + u + "」"; }).join("") + " ");
+    if (newly.length) {
+      // 今回覚えた単位も、帯で目立たせる（達成項目の帯より少し小さい。style.css の .ll-learned-msg）
+      const msg = document.createElement("div");
+      msg.className = "ll-learned-msg";
+      msg.textContent = newly.map(function (u) { return "「" + u + "」"; }).join("") + "を覚えました！";
+      learnResultBodyEl.appendChild(msg);
+    }
+    if (lost.length) add("忘れたとみなした単位（優先して練習します）：" + lost.map(function (u) { return "「" + u + "」"; }).join("") + " ", "ll-forgot"); // 赤字（style.css の .ll-forgot）
     if (p.childNodes.length) learnResultBodyEl.appendChild(p);
 
     const units = session.learning.newUnits;
