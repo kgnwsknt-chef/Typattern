@@ -43,7 +43,8 @@
 
     // 達成項目
     milestonesEl.textContent = "";
-    LayoutLearning.milestones(p, learned).forEach(function (m) {
+    // 達成項目は、一度覚えた単位で決める（忘れても達成は消えない）
+    LayoutLearning.milestones(p, LayoutLearning.everSet(s.status)).forEach(function (m) {
       const li = document.createElement("li");
       li.className = m.done ? "ll-done" : "ll-todo";
       li.textContent = (m.done ? "✓ " : "　 ") + m.name;

@@ -180,9 +180,17 @@ const LayoutLearning = (function () {
     return out;
   }
 
+  // 今覚えている単位の Set
   function learnedSet(st) {
     const s = new Set();
     st.forEach(function (v, u) { if (v.learned) s.add(u); });
+    return s;
+  }
+
+  // 一度でも覚えたことのある単位の Set（段階と達成項目は、これで決める。忘れても戻さない）
+  function everSet(st) {
+    const s = new Set();
+    st.forEach(function (v, u) { if (v.everLearned) s.add(u); });
     return s;
   }
 
@@ -205,11 +213,12 @@ const LayoutLearning = (function () {
     const cache = new Map();
     const basic = BASIC30.filter(function (c) { return p.unitSet.has(c); });
     const first = FIRST8.filter(function (c) { return p.unitSet.has(c); });
-    const all = function (arr) { return arr.every(function (u) { return learned.has(u); }); };
-    const stage = !all(first) ? "1-1" : !all(basic) ? "1-2" : p.units.every(function (u) { return learned.has(u); }) ? "done" : "2";
-    // 段階 1 は単語リスト A だけ、段階 2 は A〜D のどれも使う
-    const pool = lists.words.filter(function (w) { return stage === "2" || stage === "done" || w.list === "a"; })
-      .filter(function (w) { return unitsOfWord(w, p.unitSet, cache) !== null; });
+    // 段階は、一度たどり着いたら戻さない（単位を忘れても、一度そろえた最初の8字・基本30字の段階には戻らない）
+    const ever = everSet(st);
+    const reached = function (arr) { return arr.every(function (u) { return ever.has(u); }); };
+    const stage = !reached(first) ? "1-1" : !reached(basic) ? "1-2" : p.units.every(function (u) { return learned.has(u); }) ? "done" : "2";
+    // 言葉は、どの段階も単語リスト A〜D から、使える単位だけでできたものを選ぶ（段階でリストを分けない）
+    const pool = lists.words.filter(function (w) { return unitsOfWord(w, p.unitSet, cache) !== null; });
 
     // その単位を含み、覚えた単位とその単位だけでできた言葉
     function wordsFor(u, known) {
@@ -245,8 +254,9 @@ const LayoutLearning = (function () {
       newUnits = first.filter(function (u) { return !learned.has(u); });
     } else if (stage === "1-2") {
       const rest = basic.filter(function (u) { return !learned.has(u); });
-      newUnits = carried.filter(function (u) { return rest.indexOf(u) !== -1; });
-      shuffle(forgotten.filter(function (u) { return rest.indexOf(u) !== -1; })).concat(shuffle(rest)).forEach(function (u) {
+      // 忘れた単位 → 前の回から続けている単位 → 残りの字 の順に選ぶ
+      shuffle(forgotten.filter(function (u) { return rest.indexOf(u) !== -1; }))
+        .concat(carried.filter(function (u) { return rest.indexOf(u) !== -1; }), shuffle(rest)).forEach(function (u) {
         if (newUnits.length < NEW_COUNT && newUnits.indexOf(u) === -1) newUnits.push(u);
       });
     } else if (stage === "2") {
@@ -262,9 +272,8 @@ const LayoutLearning = (function () {
         if (i > upTo) return;
         a.units.forEach(function (u) { if (open(u) && eligible(u)) (i < upTo ? skipped : reached).push(u); });
       });
-      newUnits = carried.slice(0, NEW_COUNT);
-      // 忘れた単位 → 前に飛ばした単位 → 今の学習区画の単位 の順に選ぶ
-      shuffle(forgotten.filter(eligible)).concat(shuffle(skipped), shuffle(reached)).forEach(function (u) {
+      // 忘れた単位 → 前の回から続けている単位 → 前に飛ばした単位 → 今の学習区画の単位 の順に選ぶ
+      shuffle(forgotten.filter(eligible)).concat(carried, shuffle(skipped), shuffle(reached)).forEach(function (u) {
         if (newUnits.length < NEW_COUNT && newUnits.indexOf(u) === -1) newUnits.push(u);
       });
     }
@@ -384,7 +393,7 @@ const LayoutLearning = (function () {
 
   return {
     MODE: MODE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, NEW_WORDS: NEW_WORDS,
-    loadLists: loadLists, plan: plan, segment: segment, tally: tally, status: status, learnedSet: learnedSet,
+    loadLists: loadLists, plan: plan, segment: segment, tally: tally, status: status, learnedSet: learnedSet, everSet: everSet,
     state: state, chooseWords: chooseWords, milestones: milestones, mandalaOpts: mandalaOpts
   };
 })();

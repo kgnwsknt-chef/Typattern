@@ -1049,9 +1049,9 @@
       span.textContent = text;
       p.appendChild(span);
     };
-    // 達成項目：今回で達成になったもの
-    const mb = LayoutLearning.milestones(src.plan, before);
-    LayoutLearning.milestones(src.plan, after).forEach(function (m, i) {
+    // 達成項目：今回で達成になったもの（一度覚えた単位で決める。忘れても達成は消えない）
+    const mb = LayoutLearning.milestones(src.plan, LayoutLearning.everSet(beforeStatus));
+    LayoutLearning.milestones(src.plan, LayoutLearning.everSet(afterStatus)).forEach(function (m, i) {
       if (m.done && !mb[i].done) add("「" + m.name + "」を達成！ ", "level-up");
     });
     const newly = Array.from(after).filter(function (u) { return !before.has(u); });
