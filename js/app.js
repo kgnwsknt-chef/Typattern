@@ -826,7 +826,13 @@
     if (mode === FASTER) showFasterResult();
     if (mode === IKI) showIkiResult();
     showSkippedNote();
+    scrollToResult();
     saveSession(r);
+  }
+
+  // 結果の枠が画面の一番上に来るようにスクロールする（どのモードでも。結果の下が短くて上まで来られないときは、ページの一番下まで）
+  function scrollToResult() {
+    resultEl.scrollIntoView({ block: "start" });
   }
 
   // かな配列：割り当て表にないのでミスとして飛ばした文字を、結果の数字の下に赤字で知らせる（お題に出てきた順。同じ文字はまとめて回数）
@@ -1223,6 +1229,7 @@
             ? "記録を保存しました。キー配列習得の回は、レベルの達成度・ランキング・IKI・ミスタイプのページには入りません。"
             : "記録を保存しました。練習モードの回は、レベルの達成度・ランキングには入りません（IKI・ミスタイプのページには入ります）。";
           if (mode === LEARN) showLearnResult(session);
+          scrollToResult(); // 保存の後に結果が増えるので、もう一度スクロールする
         })
         .catch(function (err) {
           console.error(err);
@@ -1259,6 +1266,7 @@
         document.getElementById("ranking-min").textContent = Store.RANK_MIN_ACCURACY;
         Ranking.render(rankingEl, v[1], id);
         saveStatusEl.textContent = "記録を保存しました。";
+        scrollToResult(); // 保存の後に結果が増えるので、もう一度スクロールする
       })
       .catch(function (err) {
         console.error(err);
