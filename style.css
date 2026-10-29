@@ -9,7 +9,8 @@
   --accent: #1a6fd8;
   --error: #d93036;
   --error-bg: rgba(217, 48, 54, 0.15);
-  --reached: #2a8f3a; /* 目標に届いた印（他では速い bigram の結果の ✓） */
+  --reached: #2a8f3a; /* 目標に届いた印（他では速い bigram の結果の ✓。キー配列習得の達成項目の ✓ にも使う） */
+  --ll-learned: #b9d7f3; /* キー配列習得のページの配列図で、覚えた単位のキーの色 */
   /* 間隔グラフの色相（速い=青 → 平均=緑 → 遅い=赤）。js/rhythm.js が読む */
   --rh-hue-fast: 215;
   --rh-hue-avg: 120;
@@ -2076,6 +2077,26 @@ a.text-btn {
 .cmp-mean {
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
+}
+
+/* キー配列習得のページの達成項目（js/layout-learning-page.js） */
+.ll-milestones {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ll-milestones li {
+  padding: 2px 0;
+}
+
+.ll-milestones .ll-done {
+  color: var(--reached);
+  font-weight: bold;
+}
+
+.ll-milestones .ll-todo {
+  color: var(--sub);
 }
 
 /* キー配列習得の「覚えたかなの図」（js/kana-mandala.js。docs/layout-learning.md） */

@@ -80,6 +80,8 @@ const Filters = (function () {
         return match(f.mode, s.mode);
       };
       return sessions.filter(function (s) {
+        // キー配列習得の回は、どの記録ページにも入れない（docs/layout-learning.md。状況はキー配列習得のページ）
+        if (s.mode === "layout-learning") return false;
         const day = localDate(s.finishedAt);
         return match(f.lang, s.lang) && match(f.layout, s.keyLayout) && modeMatch(s) &&
           (!f.from.value || day >= f.from.value) && (!f.to.value || day <= f.to.value);

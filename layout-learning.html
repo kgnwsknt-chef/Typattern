@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Typattern キー配列習得</title>
+  <link rel="stylesheet" href="style.css?v=98">
+</head>
+<body>
+  <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
+  <nav class="top-nav" aria-label="ページ">
+    <div class="brand">
+      <div class="logo">Typattern<span id="version" class="version"></span><span id="data-size" class="data-size" title="ブラウザに保存している記録と登録したキー配列の大きさ（書き出すファイルとほぼ同じ）。書き出し・読み込みは設定のページ"></span></div>
+    </div>
+    <div class="nav-links">
+      <a class="text-btn" href="index.html">タイピング</a>
+      <a class="text-btn" href="stats.html" title="レベルの達成度・成績の推移・ランキング">記録</a>
+      <a class="text-btn" href="analysis_iki.html" title="キーごと・bigram・trigram ごとの IKI">IKI</a>
+      <a class="text-btn" href="mistype.html" title="どのキーを、どのキーと押し間違えたか">ミスタイプ</a>
+      <a class="text-btn" href="weak-words.html" title="単語モードで遅い単語・ミスの多い単語">苦手な単語</a>
+      <a class="text-btn" href="layout-learning.html" aria-current="page" title="キー配列習得の状況（覚えた単位・達成項目）">キー配列習得</a>
+      <a class="text-btn" href="settings.html" title="キー配列・お題の登録、グラフの範囲・ランキングの基準、記録の書き出しと読み込み">設定</a>
+    </div>
+  </nav>
+
+  <main class="main stats-main">
+    <!-- キー配列習得の状況（決まりは docs/layout-learning.md）。キー配列習得の回だけを使う -->
+    <div class="filters stats-filters">
+      <label class="filter">配列
+        <select id="ll-layout" class="layout-select" title="キー配列のページで登録したかな配列"></select>
+      </label>
+    </div>
+    <p id="ll-summary" class="stats-summary"></p>
+
+    <section class="stats-section">
+      <h2 class="stats-title">達成項目</h2>
+      <ul id="ll-milestones" class="ll-milestones"></ul>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">覚えたかなの図</h2>
+      <p class="rhythm-legend">覚えた単位は青、まだの単位は薄い灰色。並びがそろうと線でつながり、全部覚えると1つの模様になる ／ 右の点線の丸は、この配列にないかな</p>
+      <div id="ll-mandala"></div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">キー配列</h2>
+      <p class="rhythm-legend">シフトなしの面のかな。覚えた単位のキーに色を付ける（シフト面のかなは、上の図で見る）</p>
+      <div class="kb-scroll"><div id="ll-keymap" class="kb km"></div></div>
+    </section>
+  </main>
+
+  <script src="js/store.js?v=98"></script>
+  <script src="js/keys.js?v=98"></script>
+  <script src="js/settings.js?v=98"></script>
+  <script src="js/page-footer.js?v=98"></script>
+  <script src="js/keyboard-shapes.js?v=98"></script>
+  <script src="js/key-map.js?v=98"></script>
+  <script src="js/romaji.js?v=98"></script>
+  <script src="js/kana-layout.js?v=98"></script>
+  <script src="js/kana-mandala.js?v=98"></script>
+  <script src="js/layout-learning.js?v=98"></script>
+  <script src="js/layout-learning-page.js?v=98"></script>
+</body>
+</html>

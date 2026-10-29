@@ -1,0 +1,101 @@
+// キー配列習得のページ（layout-learning.html）。選んだかな配列について、覚えた単位の数・達成項目・覚えたかなの図・キー配列を出す
+// 決まりは docs/layout-learning.md。求め方は js/layout-learning.js
+(function () {
+  "use strict";
+
+  // タイピング画面で選んだキー配列（app.js と同じキー）。かな配列なら、最初はそれを出す
+  const KEY_LAYOUT_STORAGE = "typing-test.keyLayout";
+  const ASSET_VERSION = new URL(document.currentScript.src).searchParams.get("v") || "";
+  const layoutEl = document.getElementById("ll-layout");
+  const summaryEl = document.getElementById("ll-summary");
+  const milestonesEl = document.getElementById("ll-milestones");
+  const mandalaEl = document.getElementById("ll-mandala");
+  const keymapEl = document.getElementById("ll-keymap");
+
+  function fetchText(path) {
+    return fetch(path + "?v=" + ASSET_VERSION).then(function (r) {
+      if (!r.ok) throw new Error(path + ": " + r.status);
+      return r.text();
+    });
+  }
+
+  let layouts = [];
+  let lists = null;
+  let sessions = [];
+
+  function render() {
+    const layout = layouts.filter(function (l) { return l.id === layoutEl.value; })[0];
+    if (!layout) return;
+    const p = LayoutLearning.plan(layout.entries);
+    const mine = sessions.filter(function (s) { return s.mode === LayoutLearning.MODE && s.keyLayout === layout.id; });
+    const s = LayoutLearning.state(p, lists, mine);
+    const learned = s.learned;
+
+    // 覚えた数と、今の段階・次に覚える単位
+    const stage = s.stage === "1-1" ? "1-1. 最初の8字"
+      : s.stage === "1-2" ? "1-2. 2単位ずつ足す（基本30字）"
+      : s.stage === "done" ? "習得完了"
+      : s.areaIndex !== -1 ? "2. 学習区画「" + p.areas[s.areaIndex].name + "」" : "2. 配列ごとの学習区画";
+    const got = p.units.filter(function (u) { return learned.has(u); }).length;
+    summaryEl.textContent = "キー配列習得の回 " + mine.length + " 回 ／ 覚えた単位 " + got + " / " + p.units.length +
+      " ／ 今の段階：" + stage +
+      (s.newUnits.length ? " ／ 次に覚える単位：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") : "");
+
+    // 達成項目
+    milestonesEl.textContent = "";
+    LayoutLearning.milestones(p, learned).forEach(function (m) {
+      const li = document.createElement("li");
+      li.className = m.done ? "ll-done" : "ll-todo";
+      li.textContent = (m.done ? "✓ " : "　 ") + m.name;
+      milestonesEl.appendChild(li);
+    });
+
+    // 覚えたかなの図
+    KanaMandala.draw(mandalaEl, LayoutLearning.mandalaOpts(p, learned));
+
+    // キー配列：シフトなしの面のかなのキーに、覚えたかどうかの色を付ける
+    const kana = KeyMap.kanaOf(KanaLayout.create(layout.entries));
+    const fill = getComputedStyle(document.documentElement).getPropertyValue("--ll-learned").trim();
+    KeyMap.draw(keymapEl, function (number) {
+      const ch = Keys.charOf(number, false);
+      const u = ch === null ? null : kana.get(ch);
+      if (!u || !p.unitSet.has(u)) return null;
+      const st = s.status.get(u);
+      const ok = learned.has(u);
+      return {
+        fill: ok ? fill : "",
+        value: ok ? "✓" : "",
+        title: "「" + u + "」" + (ok ? "覚えた" : "まだ") + (st && st.acc !== null ? "（直近 " + st.count + " 回の正確率 " + st.acc.toFixed(1) + "%）" : st ? "（" + st.count + " 回）" : "")
+      };
+    }, kana);
+  }
+
+  PageFooter.init();
+  Promise.all([Store.getAllLayouts(), Store.getAllSessions(), LayoutLearning.loadLists(fetchText)])
+    .then(function (v) {
+      layouts = v[0].filter(function (l) { return l.type !== "eng"; })
+        .sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      sessions = v[1];
+      lists = v[2];
+      if (!layouts.length) {
+        summaryEl.textContent = "かな配列がまだ登録されていません。「設定」のページから開く「キー配列」のページで、かな配列を登録してください。";
+        return;
+      }
+      layouts.forEach(function (l) {
+        const o = document.createElement("option");
+        o.value = l.id;
+        o.textContent = l.name;
+        layoutEl.appendChild(o);
+      });
+      try {
+        const saved = localStorage.getItem(KEY_LAYOUT_STORAGE);
+        if (saved && layouts.some(function (l) { return l.id === saved; })) layoutEl.value = saved;
+      } catch (e) { /* 最初の配列を使う */ }
+      layoutEl.addEventListener("change", render);
+      render();
+    })
+    .catch(function (err) {
+      console.error(err);
+      summaryEl.textContent = "記録を読み込めませんでした: " + err.message;
+    });
+})();

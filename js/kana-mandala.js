@@ -1,4 +1,4 @@
-// キー配列習得の「覚えたかなの図」（かなの曼荼羅）を SVG で描く。まだどのページからも使っていない（記録のページで使う予定）。
+// キー配列習得の「覚えたかなの図」（かなの曼荼羅）を SVG で描く。まだどのページからも使っていない（キー配列習得のページで使う予定）。
 // 決まりは docs/layout-learning.md の「覚えたかなの図」。例の図は docs/images/layout-learning-mandala.svg
 const KanaMandala = (function () {
   "use strict";

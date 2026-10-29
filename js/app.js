@@ -82,8 +82,13 @@
   const GUIDE_IKI = "語を、押すキーの位置（QWERTY の文字）で打ちます。このモードの間、言語は英語、配列は QWERTY です。IME はオフにしてください。各語を5回ずつ打ちます（1回目は IKI のページに入れません）。";
   // 押したキーの QWERTY の文字を、そのまま入力の文字にする（IKI 測定。英語の配列の割り当て表と同じ形）
   const QWERTY_KEYS = { toChar: function (c) { return c; } };
+  // キー配列習得のモード（docs/layout-learning.md）：かな配列の割り当てを覚える。結果は新しい単位の正確率と達成項目
+  const LEARN = LayoutLearning.MODE;
+  const learnResultEl = document.getElementById("learn-result");
+  const learnResultBodyEl = document.getElementById("learn-result-body");
+  const GUIDE_LEARN = "読み（ひらがな）を、選んだかな配列で打ちます。IME はオフにしてください。押すキーは表示しません（割り当てを思い出して打ちます）。";
   // 練習モード（記録に practice: true を付け、レベルの達成度・ランキング・記録のページの推移に入れないモード）
-  const PRACTICE_MODES = ["weak", FASTER, IKI];
+  const PRACTICE_MODES = ["weak", FASTER, IKI, LEARN];
   const paceEl = document.getElementById("pace");
   const paceTextEl = document.getElementById("pace-text");
   // インジケーターの帯のマス（Levels.PACE_STEPS 個）。左から順に、届いている段まで色を付ける
@@ -156,6 +161,7 @@
     if (mode === "weak") return loadWeakSources();
     if (mode === FASTER) return loadFasterSources();
     if (mode === IKI) return loadIkiSources();
+    if (mode === LEARN) return loadLearnSources();
     const builtin = mode === "words" ? loadWordlists()
       : mode === "other" ? Promise.resolve([]) // 「その他」は追加したお題だけ
       : loadTexts();
@@ -232,6 +238,21 @@
   }
 
   // お題のページで追加したお題のうち、今の言語・モードのもの（文章は { name, text, lines }、単語は { name, words }）
+  // キー配列習得：単語リスト A〜D と、今の配列の割り当て表・キー配列習得の記録を読む。かな配列のときだけ使える
+  // sources は1つだけ { name: LEARN, lists, plan, sessions }。sessions は、打ち終えた回を足していく（次のお題から使う）
+  function loadLearnSources() {
+    const id = keyLayoutEl.value;
+    if (lang !== "ja" || !kanaLayouts[id]) return Promise.reject(new Error("NO_LEARN"));
+    return Promise.all([LayoutLearning.loadLists(fetchText), Store.getAllSessions()]).then(function (v) {
+      return [{
+        name: LEARN,
+        lists: v[0],
+        plan: LayoutLearning.plan(kanaLayouts[id].entries),
+        sessions: v[1].filter(function (s) { return s.mode === LEARN && s.keyLayout === id; })
+      }];
+    });
+  }
+
   function loadCustomTexts() {
     return Store.getAllTexts()
       .catch(function (err) {
@@ -380,6 +401,11 @@
       input.disabled = true;
       return;
     }
+    if (err && err.message === "NO_LEARN") {
+      textEl.textContent = "キー配列習得は、言語を日本語にして、キー配列のページで登録したかな配列を選んだときに使えます。";
+      input.disabled = true;
+      return;
+    }
     if (err && err.message === "NO_FASTER") {
       // 他では速い bigram は、ふだんのモードの記録をほかの言語・配列と比べて選ぶので、まだなければ案内する
       textEl.textContent = "この言語・配列が遅い方になっている bigram はまだありません。ほかの言語・配列とあわせて、ふだんのモードで打つと出ます（それぞれの言語・配列で " +
@@ -415,6 +441,16 @@
       const picks = WeakWords.chooseFaster(sources[0].cands);
       const made = wordText(WeakWords.practiceWords(picks.map(function (p) { return p.word; })));
       current = { name: FASTER, text: made.text, lines: made.lines, picks: picks };
+    } else if (mode === LEARN) {
+      // キー配列習得：記録から次に覚える単位を決め、その単位の言葉と覚えた単位の言葉でお題を作る
+      const src = sources[0];
+      const s = LayoutLearning.state(src.plan, src.lists, src.sessions);
+      const words = s.stage === "done" ? [] : LayoutLearning.chooseWords(s, src.lists.dUnits);
+      const made = words.length ? wordText(words) : { text: "" };
+      current = {
+        name: LEARN, text: made.text, lines: made.lines, learn: s,
+        emptyMessage: s.stage === "done" ? "この配列の単位を全部覚えました（習得完了）。" : "今覚えられる単位がありません。"
+      };
     } else if (mode === IKI) {
       // IKI 測定：設定の文字と作り方で10語を作り、それぞれ5回続けて並べる（日本語のときも、表示する文の行は作らない）
       const words = IkiMeasurement.chooseWords(Settings.get("ikiMeasurementChars"), Settings.get("ikiMeasurementPick"), sources[0].counts);
@@ -480,7 +516,7 @@
       resultEl.hidden = true;
       paceEl.hidden = true;
       current = null;
-      textEl.textContent = "「" + weakKindEl.selectedOptions[0].textContent + "」の苦手な単語はまだありません。「練習するもの」をほかのものにするか、単語モードで打ってください。";
+      textEl.textContent = picked.emptyMessage || "「" + weakKindEl.selectedOptions[0].textContent + "」の苦手な単語はまだありません。「練習するもの」をほかのものにするか、単語モードで打ってください。";
       input.disabled = true;
       return;
     }
@@ -521,7 +557,7 @@
     input.value = "";
     input.maxLength = target.length;
     input.disabled = false;
-    guideEl.textContent = mode === IKI ? GUIDE_IKI : !jp ? GUIDE_EN : romajiInput ? GUIDE_JA : GUIDE_KANA;
+    guideEl.textContent = mode === IKI ? GUIDE_IKI : mode === LEARN ? learnGuide(picked.learn) : !jp ? GUIDE_EN : romajiInput ? GUIDE_JA : GUIDE_KANA;
     speedUnitEls.forEach(function (el) { el.textContent = jp ? "かな/分" : "WPM"; });
     // 「キーごとの間隔」の説明。日本語は押したキーごとの間隔（かなは下の段に書く）
     rhythmWhatEl.textContent = jp ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
@@ -530,6 +566,7 @@
     skippedNoteEl.hidden = true;
     fasterResultEl.hidden = true;
     ikiResultEl.hidden = true;
+    learnResultEl.hidden = true;
     resultEl.hidden = true;
     board.classList.remove("finished");
 
@@ -984,6 +1021,78 @@
     }
   }
 
+  // キー配列習得：お題の上の説明。今の段階と、新しく覚える単位
+  function learnGuide(s) {
+    if (!s) return GUIDE_LEARN;
+    const stage = s.stage === "1-1" ? "1-1. 最初の8字"
+      : s.stage === "1-2" ? "1-2. 2単位ずつ足す（基本30字）"
+      : s.stage === "2" && s.areaIndex !== -1 ? "2. 学習区画「" + s.plan.areas[s.areaIndex].name + "」"
+      : s.stage === "2" ? "2. 配列ごとの学習区画" : "習得完了";
+    const units = s.newUnits.length ? "新しく覚える単位：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + "。" : "";
+    return "キー配列習得（" + stage + "）。" + units + GUIDE_LEARN;
+  }
+
+  // キー配列習得の結果：新しい単位の今回の正確率と「覚えた」かどうか、今回覚えた単位、達成した達成項目を出す
+  function showLearnResult(session) {
+    const src = sources[0];
+    if (!src || !src.plan) return;
+    const beforeStatus = LayoutLearning.status(src.sessions);
+    src.sessions.push(session); // 次のお題は、今回を含めて決める
+    const afterStatus = LayoutLearning.status(src.sessions);
+    const before = LayoutLearning.learnedSet(beforeStatus);
+    const after = LayoutLearning.learnedSet(afterStatus);
+    learnResultBodyEl.textContent = "";
+    const p = document.createElement("p");
+    const add = function (text, className) {
+      const span = document.createElement("span");
+      if (className) span.className = className;
+      span.textContent = text;
+      p.appendChild(span);
+    };
+    // 達成項目：今回で達成になったもの
+    const mb = LayoutLearning.milestones(src.plan, before);
+    LayoutLearning.milestones(src.plan, after).forEach(function (m, i) {
+      if (m.done && !mb[i].done) add("「" + m.name + "」を達成！ ", "level-up");
+    });
+    const newly = Array.from(after).filter(function (u) { return !before.has(u); });
+    const lost = Array.from(before).filter(function (u) { return !after.has(u); });
+    if (newly.length) add("今回覚えた単位：" + newly.map(function (u) { return "「" + u + "」"; }).join("") + " ");
+    if (lost.length) add("忘れたとみなした単位（優先して練習します）：" + lost.map(function (u) { return "「" + u + "」"; }).join("") + " ");
+    if (p.childNodes.length) learnResultBodyEl.appendChild(p);
+
+    const units = session.learning.newUnits;
+    if (units.length) {
+      const table = document.createElement("table");
+      table.className = "bg-table";
+      const hr = document.createElement("tr");
+      ["単位", "今回（正しく打った / 出てきた）", "判定（直近 " + LayoutLearning.MIN_RECENT + " 回以上の正確率）", "状態"].forEach(function (t) {
+        const th = document.createElement("th");
+        th.textContent = t;
+        hr.appendChild(th);
+      });
+      table.appendChild(document.createElement("thead")).appendChild(hr);
+      const body = table.appendChild(document.createElement("tbody"));
+      units.forEach(function (u) {
+        const tr = document.createElement("tr");
+        const cell = function (className, text) {
+          const td = document.createElement("td");
+          if (className) td.className = className;
+          td.textContent = text;
+          tr.appendChild(td);
+        };
+        const now = session.learning.units[u] || [0, 0];
+        const st = afterStatus.get(u);
+        cell("ww-word", u);
+        cell("", now[1] + " / " + now[0]);
+        cell("", !st || st.acc === null ? "あと " + (LayoutLearning.MIN_RECENT - (st ? st.count : 0)) + " 回で判定" : st.acc.toFixed(1) + "%（" + st.count + " 回）");
+        cell(st && st.learned ? "faster-reached" : "", st && st.learned ? "✓ 覚えた" : "まだ");
+        body.appendChild(tr);
+      });
+      learnResultBodyEl.appendChild(table);
+    }
+    learnResultEl.hidden = false;
+  }
+
   // 日本語の「キーごとの間隔」のグラフの元：最後に残ったかなごとに、そのかなを打ったキーと間隔
   // 間隔は、そのキーを押した時刻と直前のキー（Backspace を含む）の時刻の差。最初のキーは null
   function keyColumns() {
@@ -998,7 +1107,7 @@
   // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram", "iki-measurement": "IKI 測定" };
+  const MODE_NAME = { normal: "文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram", "iki-measurement": "IKI 測定", "layout-learning": "キー配列習得" };
 
   // 今回のレベルと文字/秒。正確率が基準未満なら「-」
   function renderLevel(session) {
@@ -1076,6 +1185,13 @@
     // 練習モードの回には印を付ける（レベルの達成度・ランキング・記録のページの推移に入れない。docs/measurement.md の「練習モード」）
     const practice = PRACTICE_MODES.indexOf(mode) !== -1;
     if (practice) session.practice = true;
+    // キー配列習得：単位ごとの { 出てきた回数, 正しく打った回数 } と、この回の新しい単位（docs/storage.md）
+    if (mode === LEARN && current && current.learn) {
+      session.learning = {
+        units: LayoutLearning.tally(target, missed, sources[0].plan.unitSet),
+        newUnits: current.learn.newUnits
+      };
+    }
     const raw = {
       id: id,
       keyLayout: session.keyLayout, // 文字から物理キーの位置を求めるのに使う（概要と同じ値）
@@ -1092,7 +1208,10 @@
         .then(function () {
           Store.persist();
           PageFooter.refreshSize();
-          saveStatusEl.textContent = "記録を保存しました。練習モードの回は、レベルの達成度・ランキングには入りません（IKI・ミスタイプのページには入ります）。";
+          saveStatusEl.textContent = mode === LEARN
+            ? "記録を保存しました。キー配列習得の回は、レベルの達成度・ランキング・IKI・ミスタイプのページには入りません。"
+            : "記録を保存しました。練習モードの回は、レベルの達成度・ランキングには入りません（IKI・ミスタイプのページには入ります）。";
+          if (mode === LEARN) showLearnResult(session);
         })
         .catch(function (err) {
           console.error(err);
@@ -1447,7 +1566,7 @@
   keyLayoutEl.addEventListener("change", function () {
     try { localStorage.setItem(KEY_LAYOUT_STORAGE, keyLayoutEl.value); } catch (e) { /* 無視 */ }
     // 苦手な単語・他では速い bigram は配列ごとに数えるので、配列を変えたら選び直す
-    if (mode === "weak" || mode === FASTER) setMode(mode);
+    if (mode === "weak" || mode === FASTER || mode === LEARN) setMode(mode);
     else reset(false);
   });
 

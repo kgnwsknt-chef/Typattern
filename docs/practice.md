@@ -6,7 +6,7 @@
 
 | モード | 状態 | 目的 | 決まり |
 | --- | --- | --- | --- |
-| キー配列習得 | 考えている途中 | かな配列などの新しいキー配列の割り当てを覚える。どこまで覚えたか（習得度）と達成項目を出す | [layout-learning.md](layout-learning.md) |
+| キー配列習得 | かな配列の分を作った（`mode` は `layout-learning`。英語の配列はまだ） | かな配列などの新しいキー配列の割り当てを覚える。どこまで覚えたか（習得度）と達成項目を出す | [layout-learning.md](layout-learning.md) |
 | 苦手な単語 | 作った（`mode` は `weak`） | 単語モードの記録から求めた遅い単語・ミスの多い単語を、集中して練習する | [weak-words.md](weak-words.md) |
 | 他では速い bigram | 作る（`mode` は `faster-other-setup`） | 今の言語・配列では遅いが、ほかの言語・配列では速く打てている bigram を、その bigram を含む実際の単語で練習する | [weak-words.md](weak-words.md) の「他では速い bigram の練習」 |
 | IKI 測定 | 作った（`mode` は `iki-measurement`） | 実際の語では出てこない bigram や、回数が少なく値がぶれやすい bigram の IKI を、設定の文字から作った意味のない短い語で測る | [iki-measurement.md](iki-measurement.md) |
@@ -19,7 +19,7 @@
   - レベルの達成度（結果画面にもその回のレベルを出さない。`docs/levels.md`）
   - ランキング（結果画面の順位と「ランキング」のタブ、記録のページのランキング。`docs/records.md`）
   - 記録のページの推移（`docs/records.md`）
-- **入れるところ**：IKI・ミスタイプのページ（`docs/analysis_iki.md`・`docs/analysis_mistype.md`）。絞り込みの「モード」で「練習モード以外」を選べば除ける。練習モードを1つだけ選んで見ることもできる（`docs/records.md`）。
+- **入れるところ**：IKI・ミスタイプのページ（キー配列習得の回は入れない。状況はキー配列習得のページで見る。`docs/layout-learning.md`）（`docs/analysis_iki.md`・`docs/analysis_mistype.md`）。絞り込みの「モード」で「練習モード以外」を選べば除ける。練習モードを1つだけ選んで見ることもできる（`docs/records.md`）。
 - 苦手な単語のページ（と苦手な単語の候補）は単語モードの記録だけを使うので、練習モードの回は入らない（`docs/weak-words.md`）。
 - **`mode` の値**：小文字の英語で、2語以上はハイフンでつなぐ（例 `faster-other-setup`。`docs/storage.md`）。
 - **結果画面**：順位とレベルを出さず、「練習モードの回は、レベルの達成度・ランキングには入りません（IKI・ミスタイプのページには入ります）」と書く。「ランキング」のタブは出さない。モードごとの結果（苦手な単語なら単語ごとの平均 IKI）は、それぞれの決まりに書く。
