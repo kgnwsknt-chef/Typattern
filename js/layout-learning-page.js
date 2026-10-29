@@ -57,7 +57,7 @@
       name.textContent = m.name;
       const note = document.createElement("div");
       note.className = "ll-tile-note";
-      note.textContent = m.done ? "達成" : "覚えた " + m.got + " / " + m.total;
+      note.textContent = m.done ? "達成" : m.got + " / " + m.total;
       tile.append(mark, name, note);
       milestonesEl.appendChild(tile);
     });
@@ -96,7 +96,7 @@
       const ok = learned.has(u);
       return {
         fill: ok ? fill : "",
-        value: ok ? "✓" : "",
+        value: "",
         title: "「" + u + "」" + (ok ? "覚えた" : "まだ") + (st && st.acc !== null ? "（直近 " + st.count + " 回の正確率 " + st.acc.toFixed(1) + "%）" : st ? "（" + st.count + " 回）" : "")
       };
     }, kana);
