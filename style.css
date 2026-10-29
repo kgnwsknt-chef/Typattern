@@ -11,10 +11,10 @@
   --error-bg: rgba(217, 48, 54, 0.15);
   --reached: #2a8f3a; /* 目標に届いた印（他では速い bigram の結果の ✓。キー配列習得の達成項目の ✓ にも使う） */
   --ll-learned: #b9d7f3; /* キー配列習得のページの配列図で、覚えた単位のキーの色 */
-  /* キー配列習得の結果で、達成した達成項目の帯（背景・枠・文字） */
-  --ll-achieved-bg: #fff4c2;
-  --ll-achieved-border: #e0a800;
-  --ll-achieved-text: #7a4a00;
+  /* キー配列習得の達成項目：結果の「達成！」の帯と、キー配列習得のページの達成したタイル（背景・枠・文字。覚えたかなの図の青にそろえる。タイルの ✓ は --reached の緑） */
+  --ll-done-bg: #e6f1fb;
+  --ll-done-border: #378add;
+  --ll-done-text: #0c447c;
   /* 間隔グラフの色相（速い=青 → 平均=緑 → 遅い=赤）。js/rhythm.js が読む */
   --rh-hue-fast: 215;
   --rh-hue-avg: 120;
@@ -2087,10 +2087,10 @@ a.text-btn {
 .ll-achieved {
   margin: 8px 0 12px;
   padding: 14px 20px;
-  border: 2px solid var(--ll-achieved-border);
+  border: 2px solid var(--ll-done-border);
   border-radius: 10px;
-  background: var(--ll-achieved-bg);
-  color: var(--ll-achieved-text);
+  background: var(--ll-done-bg);
+  color: var(--ll-done-text);
   font-size: 26px;
   font-weight: bold;
   text-align: center;
@@ -2104,21 +2104,57 @@ a.text-btn {
 
 /* キー配列習得のページの達成項目（js/layout-learning-page.js） */
 .ll-milestones {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 640px;
 }
 
-.ll-milestones li {
-  padding: 2px 0;
+.ll-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 92px;
+  padding: 8px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--field-bg);
+  text-align: center;
 }
 
-.ll-milestones .ll-done {
+.ll-tile-mark {
+  height: 26px;
+  font-size: 22px;
+  line-height: 26px;
+}
+
+.ll-tile-name {
+  font-weight: bold;
+}
+
+.ll-tile-note {
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.ll-tile.ll-done {
+  border-color: var(--ll-done-border);
+  background: var(--ll-done-bg);
+  color: var(--ll-done-text);
+}
+
+.ll-tile.ll-done .ll-tile-mark {
   color: var(--reached);
   font-weight: bold;
 }
 
-.ll-milestones .ll-todo {
+.ll-tile.ll-done .ll-tile-note {
+  color: var(--ll-done-text);
+}
+
+.ll-tile.ll-todo {
   color: var(--sub);
 }
 

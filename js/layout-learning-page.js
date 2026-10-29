@@ -45,11 +45,21 @@
     // 達成項目
     milestonesEl.textContent = "";
     // 達成項目は、一度覚えた単位で決める（忘れても達成は消えない）
+    // 1つずつ四角いタイルにして、3列に並べる（達成したものは色を付けて ✓、まだのものは覚えた数）
     LayoutLearning.milestones(p, LayoutLearning.everSet(s.status)).forEach(function (m) {
-      const li = document.createElement("li");
-      li.className = m.done ? "ll-done" : "ll-todo";
-      li.textContent = (m.done ? "✓ " : "　 ") + m.name;
-      milestonesEl.appendChild(li);
+      const tile = document.createElement("div");
+      tile.className = "ll-tile " + (m.done ? "ll-done" : "ll-todo");
+      const mark = document.createElement("div");
+      mark.className = "ll-tile-mark";
+      mark.textContent = m.done ? "✓" : "";
+      const name = document.createElement("div");
+      name.className = "ll-tile-name";
+      name.textContent = m.name;
+      const note = document.createElement("div");
+      note.className = "ll-tile-note";
+      note.textContent = m.done ? "達成" : "覚えた " + m.got + " / " + m.total;
+      tile.append(mark, name, note);
+      milestonesEl.appendChild(tile);
     });
 
     // 覚えたかなの図

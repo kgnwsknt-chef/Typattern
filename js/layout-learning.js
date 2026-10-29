@@ -364,23 +364,27 @@ const LayoutLearning = (function () {
 
   // ---- 達成項目 ----
 
-  // 達成項目（マイルストーン）の一覧 [{ name, done }]。どれも、その範囲の単位を全部覚えたときに達成
+  // 達成項目（マイルストーン）の一覧 [{ name, done, got, total }]。どれも、その範囲の単位を全部覚えたときに達成
   function milestones(p, learned) {
-    const has = function (arr) { return arr.length > 0 && arr.every(function (u) { return learned.has(u); }); };
+    // 範囲の単位から { name, done, got（覚えた数）, total（単位の数）} を作る
+    const item = function (name, arr) {
+      const got = arr.filter(function (u) { return learned.has(u); }).length;
+      return { name: name, done: arr.length > 0 && got === arr.length, got: got, total: arr.length };
+    };
+    const inFace = function (f) {
+      return [].concat.apply([], p.areas.filter(function (a) { return a.face === f; }).map(function (a) { return a.units; }));
+    };
     const list = [
-      { name: "最初の8字", done: has(FIRST8.filter(function (u) { return p.unitSet.has(u); })) },
-      { name: "基本30字", done: has(BASIC30.filter(function (u) { return p.unitSet.has(u); })) }
+      item("最初の8字", FIRST8.filter(function (u) { return p.unitSet.has(u); })),
+      item("基本30字", BASIC30.filter(function (u) { return p.unitSet.has(u); })),
+      item("シフトなしの面", inFace(""))
     ];
-    const plain = p.areas.filter(function (a) { return a.face === ""; });
-    list.push({ name: "シフトなしの面", done: has([].concat.apply([], plain.map(function (a) { return a.units; }))) });
     p.faces.forEach(function (f, i) {
-      const us = [].concat.apply([], p.areas.filter(function (a) { return a.face === f; }).map(function (a) { return a.units; }));
-      list.push({ name: p.faces.length === 1 ? "シフト面" : "シフト面" + (i + 1) + "（" + f + "）", done: has(us) });
+      list.push(item(p.faces.length === 1 ? "シフト面" : "シフト面" + (i + 1) + "（" + f + "）", inFace(f)));
     });
-    list.push({ name: "習得完了", done: has(p.units) });
+    list.push(item("習得完了", p.units));
     return list;
   }
-
   // 覚えたかなの図（js/kana-mandala.js）に渡す情報
   function mandalaOpts(p, learned) {
     return {
