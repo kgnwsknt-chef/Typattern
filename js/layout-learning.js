@@ -273,12 +273,16 @@ const LayoutLearning = (function () {
       const upTo = areaIndex === -1 ? p.areas.length - 1 : areaIndex;
       const reached = [];
       const skipped = [];
+      let later = []; // 今の学習区画より後の候補（学習区画の順。学習区画の中はランダム）
       p.areas.forEach(function (a, i) {
-        if (i > upTo) return;
-        a.units.forEach(function (u) { if (open(u) && eligible(u)) (i < upTo ? skipped : reached).push(u); });
+        const here = a.units.filter(function (u) { return open(u) && eligible(u); });
+        if (i < upTo) skipped.push.apply(skipped, here);
+        else if (i === upTo) reached.push.apply(reached, here);
+        else later = later.concat(shuffle(here));
       });
-      // 忘れた単位 → 前の回から続けている単位 → 前に飛ばした単位 → 今の学習区画の単位 の順に選ぶ
-      shuffle(forgotten.filter(eligible)).concat(carried, shuffle(skipped), shuffle(reached)).forEach(function (u) {
+      // 忘れた単位 → 前の回から続けている単位 → 前に飛ばした単位 → 今の学習区画の単位 の順に選ぶ。
+      // 枠が空いたら、次の学習区画の単位で埋める（今の学習区画を覚え終えると、その学習区画に進む）
+      shuffle(forgotten.filter(eligible)).concat(carried, shuffle(skipped), shuffle(reached), later).forEach(function (u) {
         if (newUnits.length < NEW_COUNT && newUnits.indexOf(u) === -1) newUnits.push(u);
       });
     }
