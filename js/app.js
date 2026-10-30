@@ -1043,6 +1043,7 @@
     const src = sources[0];
     if (!src || !src.plan) return;
     const beforeStatus = LayoutLearning.status(src.sessions);
+    const mb = LayoutLearning.achieved(src.plan, src.sessions);
     src.sessions.push(session); // 次のお題は、今回を含めて決める
     const afterStatus = LayoutLearning.status(src.sessions);
     const before = LayoutLearning.learnedSet(beforeStatus);
@@ -1055,9 +1056,8 @@
       span.textContent = text;
       p.appendChild(span);
     };
-    // 達成項目：今回で達成になったもの（一度覚えた単位で決める。忘れても達成は消えない）
-    const mb = LayoutLearning.milestones(src.plan, LayoutLearning.everSet(beforeStatus));
-    LayoutLearning.milestones(src.plan, LayoutLearning.everSet(afterStatus)).forEach(function (m, i) {
+    // 達成項目：今回で達成になったもの（範囲の単位を全部同時に覚えたとき。一度達成したら、忘れても消えない）
+    LayoutLearning.achieved(src.plan, src.sessions).forEach(function (m, i) {
       if (!m.done || mb[i].done) return;
       // 達成した達成項目は、結果の上に大きな帯で目立たせる（style.css の .ll-achieved）
       const banner = document.createElement("div");

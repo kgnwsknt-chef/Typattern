@@ -192,7 +192,7 @@ const LayoutLearning = (function () {
     return s;
   }
 
-  // 一度でも覚えたことのある単位の Set（段階と達成項目は、これで決める。忘れても戻さない）
+  // 一度でも覚えたことのある単位の Set（段階は、これで決める。忘れても戻さない。達成項目は achieved）
   function everSet(st) {
     const s = new Set();
     st.forEach(function (v, u) { if (v.everLearned) s.add(u); });
@@ -394,6 +394,22 @@ const LayoutLearning = (function () {
     list.push(item("習得完了", p.units));
     return list;
   }
+
+  // 記録から求めた達成項目の一覧 [{ name, done, got, total }]。
+  // 達成は、どこかのセッションの後に、その範囲の単位を全部同時に覚えていたこと（忘れた単位があるうちは達成にしない）。
+  // 一度達成したら、後で忘れても達成のまま。got は今覚えている数
+  function achieved(p, sessions) {
+    const list = sessions.filter(function (s) { return s.learning && s.learning.units; })
+      .slice().sort(function (a, b) { return a.finishedAt < b.finishedAt ? -1 : a.finishedAt > b.finishedAt ? 1 : 0; });
+    const done = [];
+    for (let i = 1; i <= list.length; i++) {
+      milestones(p, learnedSet(status(list.slice(0, i)))).forEach(function (m, k) { if (m.done) done[k] = true; });
+    }
+    return milestones(p, learnedSet(status(list))).map(function (m, k) {
+      m.done = !!done[k];
+      return m;
+    });
+  }
   // 覚えたかなの図（js/kana-mandala.js）に渡す情報
   function mandalaOpts(p, learned) {
     return {
@@ -407,6 +423,6 @@ const LayoutLearning = (function () {
   return {
     MODE: MODE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, FORGET_ACC: FORGET_ACC, NEW_WORDS: NEW_WORDS,
     loadLists: loadLists, plan: plan, segment: segment, tally: tally, status: status, learnedSet: learnedSet, everSet: everSet,
-    state: state, chooseWords: chooseWords, milestones: milestones, mandalaOpts: mandalaOpts
+    state: state, chooseWords: chooseWords, milestones: milestones, achieved: achieved, mandalaOpts: mandalaOpts
   };
 })();

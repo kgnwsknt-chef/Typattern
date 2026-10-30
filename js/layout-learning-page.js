@@ -44,9 +44,9 @@
 
     // 達成項目
     milestonesEl.textContent = "";
-    // 達成項目は、一度覚えた単位で決める（忘れても達成は消えない）
-    // 1つずつ四角いタイルにして、3列に並べる（達成したものは色を付けて ✓、まだのものは覚えた数）
-    LayoutLearning.milestones(p, LayoutLearning.everSet(s.status)).forEach(function (m) {
+    // 達成項目は、範囲の単位を全部同時に覚えたときに達成（一度達成したら、忘れても消えない）
+    // 1つずつ四角いタイルにして、3列に並べる（達成したものは色を付けて ✓、まだのものは今覚えている数）
+    LayoutLearning.achieved(p, mine).forEach(function (m) {
       const tile = document.createElement("div");
       tile.className = "ll-tile " + (m.done ? "ll-done" : "ll-todo");
       const mark = document.createElement("div");
