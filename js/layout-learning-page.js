@@ -34,13 +34,13 @@
 
     // 覚えた数と、今の段階・次に覚える単位
     const stage = s.stage === "1-1" ? "1-1. 最初の8字"
-      : s.stage === "1-2" ? "1-2. 2単位ずつ足す（基本30字）"
+      : s.stage === "1-2" ? "1-2. 2つずつ足す（基本30字）"
       : s.stage === "done" ? "習得完了"
       : s.areaIndex !== -1 ? "2. 学習区画「" + p.areas[s.areaIndex].name + "」" : "2. 配列ごとの学習区画";
     const got = p.units.filter(function (u) { return learned.has(u); }).length;
-    summaryEl.textContent = "キー配列習得の回 " + mine.length + " 回 ／ 覚えた単位 " + got + " / " + p.units.length +
+    summaryEl.textContent = "キー配列習得の回 " + mine.length + " 回 ／ 覚えた割り当て " + got + " / " + p.units.length +
       " ／ 今の段階：" + stage +
-      (s.newUnits.length ? " ／ 次に覚える単位：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") : "");
+      (s.newUnits.length ? " ／ 次に覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") : "");
 
     // 達成項目
     milestonesEl.textContent = "";

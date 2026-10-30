@@ -449,7 +449,7 @@
       const made = words.length ? wordText(words) : { text: "" };
       current = {
         name: LEARN, text: made.text, lines: made.lines, learn: s,
-        emptyMessage: s.stage === "done" ? "この配列の単位を全部覚えました（習得完了）。" : "今覚えられる単位がありません。"
+        emptyMessage: s.stage === "done" ? "この配列の割り当てを全部覚えました（習得完了）。" : "今覚えられる割り当てがありません。"
       };
     } else if (mode === IKI) {
       // IKI 測定：設定の文字と作り方で10語を作り、それぞれ5回続けて並べる（日本語のときも、表示する文の行は作らない）
@@ -1031,10 +1031,10 @@
   function learnGuide(s) {
     if (!s) return GUIDE_LEARN;
     const stage = s.stage === "1-1" ? "1-1. 最初の8字"
-      : s.stage === "1-2" ? "1-2. 2単位ずつ足す（基本30字）"
+      : s.stage === "1-2" ? "1-2. 2つずつ足す（基本30字）"
       : s.stage === "2" && s.areaIndex !== -1 ? "2. 学習区画「" + s.plan.areas[s.areaIndex].name + "」"
       : s.stage === "2" ? "2. 配列ごとの学習区画" : "習得完了";
-    const units = s.newUnits.length ? "新しく覚える単位：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + "。" : "";
+    const units = s.newUnits.length ? "新しく覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + "。" : "";
     return "キー配列習得（" + stage + "）。" + units + GUIDE_LEARN;
   }
 
@@ -1074,7 +1074,7 @@
       msg.textContent = newly.map(function (u) { return "「" + u + "」"; }).join("") + "を覚えました！";
       learnResultBodyEl.appendChild(msg);
     }
-    if (lost.length) add("忘れたとみなした単位（優先して練習します）：" + lost.map(function (u) { return "「" + u + "」"; }).join("") + " ", "ll-forgot"); // 赤字（style.css の .ll-forgot）
+    if (lost.length) add("忘れたとみなした割り当て（優先して練習します）：" + lost.map(function (u) { return "「" + u + "」"; }).join("") + " ", "ll-forgot"); // 赤字（style.css の .ll-forgot）
     if (p.childNodes.length) learnResultBodyEl.appendChild(p);
 
     const units = session.learning.newUnits;
@@ -1082,7 +1082,7 @@
       const table = document.createElement("table");
       table.className = "bg-table";
       const hr = document.createElement("tr");
-      ["単位", "今回（正しく打った / 出てきた）", "判定（直近 " + LayoutLearning.MIN_RECENT + " 回以上の正確率）", "状態"].forEach(function (t) {
+      ["割り当て", "今回（正しく打った / 出てきた）", "判定（直近 " + LayoutLearning.MIN_RECENT + " 回以上の正確率）", "状態"].forEach(function (t) {
         const th = document.createElement("th");
         th.textContent = t;
         hr.appendChild(th);

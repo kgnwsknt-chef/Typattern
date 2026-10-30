@@ -1,4 +1,4 @@
-// キー配列習得の「覚えたかなの図」（かなの曼荼羅）を SVG で描く。まだどのページからも使っていない（キー配列習得のページで使う予定）。
+// キー配列習得の「覚えたかなの図」（かなの曼荼羅）を SVG で描く。キー配列習得のページで使う。
 // 決まりは docs/layout-learning.md の「覚えたかなの図」。例の図は docs/images/layout-learning-mandala.svg
 const KanaMandala = (function () {
   "use strict";
@@ -156,10 +156,10 @@ const KanaMandala = (function () {
       });
     }
 
-    // 覚えた数（その配列の単位のうち）
+    // 覚えた割り当ての数（その配列の単位のうち）
     const present = units.filter(has);
     const got = present.filter(on).length;
-    el("text", { x: 20, y: 28, class: "kmd-count" }, svg).textContent = "覚えた " + got + " / " + present.length;
+    el("text", { x: 20, y: 28, class: "kmd-count" }, svg).textContent = "覚えた割り当て " + got + " / " + present.length;
     return { learned: got, total: present.length };
   }
 
