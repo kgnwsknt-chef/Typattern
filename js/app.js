@@ -1030,8 +1030,8 @@
   // キー配列習得：お題の上の説明。今の段階と、新しく覚える単位
   function learnGuide(s) {
     if (!s) return GUIDE_LEARN;
-    const stage = s.stage === "1-1" ? "1-1. 最初の8字"
-      : s.stage === "1-2" ? "1-2. 2つずつ足す（基本30字）"
+    const stage = s.stage === "1-1" ? "1-1. 頻出8字"
+      : s.stage === "1-2" ? "1-2. 2つずつ足す（頻出30字）"
       : s.stage === "2" && s.areaIndex !== -1 ? "2. 学習区画「" + s.plan.areas[s.areaIndex].name + "」"
       : s.stage === "2" ? "2. 配列ごとの学習区画" : "習得完了";
     const units = s.newUnits.length ? "新しく覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + "。" : "";

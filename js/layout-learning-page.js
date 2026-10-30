@@ -33,8 +33,8 @@
     const learned = s.learned;
 
     // 覚えた数と、今の段階・次に覚える単位
-    const stage = s.stage === "1-1" ? "1-1. 最初の8字"
-      : s.stage === "1-2" ? "1-2. 2つずつ足す（基本30字）"
+    const stage = s.stage === "1-1" ? "1-1. 頻出8字"
+      : s.stage === "1-2" ? "1-2. 2つずつ足す（頻出30字）"
       : s.stage === "done" ? "習得完了"
       : s.areaIndex !== -1 ? "2. 学習区画「" + p.areas[s.areaIndex].name + "」" : "2. 配列ごとの学習区画";
     const got = p.units.filter(function (u) { return learned.has(u); }).length;

@@ -218,7 +218,7 @@ const LayoutLearning = (function () {
     const cache = new Map();
     const basic = BASIC30.filter(function (c) { return p.unitSet.has(c); });
     const first = FIRST8.filter(function (c) { return p.unitSet.has(c); });
-    // 段階は、一度たどり着いたら戻さない（単位を忘れても、一度そろえた最初の8字・基本30字の段階には戻らない）
+    // 段階は、一度たどり着いたら戻さない（単位を忘れても、一度そろえた頻出8字・頻出30字の段階には戻らない）
     const ever = everSet(st);
     const reached = function (arr) { return arr.every(function (u) { return ever.has(u); }); };
     const stage = !reached(first) ? "1-1" : !reached(basic) ? "1-2" : p.units.every(function (u) { return learned.has(u); }) ? "done" : "2";
@@ -265,7 +265,7 @@ const LayoutLearning = (function () {
         if (newUnits.length < NEW_COUNT && newUnits.indexOf(u) === -1) newUnits.push(u);
       });
     } else if (stage === "2") {
-      // 今の学習区画：覚えていない単位のうち候補の条件を満たすものがある、最初の学習区画（基本30字は段階 1 で覚えた）
+      // 今の学習区画：覚えていない単位のうち候補の条件を満たすものがある、最初の学習区画（頻出30字は段階 1 で覚えた）
       const open = function (u) { return !learned.has(u) && basic.indexOf(u) === -1; };
       for (let i = 0; i < p.areas.length; i++) {
         if (p.areas[i].units.some(function (u) { return open(u) && eligible(u); })) { areaIndex = i; break; }
@@ -316,7 +316,7 @@ const LayoutLearning = (function () {
     };
     const known = new Set(s.learned);
     if (s.stage === "1-1") {
-      // 最初の8字の段階：全部をこの8字だけでできた言葉にする。まだ覚えていない字は、言葉の少ない字から順に、
+      // 頻出8字の段階：全部をこの8字だけでできた言葉にする。まだ覚えていない字は、言葉の少ない字から順に、
       // その字が NEW_WORDS 回ほど出てくるまで、その字を含む言葉を先に入れる（足りなければ同じ言葉を MAX_REPEAT 回まで）
       const first = new Set(FIRST8);
       const base = s.pool.filter(function (w) { return s.unitsOf(w).every(function (u) { return first.has(u); }); });
@@ -384,8 +384,8 @@ const LayoutLearning = (function () {
       return [].concat.apply([], p.areas.filter(function (a) { return a.face === f; }).map(function (a) { return a.units; }));
     };
     const list = [
-      item("最初の8字", FIRST8.filter(function (u) { return p.unitSet.has(u); })),
-      item("基本30字", BASIC30.filter(function (u) { return p.unitSet.has(u); })),
+      item("頻出8字", FIRST8.filter(function (u) { return p.unitSet.has(u); })),
+      item("頻出30字", BASIC30.filter(function (u) { return p.unitSet.has(u); })),
       item("シフトなしの面", inFace(""))
     ];
     p.faces.forEach(function (f, i) {
