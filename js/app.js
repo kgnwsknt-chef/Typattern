@@ -1080,9 +1080,9 @@
     const units = session.learning.newUnits;
     if (units.length) {
       const table = document.createElement("table");
-      table.className = "bg-table";
+      table.className = "bg-table ll-result-table";
       const hr = document.createElement("tr");
-      ["割り当て", "今回（正しく打った / 出てきた）", "判定（直近 " + LayoutLearning.MIN_RECENT + " 回以上の正確率）", "状態"].forEach(function (t) {
+      ["割り当て", "正解 / 回数", "直近の正解率", "状態"].forEach(function (t) {
         const th = document.createElement("th");
         th.textContent = t;
         hr.appendChild(th);

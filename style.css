@@ -2272,3 +2272,9 @@ a.text-btn {
   font-size: 14px;
   fill: var(--text);
 }
+
+/* キー配列習得の結果の表：見出しと「覚えた」などを折り返さない */
+.ll-result-table th,
+.ll-result-table td {
+  white-space: nowrap;
+}
