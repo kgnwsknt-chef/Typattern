@@ -13,7 +13,12 @@
   let hmBase = 0;         // 色の基準
   // bigram の表で分布を出す行が変わったら、2次元ヒストグラムのそのマスを枠で囲み直す
   const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"), redrawHeatmaps);
-  const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"));
+  // trigram の表で分布を出す行が変わったら、相関の図のその点を囲み直す
+  const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"), redrawCorr);
+  const corrPairEl = document.getElementById("corr-pair");   // trigram の中の2つの間隔
+  const corrInnerEl = document.getElementById("corr-inner"); // trigram の中の間隔と、その各 bigram
+  let corrTri = [];            // 相関の図に描く trigram（表と同じ）
+  let corrBi = new Map();      // bigram の文字 → 行（「回数」で絞らない全部の bigram）
   const filters = Filters.init(update);
   const keyIkiEl = document.getElementById("key-iki"); // キーごとの IKI の配列図
   const keyIkiLegendEl = document.getElementById("key-iki-legend");
@@ -47,6 +52,7 @@
         drawKeyIki([], 0, kana);
         drawHeatmaps([], 0);
         drawClasses([], [], 0);
+        drawCorr([], []);
         return;
       }
 
@@ -82,6 +88,7 @@
         trigramTable.renderRows(trigramEl, tri, base);
         drawKeyIki(allBi, base, kana);
         drawHeatmaps(bi, base);
+        drawCorr(tri, allBi);
         ngramSummaryEl.textContent = "総打鍵数 " + strokes.toLocaleString() + " ／ bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
       });
     }).catch(function (err) {
@@ -133,6 +140,44 @@
     const opts = { selected: bigramTable.selected(), keyMove: true, onSelect: function (r, byKey) { bigramTable.show(r ? r.gram : null, byKey); } };
     NGram.drawHeatmap(hmCountEl, hmRows, "count", hmBase, opts);
     NGram.drawHeatmap(hmIkiEl, hmRows, "iki", hmBase, opts);
+  }
+
+  // ---- trigram と bigram の相関（決まりは docs/analysis_iki.md の「trigram と bigram の相関」） ----
+
+  // tri：表に出す trigram（「回数」で絞ったもの）。allBi：全部の bigram（trigram の中の bigram の IKI を引く）
+  function drawCorr(tri, allBi) {
+    corrTri = tri;
+    corrBi = new Map(allBi.map(function (r) { return [r.gram, r]; }));
+    redrawCorr();
+  }
+
+  function redrawCorr() {
+    const ms = function (v) { return Math.round(v) + " ms"; };
+    const pair = [];
+    const inner = [];
+    corrTri.forEach(function (t) {
+      const ab = corrBi.get(t.gram.slice(0, 2));
+      const bc = corrBi.get(t.gram.slice(1));
+      if (!ab || !bc) return;
+      const head = t.gram + "（" + t.count + " 回）";
+      // 左の図：横軸 = trigram の中の1つ目の間隔、縦軸 = 2つ目の間隔
+      pair.push({ gram: t.gram, x: t.steps[0], y: t.steps[1], count: t.count,
+        tip: head + "の中の間隔：1つ目 " + ab.gram + " " + ms(t.steps[0]) + " ／ 2つ目 " + bc.gram + " " + ms(t.steps[1]) });
+      // 右の図：trigram の中の2つの間隔それぞれを、その bigram の点にする（1つ目・2つ目は区別しない）。
+      // 横軸 = bigram の IKI、縦軸 = trigram の中の間隔
+      [[ab, t.steps[0]], [bc, t.steps[1]]].forEach(function (s) {
+        inner.push({ gram: t.gram, x: s[0].avg, y: s[1], count: t.count,
+          tip: s[0].gram + "（bigram " + ms(s[0].avg) + "）：trigram " + head + "の中では " + ms(s[1]) });
+      });
+    });
+    const selected = trigramTable.selected();
+    const onSelect = function (gram) { trigramTable.show(gram); };
+    NGram.drawScatter(corrPairEl, pair, { title: "trigram の中の2つの間隔", xLabel: "1つ目の間隔",
+      yLabel: "2つ目の間隔", selected: selected, onSelect: onSelect,
+      noR: true, ariaLabel: "trigram の中の1つ目の間隔と2つ目の間隔の散布図" });
+    NGram.drawScatter(corrInnerEl, inner, { title: "trigram の中の間隔と、その各 bigram", xLabel: "bigram の IKI",
+      yLabel: "trigram の中の間隔", selected: selected, onSelect: onSelect,
+      ariaLabel: "trigram の中の間隔と、その bigram の IKI の散布図" });
   }
 
   // ---- 指と行(row)で分けた bigram・trigram（分類は js/finger-map.js。決まりは docs/analysis_iki.md） ----

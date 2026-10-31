@@ -1775,9 +1775,64 @@ a.text-btn {
   opacity: 0.5;
 }
 
-/* n-gram のページ：表の上に出す分布（出ていないときは場所を取らない） */
-.ngram-dists .ngram-dist:not(:empty) {
-  margin: 0 0 12px;
+/* IKI のページの bigram・trigram：左に表、右にクリックで出る分布と推移。狭い画面では分布を表の上に出す */
+.ng-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "table dist";
+  gap: 24px;
+  align-items: start;
+}
+
+.ng-table {
+  grid-area: table;
+}
+
+.ng-dist {
+  grid-area: dist;
+}
+
+.ng-block .ngram-dist:not(:empty) {
+  margin-top: 0;
+}
+
+@media (max-width: 700px) {
+  .ng-block {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "dist" "table";
+  }
+}
+
+/* IKI のページ：trigram と bigram の相関の散布図（js/ngram.js の drawScatter） */
+.corr:not(:empty) {
+  padding: 8px 10px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.corr-diag {
+  stroke: var(--sub);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.corr-dot {
+  stroke: none;
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.corr-dot:hover {
+  opacity: 1;
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+/* 分布を出している trigram の点は赤い丸で囲む（青い点の中で目立つように） */
+.corr-dot.corr-selected {
+  opacity: 1;
+  stroke: var(--error);
+  stroke-width: 1.5;
 }
 
 /* タイピング画面：初めての人向けの使い方（ふだんは閉じておく） */

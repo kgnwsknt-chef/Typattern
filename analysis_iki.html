@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern IKI</title>
-  <link rel="stylesheet" href="style.css?v=109">
+  <link rel="stylesheet" href="style.css?v=110">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -63,7 +63,7 @@
     </div>
     <p id="stats-summary" class="stats-summary">読み込み中…</p>
 
-    <!-- 並び：絞り込み → 回数・集計・説明 → キーごとの IKI（配列図）→ bigram の2次元ヒストグラム → 分布（クリックで出る）→ bigram・trigram の表 -->
+    <!-- 並び：絞り込み → 回数・集計・説明 → キーごとの IKI（配列図）→ bigram の2次元ヒストグラム → bigram（表と分布）→ 指と行(row)で分けた bigram・trigram → trigram（表と分布）→ trigram と bigram の相関 -->
     <section class="stats-section">
       <div class="filters">
         <label class="filter">回数
@@ -76,7 +76,7 @@
         </label>
       </div>
       <p id="ngram-summary" class="stats-summary"></p>
-      <p class="rhythm-legend">続けて押した2キー（bigram）・3キー（trigram）ごとの平均 IKI を、選んだ記録すべてで集計。キーは QWERTY の文字で表示（日本語も押したキー）。trigram は2つの打鍵間隔の平均 ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡んだものは除外 ／ 色は全体の打鍵間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い ／ 表の上に IKI の分布を表示（最初は一番速い bigram・trigram。2次元ヒストグラムのマスや表の行をクリックすると切り替わる）</p>
+      <p class="rhythm-legend">続けて押した2キー（bigram）・3キー（trigram）ごとの平均 IKI を、選んだ記録すべてで集計。キーは QWERTY の文字で表示（日本語も押したキー）。trigram は2つの打鍵間隔の平均 ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡んだものは除外 ／ 色は全体の打鍵間隔の平均が基準 ／ 速い<span class="rhythm-scale"></span>遅い ／ 表の横に IKI の分布を表示（最初は一番速い bigram・trigram。2次元ヒストグラムのマスや表の行、相関の図の点をクリックすると切り替わる）</p>
     </section>
 
     <section class="stats-section">
@@ -101,6 +101,7 @@
     </section>
 
     <section class="stats-section">
+      <h2 class="stats-title">bigram</h2>
       <!-- 分布の下の IKI の推移の横軸（bigram・trigram 共通） -->
       <div class="filters">
         <label class="filter">推移の横軸
@@ -110,18 +111,10 @@
           </select>
         </label>
       </div>
-      <!-- クリックで出る IKI の分布と推移（左が bigram、右が trigram） -->
-      <div class="ngram-grid ngram-dists">
-        <div class="ngram-col"><div id="bigram-dist" class="ngram-dist"></div></div>
-        <div class="ngram-col"><div id="trigram-dist" class="ngram-dist"></div></div>
-      </div>
-      <div class="ngram-grid">
-        <div class="ngram-col">
-          <div id="bigram" class="ngram-scroll"></div>
-        </div>
-        <div class="ngram-col">
-          <div id="trigram" class="ngram-scroll"></div>
-        </div>
+      <!-- 左に表、右にクリックで出る IKI の分布と推移（狭い画面では分布を表の上に出す） -->
+      <div class="ng-block">
+        <div id="bigram" class="ngram-scroll ng-table"></div>
+        <div id="bigram-dist" class="ngram-dist ng-dist"></div>
       </div>
     </section>
 
@@ -148,21 +141,39 @@
         <div id="tc-dist" class="ngram-dist fc-dist"></div>
       </div>
     </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">trigram</h2>
+      <p class="rhythm-legend">分布の下の推移の横軸は、上の bigram の欄の「推移の横軸」で選ぶ</p>
+      <div class="ng-block">
+        <div id="trigram" class="ngram-scroll ng-table"></div>
+        <div id="trigram-dist" class="ngram-dist ng-dist"></div>
+      </div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">trigram と bigram の相関</h2>
+      <p class="rhythm-legend">点は trigram（上の trigram の表と同じもの。「回数」の絞り込みも同じ）／ bigram の IKI は、その bigram のすべての出現の平均 ／ 軸の最大値よりも大きい値は最大値のところに描く ／ r = 相関係数（ピアソン。1 に近いほど一直線に並ぶ）／ 点にマウスを乗せると値を表示、クリックでその trigram の分布を表示</p>
+      <div class="ngram-grid">
+        <div class="ngram-col"><div id="corr-pair" class="corr"></div></div>
+        <div class="ngram-col"><div id="corr-inner" class="corr"></div></div>
+      </div>
+    </section>
   </main>
 
-  <script src="js/store.js?v=109"></script>
-  <script src="js/keys.js?v=109"></script>
-  <script src="js/settings.js?v=109"></script>
-  <script src="js/page-footer.js?v=109"></script>
-  <script src="js/rhythm.js?v=109"></script>
-  <script src="js/keyboard-shapes.js?v=109"></script>
-  <script src="js/kana-layout.js?v=109"></script>
-  <script src="js/key-map.js?v=109"></script>
-  <script src="js/point-trend.js?v=109"></script>
-  <script src="js/ngram.js?v=109"></script>
-  <script src="js/finger-map.js?v=109"></script>
-  <script src="js/iki-measurement.js?v=109"></script>
-  <script src="js/filters.js?v=109"></script>
-  <script src="js/ngram-page.js?v=109"></script>
+  <script src="js/store.js?v=110"></script>
+  <script src="js/keys.js?v=110"></script>
+  <script src="js/settings.js?v=110"></script>
+  <script src="js/page-footer.js?v=110"></script>
+  <script src="js/rhythm.js?v=110"></script>
+  <script src="js/keyboard-shapes.js?v=110"></script>
+  <script src="js/kana-layout.js?v=110"></script>
+  <script src="js/key-map.js?v=110"></script>
+  <script src="js/point-trend.js?v=110"></script>
+  <script src="js/ngram.js?v=110"></script>
+  <script src="js/finger-map.js?v=110"></script>
+  <script src="js/iki-measurement.js?v=110"></script>
+  <script src="js/filters.js?v=110"></script>
+  <script src="js/ngram-page.js?v=110"></script>
 </body>
 </html>

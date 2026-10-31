@@ -289,6 +289,114 @@ const NGram = (function () {
     el.appendChild(svg);
   }
 
+  // ---- trigram と bigram の相関の散布図（IKI のページ。決まりは docs/analysis_iki.md の「trigram と bigram の相関」） ----
+
+  // points：[{ gram, x, y, count, tip }]（gram は点が表す trigram。同じ gram の点がいくつあってもよい。count はその trigram の回数）
+  // 点の色は回数（薄い青 = 少ない、濃い青 = 多い。回数は偏りが大きいので対数で）。回数の多い点を上に描く
+  // opts：title・xLabel・yLabel（軸の名前）・selected（赤い丸で囲む点の gram）・
+  //   onSelect(gram)（点のクリックで呼ぶ）・ariaLabel・noR（true なら相関係数を出さない）
+  // 縦軸・横軸とも 0〜設定の「分布の横軸の最大」（ngramMaxMs）で、範囲の外の値は端に描く。相関係数は端で止める前の値で求める
+  function drawScatter(el, points, opts) {
+    el.textContent = "";
+    const head = document.createElement("div");
+    head.className = "dist-head";
+    const title = document.createElement("span");
+    title.className = "dist-title";
+    title.textContent = opts.title;
+    const info = document.createElement("span");
+    info.className = "dist-info";
+    const r = opts.noR ? null : pearson(points);
+    info.textContent = "点 " + points.length.toLocaleString() + " 個" + (opts.noR ? "" : " ／ r = " + (r === null ? "-" : r.toFixed(2)));
+    head.appendChild(title);
+    head.appendChild(info);
+    el.appendChild(head);
+    if (!points.length) {
+      const p = document.createElement("p");
+      p.className = "hm-empty";
+      p.textContent = "対象になる trigram がありません。";
+      el.appendChild(p);
+      return;
+    }
+
+    const max = Settings.get("ngramMaxMs");
+    const P = 300, L = 40, R = 14, T = 12, B = 64; // 描く範囲は正方形（P × P）。下に軸の名前と色の凡例
+    const W = L + P + R, H = T + P + B;
+    const x = function (v) { return L + (Math.min(v, max) / max) * P; };
+    const y = function (v) { return T + P - (Math.min(v, max) / max) * P; };
+    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg", role: "img", "aria-label": opts.ariaLabel });
+    svg.style.maxWidth = (W * 1.4) + "px";
+
+    // 軸と目盛り（分布と同じ切りのよい間隔で6本程度）
+    svg.appendChild(svgEl("line", { x1: L, y1: T + P, x2: L + P, y2: T + P, class: "dist-axis" }));
+    svg.appendChild(svgEl("line", { x1: L, y1: T, x2: L, y2: T + P, class: "dist-axis" }));
+    const tick = [10, 20, 25, 50, 100, 200, 250, 500, 1000].find(function (s) { return max / s <= 6; }) || 2000;
+    for (let v = 0; v <= max; v += tick) {
+      svg.appendChild(svgEl("line", { x1: x(v), y1: T + P, x2: x(v), y2: T + P + 3, class: "dist-axis" }));
+      svg.appendChild(svgText(x(v), T + P + 14, String(v), "middle"));
+      svg.appendChild(svgEl("line", { x1: L - 3, y1: y(v), x2: L, y2: y(v), class: "dist-axis" }));
+      svg.appendChild(svgText(L - 5, y(v) + 3, String(v), "end"));
+    }
+    svg.appendChild(svgText(L + P, T + P + 28, opts.xLabel + "（ms）→", "end"));
+    const yTitle = svgText(10, T + P, opts.yLabel + "（ms）→", "start");
+    yTitle.setAttribute("transform", "rotate(-90 10 " + (T + P) + ")");
+    svg.appendChild(yTitle);
+
+    // 縦と横が等しいところ（点線）
+    svg.appendChild(svgEl("line", { x1: x(0), y1: y(0), x2: x(max), y2: y(max), class: "corr-diag" }));
+
+    // 点の色：回数の対数で 0〜1 にする（1回 = 0、一番多い回数 = 1）
+    let maxCount = 1;
+    points.forEach(function (p) { if (p.count > maxCount) maxCount = p.count; });
+    const shade = function (c) { return maxCount > 1 ? Math.log(c) / Math.log(maxCount) : 1; };
+
+    // 色の凡例（回数。目盛りは 1・真ん中・一番多い回数）
+    const ly = T + P + 40, lw = 160, lh = 8, steps = 20;
+    svg.appendChild(svgText(L, ly + lh - 1, "回数（対数）", "start")); // 色は回数の対数で変えるので、凡例の目盛りも対数
+    const lx = L + 66;
+    for (let i = 0; i < steps; i++) {
+      svg.appendChild(svgEl("rect", { x: lx + (i * lw) / steps, y: ly, width: lw / steps + 0.5, height: lh, fill: dotColor((i + 0.5) / steps) }));
+    }
+    svg.appendChild(svgText(lx, ly + lh + 11, "1", "start"));
+    svg.appendChild(svgText(lx + lw / 2, ly + lh + 11, String(Math.round(Math.sqrt(maxCount))), "middle"));
+    svg.appendChild(svgText(lx + lw, ly + lh + 11, maxCount + " 回", "end"));
+
+    // 点（回数の少ない順に描き、多い点を上にする。選んでいる trigram の点は、ほかの点に隠れないよう最後に描く）
+    const sel = points.filter(function (p) { return p.gram === opts.selected; });
+    points.filter(function (p) { return p.gram !== opts.selected; })
+      .sort(function (a, b) { return a.count - b.count; }).concat(sel).forEach(function (p) {
+      const dot = svgEl("circle", { cx: x(p.x), cy: y(p.y), r: p.gram === opts.selected ? 4.5 : 2.5, fill: dotColor(shade(p.count)),
+        class: "corr-dot" + (p.gram === opts.selected ? " corr-selected" : "") });
+      const tip = svgEl("title", {});
+      tip.textContent = p.tip;
+      dot.appendChild(tip);
+      if (opts.onSelect) dot.addEventListener("click", function () { opts.onSelect(p.gram); });
+      svg.appendChild(dot);
+    });
+    el.appendChild(svg);
+  }
+
+  // 散布図の点の色。f = 0（回数が少ない）〜 1（多い）。薄い青 → 濃い青（一番薄くても背景から見分けられる濃さ）
+  function dotColor(f) {
+    return "hsl(215, 75%, " + Math.round(80 - f * 55) + "%)";
+  }
+
+  // 相関係数（ピアソン）。点が2つ未満か、どちらかの値が全部同じなら null
+  function pearson(points) {
+    const n = points.length;
+    if (n < 2) return null;
+    let mx = 0, my = 0;
+    points.forEach(function (p) { mx += p.x; my += p.y; });
+    mx /= n;
+    my /= n;
+    let sxy = 0, sxx = 0, syy = 0;
+    points.forEach(function (p) {
+      sxy += (p.x - mx) * (p.y - my);
+      sxx += (p.x - mx) * (p.x - mx);
+      syy += (p.y - my) * (p.y - my);
+    });
+    return sxx && syy ? sxy / Math.sqrt(sxx * syy) : null;
+  }
+
   // 軸に並べるキーの順（QWERTY の物理的な並び。数字の行 → Q の行 → A の行 → Z の行）
   const KEY_ROWS = ["`1234567890-=", "qwertyuiop[]\\", "asdfghjkl;'", "zxcvbnm,./"];
   const KEY_ORDER = KEY_ROWS.join("");
@@ -515,6 +623,7 @@ const NGram = (function () {
   // （複数回分を同じ map に足せば、全記録の集計になる）
   // tag を渡すと、値ごとにどの回の記録かを覚えておく（IKI の推移に使う。{ run: 何回目か, day: "YYYY-MM-DD", at: 打ち終わりの日時 }）
   // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis_iki.md を参照
+  // 中の間隔ごとの合計も足しておく（trigram の中の1つ目・2つ目の間隔。trigram と bigram の相関の図に使う）
   // skip を渡すと、その位置を打ったキーが絡むものは除く（IKI 測定モードの1回目。IkiMeasurement.skipOf）
   function accumulate(map, n, events, tag, skip) {
     const seq = keySequence(events, skip);
@@ -526,15 +635,17 @@ const NGram = (function () {
       }
       if (!ok) continue;
       const key = seq.slice(start, end + 1).map(function (k) { return k.label; }).join("");
-      const e = map.get(key) || { values: [], tags: [] };
+      const e = map.get(key) || { values: [], tags: [], stepSums: new Array(n - 1).fill(0) };
       e.values.push((seq[end].t - seq[start].t) / (n - 1)); // 1回ごとの値（分布・標準偏差に使う）
+      for (let i = start; i < end; i++) e.stepSums[i - start] += seq[i + 1].t - seq[i].t;
       e.tags.push(tag || null);
       map.set(key, e);
     }
     return map;
   }
 
-  // accumulate の結果を一覧表の行 { gram, avg, sd, count, values, tags } にする（tags は values と同じ並びで、その値の記録）
+  // accumulate の結果を一覧表の行 { gram, avg, sd, count, values, tags, steps } にする（tags は values と同じ並びで、その値の記録。
+  // steps は中の間隔ごとの平均。trigram なら [1つ目, 2つ目]）
   // sd は IKI の標本標準偏差（n-1 で割る）。1回しか出ないものは null
   function toRows(map) {
     return Array.from(map, function (entry) {
@@ -544,7 +655,8 @@ const NGram = (function () {
       const sd = count > 1
         ? Math.sqrt(values.reduce(function (a, v) { return a + (v - avg) * (v - avg); }, 0) / (count - 1))
         : null;
-      return { gram: entry[0], avg: avg, sd: sd, count: count, values: values, tags: entry[1].tags };
+      const steps = entry[1].stepSums.map(function (s) { return s / count; });
+      return { gram: entry[0], avg: avg, sd: sd, count: count, values: values, tags: entry[1].tags, steps: steps };
     });
   }
 
@@ -561,5 +673,5 @@ const NGram = (function () {
     return el;
   }
 
-  return { create: create, accumulate: accumulate, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution };
+  return { create: create, accumulate: accumulate, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution, drawScatter: drawScatter };
 })();
