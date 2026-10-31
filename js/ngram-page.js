@@ -16,7 +16,7 @@
   // trigram の表で分布を出す行が変わったら、相関の図のその点を囲み直す
   const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"), redrawCorr);
   const corrPairEl = document.getElementById("corr-pair");   // trigram の中の2つの間隔
-  const corrInnerEl = document.getElementById("corr-inner"); // trigram の中の間隔と、その各 bigram
+  const corrInnerEl = document.getElementById("corr-inner"); // trigram の中の間隔と、bigram 全体の平均
   let corrTri = [];            // 相関の図に描く trigram（表と同じ）
   let corrBi = new Map();      // bigram の文字 → 行（「回数」で絞らない全部の bigram）
   const filters = Filters.init(update);
@@ -167,16 +167,16 @@
       // 横軸 = bigram の IKI、縦軸 = trigram の中の間隔
       [[ab, t.steps[0]], [bc, t.steps[1]]].forEach(function (s) {
         inner.push({ gram: t.gram, x: s[0].avg, y: s[1], count: t.count,
-          tip: s[0].gram + "（bigram " + ms(s[0].avg) + "）：trigram " + head + "の中では " + ms(s[1]) });
+          tip: s[0].gram + "（bigram 全体の平均 " + ms(s[0].avg) + "）：trigram " + head + "の中では " + ms(s[1]) });
       });
     });
     const selected = trigramTable.selected();
     const onSelect = function (gram) { trigramTable.show(gram); };
-    NGram.drawScatter(corrPairEl, pair, { title: "trigram の中の2つの間隔", xLabel: "1つ目の間隔",
-      yLabel: "2つ目の間隔", selected: selected, onSelect: onSelect,
+    NGram.drawScatter(corrPairEl, pair, { title: "trigram の中の2つの間隔", xLabel: "1つ目の間隔（trigram の中）",
+      yLabel: "2つ目の間隔（trigram の中）", selected: selected, onSelect: onSelect,
       noR: true, ariaLabel: "trigram の中の1つ目の間隔と2つ目の間隔の散布図" });
-    NGram.drawScatter(corrInnerEl, inner, { title: "trigram の中の間隔と、その各 bigram", xLabel: "bigram の IKI",
-      yLabel: "trigram の中の間隔", selected: selected, onSelect: onSelect,
+    NGram.drawScatter(corrInnerEl, inner, { title: "trigram の中の間隔と、bigram 全体の平均", xLabel: "bigram 全体の平均 IKI",
+      yLabel: "間隔（trigram の中）", selected: selected, onSelect: onSelect,
       ariaLabel: "trigram の中の間隔と、その bigram の IKI の散布図" });
   }
 

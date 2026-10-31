@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern IKI</title>
-  <link rel="stylesheet" href="style.css?v=110">
+  <link rel="stylesheet" href="style.css?v=111">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -153,7 +153,7 @@
 
     <section class="stats-section">
       <h2 class="stats-title">trigram と bigram の相関</h2>
-      <p class="rhythm-legend">点は trigram（上の trigram の表と同じもの。「回数」の絞り込みも同じ）／ bigram の IKI は、その bigram のすべての出現の平均 ／ 軸の最大値よりも大きい値は最大値のところに描く ／ r = 相関係数（ピアソン。1 に近いほど一直線に並ぶ）／ 点にマウスを乗せると値を表示、クリックでその trigram の分布を表示</p>
+      <p class="rhythm-legend">点は trigram（上の trigram の表と同じもの。「回数」の絞り込みも同じ）／ trigram abc の中の間隔 = abc と打ったときの a→b（1つ目）と b→c（2つ目）／ bigram 全体の平均 = ab をどの並びの中で打ったかを問わない平均（bigram の表の値）／ 軸の最大値よりも大きい値は最大値のところに描く ／ r = 相関係数（ピアソン。1 に近いほど一直線に並ぶ）／ 点にマウスを乗せると値を表示、クリックでその trigram の分布を表示</p>
       <div class="ngram-grid">
         <div class="ngram-col"><div id="corr-pair" class="corr"></div></div>
         <div class="ngram-col"><div id="corr-inner" class="corr"></div></div>
@@ -161,19 +161,19 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=110"></script>
-  <script src="js/keys.js?v=110"></script>
-  <script src="js/settings.js?v=110"></script>
-  <script src="js/page-footer.js?v=110"></script>
-  <script src="js/rhythm.js?v=110"></script>
-  <script src="js/keyboard-shapes.js?v=110"></script>
-  <script src="js/kana-layout.js?v=110"></script>
-  <script src="js/key-map.js?v=110"></script>
-  <script src="js/point-trend.js?v=110"></script>
-  <script src="js/ngram.js?v=110"></script>
-  <script src="js/finger-map.js?v=110"></script>
-  <script src="js/iki-measurement.js?v=110"></script>
-  <script src="js/filters.js?v=110"></script>
-  <script src="js/ngram-page.js?v=110"></script>
+  <script src="js/store.js?v=111"></script>
+  <script src="js/keys.js?v=111"></script>
+  <script src="js/settings.js?v=111"></script>
+  <script src="js/page-footer.js?v=111"></script>
+  <script src="js/rhythm.js?v=111"></script>
+  <script src="js/keyboard-shapes.js?v=111"></script>
+  <script src="js/kana-layout.js?v=111"></script>
+  <script src="js/key-map.js?v=111"></script>
+  <script src="js/point-trend.js?v=111"></script>
+  <script src="js/ngram.js?v=111"></script>
+  <script src="js/finger-map.js?v=111"></script>
+  <script src="js/iki-measurement.js?v=111"></script>
+  <script src="js/filters.js?v=111"></script>
+  <script src="js/ngram-page.js?v=111"></script>
 </body>
 </html>
