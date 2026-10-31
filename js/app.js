@@ -1133,10 +1133,13 @@
     const values = intervals.filter(function (v) { return v !== null; });
     const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
     const displays = sources[0] ? sources[0].displays : new Map();
+    // 苦手な単語のページと同じ、記録（単語モードの直近の回）での遅さと回数。遅い単語・ミスの多い単語の候補から引く
+    const recorded = new Map();
+    if (sources[0]) sources[0].slow.concat(sources[0].miss).forEach(function (r) { recorded.set(r.word, r); });
     const table = document.createElement("table");
     table.className = "bg-table";
     const hr = document.createElement("tr");
-    ["単語", "平均 IKI(ms/文字)", "ミスした回数"].forEach(function (t) {
+    ["単語", "平均 IKI(ms/文字)", "ミスした回数", "記録の平均 IKI(ms/文字)", "記録のミスの割合", "記録の回数"].forEach(function (t) {
       const th = document.createElement("th");
       th.textContent = t;
       hr.appendChild(th);
@@ -1164,6 +1167,18 @@
       const miss = document.createElement("td");
       miss.textContent = w.misses + " / " + w.count;
       tr.appendChild(miss);
+      const rec = recorded.get(w.word);
+      const recIki = document.createElement("td");
+      recIki.className = "bg-avg";
+      recIki.textContent = rec ? Math.round(rec.slow) : "-";
+      if (rec && base) recIki.style.color = Rhythm.color(rec.slow, base);
+      tr.appendChild(recIki);
+      const recMiss = document.createElement("td");
+      recMiss.textContent = rec ? (rec.missRate * 100).toFixed(0) + "%" : "-"; // 苦手な単語のページと同じ形
+      tr.appendChild(recMiss);
+      const recCount = document.createElement("td");
+      recCount.textContent = rec ? rec.count : "-";
+      tr.appendChild(recCount);
       body.appendChild(tr);
     });
     weakResultTableEl.textContent = "";
