@@ -11,6 +11,7 @@
   const WORDS_TARGET_LENGTH = 300;
   // 日本語の単語モードで、画面の1行に並べる読みの文字数の目安
   const JA_LINE_LENGTH = 40;
+  const EN_LINE_LENGTH = 48; // ノーミス連続タイプの英語の1行の文字数の目安（docs/no-mistype.md）
   // ランキングに表示する件数
   const RANK_TOP = 30;
   // 選んだキー配列・モードを覚えておく localStorage のキー
@@ -89,6 +90,14 @@
   const GUIDE_LEARN = "読み（ひらがな）を、選んだかな配列で打ちます。IME はオフにしてください。押すキーは表示しません（割り当てを思い出して打ちます）。";
   // 練習モード（記録に practice: true を付け、レベルの達成度・ランキング・記録のページの推移に入れないモード）
   const PRACTICE_MODES = ["weak", FASTER, IKI, LEARN];
+  // ノーミス連続タイプ（docs/no-mistype.md）：ミスなしでどこまで続けて打てるか。1回ミスしたら終わり。練習モードとは別のモード
+  const NO_MISTYPE = NoMistype.MODE;
+  const nmResultEl = document.getElementById("nm-result");
+  const GUIDE_NM = "ミスをせずに、どこまで続けて打てるかに挑戦します。1回でもミスしたら終わりです（Backspace は使えません）。単語は打ち進むと後ろに足していきます。";
+  let nmStream = null; // 単語の並びを作るもの（NoMistype.stream）。お題を出すたびに作り直す
+  let nmCarry = [];    // 作った単語のうち、まだ行に入れていないもの
+  let nmLineEls = [];  // お題の行の要素（nmAppendLines）
+  let nmLineStarts = []; // それぞれの行の最初の文字の、お題の中の位置
   const paceEl = document.getElementById("pace");
   const paceTextEl = document.getElementById("pace-text");
   // インジケーターの帯のマス（Levels.PACE_STEPS 個）。左から順に、届いている段まで色を付ける
@@ -162,6 +171,7 @@
     if (mode === FASTER) return loadFasterSources();
     if (mode === IKI) return loadIkiSources();
     if (mode === LEARN) return loadLearnSources();
+    if (mode === NO_MISTYPE) return loadNoMistypeSources();
     const builtin = mode === "words" ? loadWordlists()
       : mode === "other" ? Promise.resolve([]) // 「その他」は追加したお題だけ
       : loadTexts();
@@ -218,6 +228,30 @@
       }).filter(function (c) { return c.words.length > 0; });
       if (!cands.length) throw new Error("NO_FASTER");
       return [{ name: FASTER, cands: cands }];
+    });
+  }
+
+  // ノーミス連続タイプのモード：単語モードの単語リスト（basic）と、日本語はキー配列習得の単語リスト A〜D を読む（docs/no-mistype.md）
+  // かな配列では、割り当て表にないかなを含む語は使わない（配列にないかなはミスになるため）
+  // sources は1つだけ { name: NO_MISTYPE, pools: { basic, a, b, c, d } }
+  function loadNoMistypeSources() {
+    const kana = lang === "ja" ? kanaLayouts[keyLayoutEl.value] : null;
+    const typable = function (w) { return !kana || Typer.keysOf(w.reading, kana.options) !== null; };
+    const parse = function (t) {
+      return t.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(function (s) { return s && s[0] !== "#"; })
+        .map(function (s) {
+          const cols = s.split("\t"); // 「表示する語<タブ>読み」。かなだけの語は1列
+          return { display: cols[0].trim(), reading: (cols[1] || cols[0]).trim() };
+        });
+    };
+    const lists = lang === "ja" ? ["a", "b", "c", "d"] : [];
+    return Promise.all([loadWordlists()].concat(lists.map(function (x) {
+      return fetchText("wordlists/layout-learning/ja-words-" + x + ".txt").then(parse);
+    }))).then(function (v) {
+      const pools = { basic: [].concat.apply([], v[0].map(function (l) { return l.words; })) };
+      lists.forEach(function (x, i) { pools[x] = v[i + 1]; });
+      if (lang === "ja") Object.keys(pools).forEach(function (k) { pools[k] = pools[k].filter(typable); });
+      return [{ name: NO_MISTYPE, pools: pools }];
     });
   }
 
@@ -422,6 +456,17 @@
 
   // お題を決める。next なら新しいお題、そうでなければ今のお題（やり直し）
   function pickText(next) {
+    if (mode === NO_MISTYPE) {
+      // ノーミス連続タイプ：やり直しでも新しい単語の並びにする。打ち進むと nmExtend で後ろに足す
+      nmStream = NoMistype.stream(sources[0].pools);
+      nmCarry = [];
+      const lines = nmMakeLines(NoMistype.FIRST_LINES);
+      current = {
+        name: NO_MISTYPE, text: lines.map(function (l) { return l.reading; }).join(""), nmLines: lines,
+        emptyMessage: "この言語・配列で打てる単語がありません。"
+      };
+      return current;
+    }
     if (current && !next) return current;
     if (mode === "words") {
       // 単語モードは毎回新しく作る
@@ -557,7 +602,7 @@
     input.value = "";
     input.maxLength = target.length;
     input.disabled = false;
-    guideEl.textContent = mode === IKI ? GUIDE_IKI : mode === LEARN ? learnGuide(picked.learn) : !jp ? GUIDE_EN : romajiInput ? GUIDE_JA : GUIDE_KANA;
+    guideEl.textContent = mode === IKI ? GUIDE_IKI : mode === NO_MISTYPE ? GUIDE_NM : mode === LEARN ? learnGuide(picked.learn) : !jp ? GUIDE_EN : romajiInput ? GUIDE_JA : GUIDE_KANA;
     speedUnitEls.forEach(function (el) { el.textContent = jp ? "かな/分" : "WPM"; });
     // 「キーごとの間隔」の説明。日本語は押したキーごとの間隔（かなは下の段に書く）
     rhythmWhatEl.textContent = jp ? "最後に残ったかなを打った各キーの、直前のキーからの間隔（下の段はそのかな）" : "各文字の最後の打鍵の間隔";
@@ -570,40 +615,139 @@
     resultEl.hidden = true;
     board.classList.remove("finished");
 
+    nmResultEl.hidden = true;
+
     // お題を1文字ずつ span にする。日本語は、1行ごとに表示する文を上に、読みを下に並べる
     textEl.textContent = "";
     textEl.classList.toggle("ja", jp);
+    // ノーミス連続タイプは、4つの段に行を順に入れて見せる（nmLayout）
+    textEl.classList.toggle("nm-stream", mode === NO_MISTYPE);
     const frag = document.createDocumentFragment();
     charEls = [];
-    function addChars(parent, str, wide) {
-      Array.from(str).forEach(function (ch) {
-        const span = document.createElement("span");
-        // 日本語の単語の間のスペースは、かなの幅に合わせて全角で見せる（打つのは半角スペース）
-        span.textContent = wide && ch === " " ? "　" : ch;
-        parent.appendChild(span);
-        charEls.push(span);
-      });
-    }
-    if (picked.lines) {
-      picked.lines.forEach(function (l) {
-        const display = document.createElement("div");
-        display.className = "ja-display";
-        display.textContent = l.display;
-        const reading = document.createElement("div");
-        // 2行目：よみがな、またはローマ字（かなごとの span に、render でキーの並びを書く）
-        reading.className = "ja-reading" + (romajiLine ? " ja-romaji" : "");
-        addChars(reading, l.reading, true);
-        frag.appendChild(display);
-        frag.appendChild(reading);
-      });
-    } else {
-      addChars(frag, target);
-    }
+    nmLineEls = [];
+    nmLineStarts = [];
+    if (picked.nmLines) nmAppendLines(frag, picked.nmLines, 0);
+    else if (picked.lines) appendLines(frag, picked.lines);
+    else addTextChars(frag, target);
     textEl.appendChild(frag);
 
     render();
     updateStats();
     input.focus();
+  }
+
+  // お題の文字を1文字ずつ span にして parent に足す（charEls にも足す）
+  function addTextChars(parent, str, wide) {
+    Array.from(str).forEach(function (ch) {
+      const span = document.createElement("span");
+      // 日本語の単語の間のスペースは、かなの幅に合わせて全角で見せる（打つのは半角スペース）
+      span.textContent = wide && ch === " " ? "　" : ch;
+      parent.appendChild(span);
+      charEls.push(span);
+    });
+  }
+
+  // 日本語：1行ごとに、表示する文の行と読みの行を parent に足す
+  function appendLines(parent, lines) {
+    lines.forEach(function (l) {
+      const display = document.createElement("div");
+      display.className = "ja-display";
+      display.textContent = l.display;
+      const reading = document.createElement("div");
+      // 2行目：よみがな、またはローマ字（かなごとの span に、render でキーの並びを書く）
+      reading.className = "ja-reading" + (romajiLine ? " ja-romaji" : "");
+      addTextChars(reading, l.reading, true);
+      parent.appendChild(display);
+      parent.appendChild(reading);
+    });
+  }
+
+  // ---- ノーミス連続タイプ（docs/no-mistype.md） ----
+
+  // 単語の並びから、続きの count 行を作る（日本語は読みで JA_LINE_LENGTH 文字、英語は EN_LINE_LENGTH 文字ほどで行を分ける）
+  // 行 { display: 表示する語の行（英語は null）, reading: 打つ文字の行 }。お題に終わりはないので、どの行も終わりにスペースを付ける
+  // 行に入らなかった単語は nmCarry に残し、次の行の頭にする（足すたびに短い行ができないように）
+  function nmMakeLines(count) {
+    const max = lang === "ja" ? JA_LINE_LENGTH : EN_LINE_LENGTH;
+    const reading = function (w) { return typeof w === "string" ? w : w.reading; };
+    const nextWord = function () {
+      if (!nmCarry.length) nmCarry = nmStream.next(NoMistype.CHUNK);
+      return nmCarry[0];
+    };
+    const out = [];
+    while (out.length < count && nextWord() !== undefined) {
+      const line = [];
+      let len = 0;
+      while (nextWord() !== undefined) {
+        const add = (line.length ? 1 : 0) + reading(nmCarry[0]).length;
+        if (line.length && len + add > max) break;
+        line.push(nmCarry.shift());
+        len += add;
+      }
+      out.push({
+        display: lang === "ja" ? line.map(function (w) { return w.display; }).join("　") : null, // 画面では全角スペースで区切る
+        reading: line.map(reading).join(" ") + " "
+      });
+    }
+    return out;
+  }
+
+  // 行を parent に足す。1行を1つの nm-line にまとめ（日本語は表示する文の行と読みの行）、はじめは隠しておく（nmLayout で出す）
+  //   start：その行の最初の文字の、お題の中の位置
+  function nmAppendLines(parent, lines, start) {
+    lines.forEach(function (l) {
+      const el = document.createElement("div");
+      el.className = "nm-line";
+      el.hidden = true;
+      if (l.display !== null) {
+        const display = document.createElement("div");
+        display.className = "ja-display";
+        display.textContent = l.display;
+        const reading = document.createElement("div");
+        reading.className = "ja-reading" + (romajiLine ? " ja-romaji" : "");
+        addTextChars(reading, l.reading, true);
+        el.appendChild(display);
+        el.appendChild(reading);
+      } else {
+        addTextChars(el, l.reading);
+      }
+      parent.appendChild(el);
+      nmLineEls.push(el);
+      nmLineStarts.push(start);
+      start += l.reading.length;
+    });
+  }
+
+  // 打っている位置からお題の終わりまでが短くなったら、続きの行を後ろに足す
+  function nmExtend() {
+    const pos = typer ? typer.pos : input.value.length;
+    if (target.length - pos >= NoMistype.AHEAD_CHARS) return;
+    const lines = nmMakeLines(NoMistype.MORE_LINES);
+    if (!lines.length) return;
+    const start = target.length;
+    const more = lines.map(function (l) { return l.reading; }).join("");
+    target += more;
+    for (let i = 0; i < more.length; i++) {
+      intervals.push(null);
+      missed.push(false);
+    }
+    if (typer) typer.extend(more);
+    input.maxLength = target.length;
+    nmAppendLines(textEl, lines, start);
+  }
+
+  // 4つの段に、行を順に（1・2・3・4・1・2 …の段に）入れて見せる（docs/no-mistype.md の「お題」）
+  //   打っている行から2行先まで（はじめは4行目まで）を出し、打ち終えた行は隠す（その段は空ける）
+  function nmLayout() {
+    const pos = typer ? typer.pos : input.value.length;
+    let n = 0; // 打っている行
+    while (n + 1 < nmLineStarts.length && nmLineStarts[n + 1] <= pos) n++;
+    const last = Math.max(n + 2, NoMistype.ROWS - 1);
+    nmLineEls.forEach(function (el, i) {
+      const show = i >= n && i <= last;
+      if (el.hidden === show) el.hidden = !show;
+      if (show) el.style.gridRow = String(i % NoMistype.ROWS + 1);
+    });
   }
 
   // 打ち終えた位置ごとの正誤（true = お題と合っている）。長さは打ち終えた文字数
@@ -647,6 +791,7 @@
         delete charEls[i].dataset.typed;
       }
     }
+    if (mode === NO_MISTYPE) nmLayout();
     renderRomajiGuide();
   }
 
@@ -740,7 +885,7 @@
   // 目標：この言語・モードの達成レベルの次（その他・練習モードは文章の目標）。一番上を達成していれば null
   // 設定で消しているとき・記録をまだ読み込んでいないときも null（出さない）
   function setGoal() {
-    goal = allSessions && Settings.get("indicator")
+    goal = allSessions && Settings.get("indicator") && mode !== NO_MISTYPE // ノーミス連続タイプは速さを問わないので出さない
       ? Levels.next(Levels.achieved(allSessions, lang, Levels.targetMode(mode)))
       : null;
   }
@@ -831,6 +976,126 @@
   }
 
   // 結果の枠が画面の一番上に来るようにスクロールする（どのモードでも。結果の下が短くて上まで来られないときは、ページの一番下まで）
+  // ノーミス連続タイプ：ミスをしたところで終わる。chars はミスの前までに正しく打った文字（日本語はかな）の数、
+  // endKeyTime は英語のとき、ミスの前に最後に正しく打った時刻（日本語は確定したかなから求める）
+  // お題（target）はミスの前までに切り詰めて記録する（docs/no-mistype.md）
+  function nmFinish(chars, endKeyTime) {
+    finished = true;
+    clearInterval(timerId);
+    input.disabled = true;
+    board.classList.add("finished");
+    const units = typer ? typer.units.filter(function (u) { return u.pos < chars; }) : null;
+    const keys = typer ? units.reduce(function (n, u) { return n + u.keys.length; }, 0) : chars; // 正しく打ったキーの数（Shift は数えない）
+    endTime = typer ? (units.length ? units[units.length - 1].time : startTime) : (chars ? endKeyTime : startTime);
+    target = target.slice(0, chars);
+    intervals = intervals.slice(0, chars);
+    missed = missed.slice(0, chars);
+    updatePace({ sec: 0, acc: 100 });
+
+    const sec = (endTime - startTime) / 1000;
+    const avgIki = Store.avgIki(Math.round(sec * 1000) / 1000, keys);
+    const wpm = sec <= 0 ? 0 : typer ? chars / (sec / 60) : (chars / 5) / (sec / 60);
+    stat.time.textContent = sec.toFixed(1);
+    res.iki.textContent = avgIki === null ? "-" : avgIki.toFixed(1);
+    res.wpm.textContent = Math.round(wpm);
+    res.acc.textContent = "100.0";
+    res.time.textContent = sec.toFixed(1);
+    res.miss.textContent = misses;
+    res.uncorrected.textContent = 0;
+    res.rank.textContent = "-";
+    res.rank.classList.remove("rank-1", "rank-2", "rank-3");
+    res.rankLabel.textContent = "ノーミス連続タイプ";
+    res.level.textContent = "-";
+    res.level.classList.remove("level-up");
+    res.levelLabel.textContent = "レベル（ノーミス連続タイプは出しません）";
+    levelStatusEl.textContent = "";
+    rankingTabEl.hidden = true;
+    if (rankingTabEl.getAttribute("aria-selected") === "true") document.getElementById("tab-rhythm").click();
+    const lastAvg = typer ? Rhythm.renderKeys(rhythmEl, Rhythm.kanaColumns(units, target, missed)) : Rhythm.render(rhythmEl, target, intervals, missed);
+    rhythmAvgEl.textContent = lastAvg;
+
+    // 結果の上に、ミスなしで打てた文字数・打鍵数・時間と、自己ベスト
+    nmResultEl.hidden = false;
+    nmResultEl.textContent = "";
+    const add = function (className, text) {
+      const p = document.createElement("p");
+      p.className = className;
+      p.textContent = text;
+      nmResultEl.appendChild(p);
+      return p;
+    };
+    add("nm-count", "ミスなしで " + chars + " 文字");
+    add("nm-sub", "打鍵 " + keys + " ／ " + sec.toFixed(1) + " 秒 ／ 平均 IKI " + (avgIki === null ? "-" : avgIki.toFixed(1)) + " ms（" +
+      Math.round(wpm) + " " + (typer ? "かな/分" : "WPM") + "）");
+    const bestEl = add("nm-best", "");
+    resultEl.hidden = false;
+    scrollToResult();
+
+    if (!chars) {
+      // 1文字も打てなかった回は記録しない
+      saveStatusEl.textContent = "1文字目でミスしたので、記録はしません。";
+      return;
+    }
+    const id = crypto.randomUUID();
+    const session = {
+      schemaVersion: Store.SCHEMA_VERSION,
+      id: id,
+      finishedAt: new Date().toISOString(),
+      appVersion: ASSET_VERSION,
+      lang: lang,
+      mode: mode,
+      keyLayout: keyLayoutEl.value,
+      textId: NO_MISTYPE,
+      textLength: chars,
+      result: {
+        wpm: typer ? null : Math.round(wpm * 10) / 10,
+        accuracy: 100,
+        timeSec: Math.round(sec * 1000) / 1000,
+        keystrokes: keystrokes,
+        misses: misses,
+        uncorrected: 0,
+        avgIki: avgIki
+      }
+    };
+    if (typer) {
+      session.result.kanaPerMin = Math.round(wpm * 10) / 10;
+      session.result.correctKeys = keys;
+    }
+    const raw = {
+      id: id,
+      keyLayout: session.keyLayout,
+      text: target,
+      events: events,
+      intervals: intervals.map(round1),
+      missedPositions: []
+    };
+    saveStatusEl.textContent = "記録を保存中…";
+    Store.save(session, raw)
+      .then(function () {
+        Store.persist();
+        PageFooter.refreshSize();
+        return Store.getAllSessions();
+      })
+      .then(function (all) {
+        allSessions = all;
+        // 自己ベスト（言語ごと）。今回を除いた記録の自己ベストと比べる
+        const before = NoMistype.best(all.filter(function (s) { return s.id !== id; }), lang);
+        const now = NoMistype.best(all, lang);
+        if (now && now.id === id) {
+          bestEl.textContent = "自己ベスト更新！" + (before ? "（これまでの自己ベスト " + before.textLength + " 文字）" : "");
+          bestEl.classList.add("level-up");
+        } else if (now) {
+          const d = new Date(now.finishedAt);
+          bestEl.textContent = "自己ベスト " + now.textLength + " 文字（" + d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate() + "）";
+        }
+        saveStatusEl.textContent = "記録を保存しました。ノーミス連続タイプの回は、レベル・ランキング・IKI・ミスタイプのページには入りません（自己ベストは記録のページの「レベルの達成度」に出ます）。";
+      })
+      .catch(function (err) {
+        console.error(err);
+        saveStatusEl.textContent = "記録を保存できませんでした: " + err.message;
+      });
+  }
+
   function scrollToResult() {
     resultEl.scrollIntoView({ block: "start" });
   }
@@ -1124,7 +1389,7 @@
   // ---- レベル（js/levels.js。決まりは docs/levels.md） ----
 
   const LANG_NAME = { en: "英語", ja: "日本語" };
-  const MODE_NAME = { normal: "文章", words: "単語", other: "その他", weak: "苦手な単語", "faster-other-setup": "他では速い bigram", "iki-measurement": "IKI 測定", "layout-learning": "キー配列習得" };
+  const MODE_NAME = { normal: "文章", words: "単語", other: "その他", "no-mistype": "ノーミス連続タイプ", weak: "苦手な単語", "faster-other-setup": "他では速い bigram", "iki-measurement": "IKI 測定", "layout-learning": "キー配列習得" };
 
   // 今回のレベルと文字/秒。正確率が基準未満なら「-」
   function renderLevel(session) {
@@ -1419,6 +1684,14 @@
       }
     });
     lastKeyTime = now;
+    if (mode === NO_MISTYPE) {
+      if (r.judge === 0) {
+        render();
+        nmFinish(r.pos);
+        return;
+      }
+      nmExtend();
+    }
     render();
     updateStats();
     if (typer.done()) finish();
@@ -1448,6 +1721,7 @@
     // 時刻は、この変化を起こしたキーを押した時刻（キーを押さずに変わったときは今の時刻）
     const now = keyTime || performance.now();
     keyTime = 0;
+    const prevKeyTime = lastKeyTime; // ノーミス連続タイプ：ミスの前に最後に正しく打った時刻
 
     // 末尾に追加された文字だけを打鍵として数える
     if (value.length > prevValue.length && value.startsWith(prevValue)) {
@@ -1473,6 +1747,18 @@
       if (startTime) logEvents(prevValue, value, now);
       lastKeyTime = now;
     }
+    if (mode === NO_MISTYPE && startTime) {
+      // 1回でもミスしたら、そこで終わる
+      let bad = -1;
+      for (let i = prevValue.length; i < value.length && bad === -1; i++) if (!isCorrect(value[i], target[i])) bad = i;
+      if (bad !== -1) {
+        prevValue = value;
+        render();
+        nmFinish(bad, prevKeyTime);
+        return;
+      }
+      nmExtend();
+    }
     prevValue = value;
 
     render();
@@ -1485,6 +1771,11 @@
   input.addEventListener("keydown", function (e) {
     lastActivity = performance.now(); // どのキーでも「入力あり」とみなす
     if (blockedKeys.indexOf(e.key) !== -1) {
+      e.preventDefault();
+      return;
+    }
+    // ノーミス連続タイプでは Backspace を使えない（何もしない）
+    if (mode === NO_MISTYPE && e.code === "Backspace") {
       e.preventDefault();
       return;
     }
@@ -1584,8 +1875,8 @@
 
   keyLayoutEl.addEventListener("change", function () {
     try { localStorage.setItem(KEY_LAYOUT_STORAGE, keyLayoutEl.value); } catch (e) { /* 無視 */ }
-    // 苦手な単語・他では速い bigram は配列ごとに数えるので、配列を変えたら選び直す
-    if (mode === "weak" || mode === FASTER || mode === LEARN) setMode(mode);
+    // 苦手な単語・他では速い bigram は配列ごとに数え、ノーミス連続タイプは配列にないかなを含む語を除くので、配列を変えたら選び直す
+    if (mode === "weak" || mode === FASTER || mode === LEARN || mode === NO_MISTYPE) setMode(mode);
     else reset(false);
   });
 

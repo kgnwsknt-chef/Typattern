@@ -175,6 +175,145 @@ const Trend = (function () {
     container.appendChild(svg);
   }
 
+  // ノーミス連続タイプの推移（記録のページでモードに「ノーミス連続タイプ」を選んだとき。docs/no-mistype.md）
+  // 上段：ミスなしで打てた文字数（多いほど上）。1回ごとは自己ベストの線、日ごと・月ごとはその日（月）の平均の点と最高の ◇
+  // 下段：平均 IKI（ms。小さいほど上）
+  function renderStreak(container, legendEl, sessions, group) {
+    const period = PERIODS[group] || null;
+    container.textContent = "";
+    if (sessions.length === 0) {
+      legendEl.textContent = "";
+      const p = document.createElement("p");
+      p.className = "trend-empty";
+      p.textContent = "データなし";
+      container.appendChild(p);
+      return;
+    }
+    const mean = function (arr) { return arr.reduce(function (a, b) { return a + b; }, 0) / arr.length; };
+    const ikiOf = function (ss) {
+      const v = ss.map(function (s) { return s.result.avgIki; }).filter(function (x) { return x !== null; });
+      return v.length ? mean(v) : null;
+    };
+    let points;
+    if (period) {
+      const groups = new Map();
+      sessions.forEach(function (s) {
+        const k = period.key(s.finishedAt);
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(s);
+      });
+      points = Array.from(groups, function (e) {
+        const ss = e[1];
+        const chars = mean(ss.map(function (s) { return s.textLength; }));
+        const best = Math.max.apply(null, ss.map(function (s) { return s.textLength; }));
+        const iki = ikiOf(ss);
+        return {
+          x: e[0], chars: chars, best: best, iki: iki,
+          tip: period.fmt(e[0]) + " ／ " + ss.length + " 回\n文字数の平均 " + chars.toFixed(1) + " ／ 最高 " + best +
+            "\n平均 IKI の平均 " + (iki === null ? "-" : iki.toFixed(1) + " ms")
+        };
+      }).sort(function (a, b) { return a.x - b.x; });
+    } else {
+      points = sessions.map(function (s, i) {
+        const r = s.result;
+        return {
+          x: i + 1, chars: s.textLength, iki: r.avgIki,
+          tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + LANG_NAME[s.lang] + "・" + (s.keyLayout === "qwerty" ? "QWERTY" : s.keyLayout) +
+            "\nミスなしで " + s.textLength + " 文字（打鍵 " + (s.lang === "ja" ? r.correctKeys : s.textLength) + " ／ " + r.timeSec.toFixed(1) + " 秒）" +
+            "\n平均 IKI " + (r.avgIki === null ? "-" : r.avgIki.toFixed(1) + " ms") + "（" + speedText(s) + "）"
+        };
+      });
+    }
+    // 1回ごと：その回までの自己ベスト（それまでの最高の文字数）の線
+    const bestLine = [];
+    if (!period) {
+      let m = 0;
+      points.forEach(function (p) {
+        m = Math.max(m, p.chars);
+        bestLine.push({ x: p.x, v: m });
+      });
+    }
+    legendEl.textContent = period
+      ? "上段：● " + "その" + period.name + "の文字数の平均 ／ ◇ その" + period.name + "の最高 ／ 下段：その" + period.name + "の平均 IKI の平均"
+      : "上段：● 1回ごとのミスなしで打てた文字数 ／ ━ 自己ベスト（その回までの最高）／ 下段：1回ごとの平均 IKI";
+
+    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "trend-svg", role: "img", "aria-label": "ノーミス連続タイプの推移" });
+    const xs = points.map(function (p) { return p.x; });
+    let x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+    if (x0 === x1) { x0 -= 1; x1 += 1; }
+    const xpad = (x1 - x0) * 0.03;
+    x0 -= xpad; x1 += xpad;
+    const X = function (v) { return L + ((v - x0) / (x1 - x0)) * PW; };
+
+    // 上段：文字数（0 から、最高の少し上まで）
+    const top = Math.max.apply(null, points.map(function (p) { return p.best !== undefined ? p.best : p.chars; }));
+    const cHi = Math.max(10, top * 1.08);
+    const YC = function (v) { return T + PH1 - (v / cHi) * PH1; };
+    frame(svg, T, PH1);
+    const cStep = niceStep(cHi, 6, [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000]);
+    for (let v = 0; v <= cHi; v += cStep) {
+      hline(svg, YC(v));
+      svg.appendChild(text(L - 6, YC(v) + 3, String(v), "end"));
+    }
+    svg.appendChild(text(L - 6, T - 8, "文字数", "end", "trend-axis-title"));
+    if (bestLine.length > 1) {
+      svg.appendChild(svgEl("polyline", { points: bestLine.map(function (m) { return X(m.x) + "," + YC(m.v); }).join(" "), class: "trend-ma" }));
+    }
+    if (period && points.length > 1) {
+      svg.appendChild(svgEl("polyline", { points: points.map(function (p) { return X(p.x) + "," + YC(p.chars); }).join(" "), class: "trend-line" }));
+    }
+    points.forEach(function (p) {
+      if (p.best !== undefined) {
+        const bx = X(p.x), by = YC(p.best);
+        const d = svgEl("polygon", { points: [bx, by - 4, bx + 4, by, bx, by + 4, bx - 4, by].join(" "), class: "trend-best" });
+        d.appendChild(title(p.tip));
+        svg.appendChild(d);
+      }
+      const c = svgEl("circle", { cx: X(p.x), cy: YC(p.chars), r: 3.5, class: "trend-point" });
+      c.appendChild(title(p.tip));
+      svg.appendChild(c);
+    });
+
+    // 下段：平均 IKI（小さいほど上）
+    const ikis = points.map(function (p) { return p.iki; }).filter(function (v) { return v !== null; });
+    frame(svg, T2, PH2);
+    svg.appendChild(text(L - 6, T2 - 8, "IKI (ms)", "end", "trend-axis-title"));
+    if (ikis.length) {
+      let lo = Math.min.apply(null, ikis), hi = Math.max.apply(null, ikis);
+      const span = Math.max(hi - lo, 20);
+      lo = Math.max(1, lo - span * 0.1); hi = hi + span * 0.1;
+      const YI = function (v) { return T2 + ((v - lo) / (hi - lo)) * PH2; };
+      const iStep = niceStep(hi - lo, 4, [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000]);
+      for (let v = Math.ceil(lo / iStep) * iStep; v <= hi; v += iStep) {
+        hline(svg, YI(v));
+        svg.appendChild(text(L - 6, YI(v) + 3, String(v), "end"));
+      }
+      const withIki = points.filter(function (p) { return p.iki !== null; });
+      if (withIki.length > 1) {
+        svg.appendChild(svgEl("polyline", { points: withIki.map(function (p) { return X(p.x) + "," + YI(p.iki); }).join(" "), class: "trend-acc-line" }));
+      }
+      withIki.forEach(function (p) {
+        const c = svgEl("circle", { cx: X(p.x), cy: YI(p.iki), r: 2.5, class: "trend-point" });
+        c.appendChild(title(p.tip));
+        svg.appendChild(c);
+      });
+    }
+
+    // 横軸の目盛り
+    const axisY = T2 + PH2;
+    if (period) {
+      const step = niceStep(x1 - x0, 7, period.steps);
+      for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, period.fmt(d));
+      svg.appendChild(text(L + PW, H - 2, period.axis, "end", "trend-axis-title"));
+    } else {
+      const step = niceStep(x1 - x0, 10, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
+      for (let n = Math.max(step, Math.ceil(x0 / step) * step); n <= x1; n += step) xTick(svg, X(n), axisY, String(n));
+      if (x0 < 1 && 1 <= x1 && step > 1) xTick(svg, X(1), axisY, "1");
+      svg.appendChild(text(L + PW, H - 2, "回", "end", "trend-axis-title"));
+    }
+    container.appendChild(svg);
+  }
+
   // 1回ごと：横軸は何回目か。移動平均は正確率が基準以上の回だけで計算する
   function byRun(list, ups) {
     const points = list.map(function (s, i) {
@@ -359,5 +498,5 @@ const Trend = (function () {
     return el;
   }
 
-  return { render: render };
+  return { render: render, renderStreak: renderStreak };
 })();

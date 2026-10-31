@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern</title>
-  <link rel="stylesheet" href="style.css?v=112">
+  <link rel="stylesheet" href="style.css?v=113">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -36,6 +36,7 @@
           <option value="normal">文章（約300文字）</option>
           <option value="words">単語（約300文字）</option>
           <option value="other">その他（追加したお題）</option>
+          <option value="no-mistype">ノーミス連続タイプ</option>
           <option value="weak">苦手な単語（練習モード）</option>
           <option value="faster-other-setup">他では速い bigram（練習モード）</option>
           <option value="iki-measurement">IKI 測定（練習モード）</option>
@@ -103,6 +104,8 @@
 
     <section id="result" class="result" hidden>
       <h2 class="result-title">結果</h2>
+      <!-- ノーミス連続タイプのとき：ミスなしで打てた文字数と自己ベスト（docs/no-mistype.md） -->
+      <div id="nm-result" class="nm-result" hidden></div>
       <div class="result-grid">
         <div><span id="res-iki" class="result-value"></span><span class="result-label">ms 平均 IKI（<span id="res-wpm"></span> <span class="speed-unit">WPM</span>）</span></div>
         <div><span id="res-acc" class="result-value"></span><span class="result-label">% 正確率</span></div>
@@ -162,20 +165,21 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=112"></script>
-  <script src="js/keys.js?v=112"></script>
-  <script src="js/romaji.js?v=112"></script>
-  <script src="js/typer.js?v=112"></script>
-  <script src="js/kana-layout.js?v=112"></script>
-  <script src="js/settings.js?v=112"></script>
-  <script src="js/page-footer.js?v=112"></script>
-  <script src="js/rhythm.js?v=112"></script>
-  <script src="js/ranking.js?v=112"></script>
-  <script src="js/levels.js?v=112"></script>
-  <script src="js/ngram.js?v=112"></script>
-  <script src="js/iki-measurement.js?v=112"></script>
-  <script src="js/weak-words.js?v=112"></script>
-  <script src="js/layout-learning.js?v=112"></script>
-  <script src="js/app.js?v=112"></script>
+  <script src="js/store.js?v=113"></script>
+  <script src="js/keys.js?v=113"></script>
+  <script src="js/romaji.js?v=113"></script>
+  <script src="js/typer.js?v=113"></script>
+  <script src="js/kana-layout.js?v=113"></script>
+  <script src="js/settings.js?v=113"></script>
+  <script src="js/page-footer.js?v=113"></script>
+  <script src="js/rhythm.js?v=113"></script>
+  <script src="js/ranking.js?v=113"></script>
+  <script src="js/levels.js?v=113"></script>
+  <script src="js/ngram.js?v=113"></script>
+  <script src="js/iki-measurement.js?v=113"></script>
+  <script src="js/weak-words.js?v=113"></script>
+  <script src="js/layout-learning.js?v=113"></script>
+  <script src="js/no-mistype.js?v=113"></script>
+  <script src="js/app.js?v=113"></script>
 </body>
 </html>

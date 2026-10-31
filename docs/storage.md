@@ -64,9 +64,9 @@
 | `finishedAt` | 打ち終わりの日時（UTC, ISO 8601）。打ち始めは `finishedAt - result.timeSec` で求められるので持たない |
 | `appVersion` | 記録したときのアプリのバージョン |
 | `lang` | お題の言語（`en` 英語・`ja` 日本語） |
-| `mode` | `"normal"`（文章）・`"words"`（単語）・`"other"`（その他。追加したお題で、文章の長さに入らないもの。`docs/text-manager.md`）。`"weak"`（苦手な単語の練習。練習モード。`docs/weak-words.md`）・`"faster-other-setup"`（他では速い bigram の練習。練習モード。`docs/weak-words.md`）・`"iki-measurement"`（IKI 測定。練習モード。`docs/iki-measurement.md`）・`"layout-learning"`（キー配列習得。練習モード。`docs/layout-learning.md`）。値は小文字の英語で、2語以上はハイフンでつなぐ（大文字が混ざると書き間違えても気づきにくいため）。IndexedDB の索引に true/false は使えないため文字列にしている |
+| `mode` | `"normal"`（文章）・`"words"`（単語）・`"other"`（その他。追加したお題で、文章の長さに入らないもの。`docs/text-manager.md`）。`"weak"`（苦手な単語の練習。練習モード。`docs/weak-words.md`）・`"faster-other-setup"`（他では速い bigram の練習。練習モード。`docs/weak-words.md`）・`"iki-measurement"`（IKI 測定。練習モード。`docs/iki-measurement.md`）・`"layout-learning"`（キー配列習得。練習モード。`docs/layout-learning.md`）。`"no-mistype"`（ノーミス連続タイプ。練習モードではない。`docs/no-mistype.md`）。値は小文字の英語で、2語以上はハイフンでつなぐ（大文字が混ざると書き間違えても気づきにくいため）。IndexedDB の索引に true/false は使えないため文字列にしている |
 | `keyLayout` | キー配列。`"qwerty"`（英語は QWERTY、日本語はローマ字入力）か、登録した配列の配列名（`layouts` の `id`。かな配列は日本語だけ。英語の配列は英語と、日本語のローマ字入力）。画面上部の「配列」で選ぶ |
-| `textId` | お題の題材名（`texts/index.json` の名前。例 `honeybee`）。単語モードは単語リスト名（例 `basic1000`）。追加したお題は、その名前（`texts` の `name`）。苦手な単語の練習は `"weak"`、他では速い bigram の練習は `"faster-other-setup"`、IKI 測定は `"iki-measurement"`、キー配列習得は `"layout-learning"` |
+| `textId` | お題の題材名（`texts/index.json` の名前。例 `honeybee`）。単語モードは単語リスト名（例 `basic1000`）。追加したお題は、その名前（`texts` の `name`）。苦手な単語の練習は `"weak"`、他では速い bigram の練習は `"faster-other-setup"`、IKI 測定は `"iki-measurement"`、キー配列習得は `"layout-learning"`、ノーミス連続タイプは `"no-mistype"`（ノーミス連続タイプは、お題をミスの前までに切り詰めて保存する。`docs/no-mistype.md` の「記録」） |
 | `practice` | 練習モード（苦手な単語・他では速い bigram・IKI 測定・キー配列習得）の回だけ `true`。ふだんのモードの回は持たない（ないときは練習モードではない）。練習モードの回は、レベルの達成度・ランキング・記録のページの推移には入れず、IKI・ミスタイプのページには入れる（`docs/practice.md`）。この項目を足したときも、ないときに読めるので `schemaVersion` は 4 のまま |
 | `learning` | キー配列習得の回だけ持つ。`units` は割り当て文字（「の」「きゃ」など）ごとの `[出てきた回数, 正しく打った回数]`（間違えたキーが1つもなく打てた回を正しいとする）、`newUnits` はこの回の新しい割り当ての並び。覚えたかどうか・次に覚える割り当ては、これから求める（`docs/layout-learning.md`）。ないときに読めるので `schemaVersion` は 4 のまま |
 | `textLength` | お題の文字数（日本語は読みのかなの数） |

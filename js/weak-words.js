@@ -271,7 +271,7 @@ const WeakWords = (function () {
   // 遅い方が lang・keyLayout になっている bigramGaps の行を、差の大きい方から LIST_SIZE 個
   function loadFasterCandidates(lang, keyLayout) {
     return Store.getAllSessions().then(function (sessions) {
-      const picked = recentPerGroup(sessions.filter(function (s) { return !s.practice; }));
+      const picked = recentPerGroup(sessions.filter(Store.isRegular));
       const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
       const groups = new Map();
       return Store.eachRaw(new Set(byId.keys()), function (raw) {

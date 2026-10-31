@@ -243,7 +243,9 @@ const Typer = (function () {
       get pending() { return pending; },
       // 打ちかけに間違えたキーがあるか（画面で、打ちかけのかなの上に打ったキーを出すのに使う）
       get pendingWrong() { return locked !== null; },
-      done: function () { return pos >= text.length; }
+      done: function () { return pos >= text.length; },
+      // お題の後ろに続きを足す（ノーミス連続タイプで、打ち進むと単語を足していく。docs/no-mistype.md）
+      extend: function (more) { text += more; }
     };
   }
 

@@ -39,7 +39,7 @@
       if (!byPeriod) picked = WeakWords.recentPerGroup(picked);
       // 言語・配列で差のある bigram：練習モード以外のすべてのモードの記録。絞り込みの言語・配列は効かせず、期間だけを使う
       let biPicked = sessions.filter(function (s) {
-        if (s.practice) return false;
+        if (!Store.isRegular(s)) return false;
         const day = Filters.localDate(s.finishedAt);
         return (!fromEl.value || day >= fromEl.value) && (!toEl.value || day <= toEl.value);
       });

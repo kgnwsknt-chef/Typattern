@@ -117,9 +117,14 @@ const Store = (function () {
     );
   }
 
-  // ランキングに載せる記録か（練習モードの回でなく、正確率が設定の基準 rankMinAccuracy% 以上）
+  // ふだんのモードの回か（練習モードとノーミス連続タイプの回でない）。ランキング・レベル・推移・苦手な単語の比べに使う（docs/practice.md・docs/no-mistype.md）
+  function isRegular(s) {
+    return !s.practice && s.mode !== "no-mistype";
+  }
+
+  // ランキングに載せる記録か（ふだんのモードの回で、正確率が設定の基準 rankMinAccuracy% 以上）
   function eligible(s) {
-    return !s.practice && s.result.avgIki !== null && s.result.accuracy >= rankMinAccuracy();
+    return isRegular(s) && s.result.avgIki !== null && s.result.accuracy >= rankMinAccuracy();
   }
 
   // a が b より上位か。平均 IKI の小さい順、同じなら正確率の高い順
@@ -381,6 +386,7 @@ const Store = (function () {
     get RANK_MIN_ACCURACY() { return rankMinAccuracy(); },
     avgIki: avgIki,
     accuracy: accuracy,
+    isRegular: isRegular,
     eligible: eligible,
     compare: compare,
     save: save,

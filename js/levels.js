@@ -53,9 +53,9 @@ const Levels = (function () {
     return rateOf(s.textLength - (s.result.uncorrected || 0), s.result.timeSec);
   }
 
-  // 記録（概要）のレベル。練習モードの回と、正確率が MIN_ACCURACY（95%）未満なら null
+  // 記録（概要）のレベル。練習モード・ノーミス連続タイプの回と、正確率が MIN_ACCURACY（95%）未満なら null
   function ofSession(s) {
-    if (s.practice || s.result.accuracy < MIN_ACCURACY) return null; // 練習モードの回はレベルを付けない
+    if (!Store.isRegular(s) || s.result.accuracy < MIN_ACCURACY) return null; // 練習モード・ノーミス連続タイプの回はレベルを付けない
     return fromRate(rateOfSession(s), charsFor(s.lang));
   }
 

@@ -19,6 +19,7 @@
   const svAvgEl = document.getElementById("sv-avg");
   const svChartEl = document.getElementById("sv-chart");
   let selectedId = null; // 表示中の回の id
+  let streak = false;    // モードに「ノーミス連続タイプ」を選んでいるか
   let trendData = null;  // 推移のグラフに描く記録と、達成レベルが上がった回（選んだ回が変わったら描き直す）
   let rankingRows = [];  // ランキングに出している回（順位を求めるのに使う）
   let viewId = 0;        // 古い読み込みの結果で上書きしないための番号
@@ -33,7 +34,9 @@
     Store.getAllSessions().then(function (sessions) {
       if (myId !== loadId) return;
       // 古い順のまま。練習モードの回は、記録のページ（推移・ランキング）には入れない（docs/measurement.md の「練習モード」）
-      const picked = filters.pick(sessions).filter(function (s) { return !s.practice; });
+      // ノーミス連続タイプの回は、モードで選んだときだけ（推移を文字数で描き、ランキングは出さない。docs/no-mistype.md）
+      streak = document.getElementById("f-mode").value === NoMistype.MODE;
+      const picked = filters.pick(sessions).filter(function (s) { return streak ? s.mode === NoMistype.MODE : Store.isRegular(s); });
       summaryEl.textContent = Filters.summary(picked);
       // レベルの達成度と、達成レベルが上がった回は、絞り込まずに全部の記録から出す
       renderLevels(sessions);
@@ -50,9 +53,13 @@
   // 推移のグラフ。ランキングで選んだ回（selectedId）の位置に緑の縦線を引く（1回ごとのときだけ）
   function drawTrend() {
     if (!trendData) return;
+    if (streak) {
+      Trend.renderStreak(trendEl, trendLegendEl, trendData.picked, groupEl.value);
+      return;
+    }
     Trend.render(trendEl, trendLegendEl, trendData.picked, groupEl.value, { levelUps: trendData.levelUps, selectedId: selectedId });
   }
-  // レベルの達成度の表（行：言語、列：モード（文章・単語））。決まりは docs/levels.md
+  // レベルの達成度の表（行：言語、列：モード（文章・単語）と、ノーミス連続タイプの自己ベスト）。決まりは docs/levels.md
   const LANGS = [["en", "英語"], ["ja", "日本語"]];
   const MODES = [["normal", "文章"], ["words", "単語"]];
 
@@ -63,6 +70,7 @@
     const head = table.createTHead().insertRow();
     head.appendChild(cell("th", ""));
     MODES.forEach(function (m) { head.appendChild(cell("th", m[1])); });
+    head.appendChild(cell("th", "ノーミス連続タイプ"));
     const body = table.createTBody();
     LANGS.forEach(function (lang) {
       const tr = body.insertRow();
@@ -83,8 +91,27 @@
         }
         tr.appendChild(td);
       });
+      tr.appendChild(streakCell(sessions, lang[0]));
     });
     levelsEl.appendChild(table);
+  }
+
+  // ノーミス連続タイプの自己ベスト（言語ごと。docs/no-mistype.md）：文字数・打鍵数・時間・速さ・日付・配列
+  function streakCell(sessions, lang) {
+    const td = document.createElement("td");
+    const b = NoMistype.best(sessions, lang);
+    if (!b) {
+      td.appendChild(line("level-none", "まだ記録がありません"));
+      return td;
+    }
+    const r = b.result;
+    const keys = lang === "ja" ? r.correctKeys : b.textLength;
+    const speed = lang === "ja" ? Math.round(r.kanaPerMin) + " かな/分" : Math.round(r.wpm) + " WPM";
+    td.appendChild(line("level-name", b.textLength + " 文字"));
+    td.appendChild(line("level-sub", "打鍵 " + keys + " ／ " + r.timeSec.toFixed(1) + " 秒"));
+    td.appendChild(line("level-sub", "平均 IKI " + (r.avgIki === null ? "-" : r.avgIki.toFixed(1)) + " ms（" + speed + "）"));
+    td.appendChild(line("level-sub", Filters.localDate(b.finishedAt).replace(/-/g, "/") + " ／ " + (b.keyLayout === "qwerty" ? "QWERTY" : b.keyLayout)));
+    return td;
   }
 
   function cell(tag, text) {
@@ -102,6 +129,14 @@
 
   // 絞り込んだ記録のうちランキングの対象（正確率の基準以上）を、結果画面と同じ順で上位 RANK_TOP 件
   function updateRanking(picked) {
+    if (streak) {
+      // ノーミス連続タイプにはランキングはない
+      rankingLegendEl.textContent = "ノーミス連続タイプにはランキングはありません（自己ベストは上のレベルの達成度の表）。";
+      rankingRows = [];
+      closeSession();
+      rankingEl.textContent = "";
+      return;
+    }
     const rows = picked.filter(Store.eligible).sort(Store.compare);
     // 言語・モード・配列が混ざっているときは「区分」の列を出す
     const cats = new Set(rows.map(Ranking.categoryLabel));

@@ -82,6 +82,8 @@ const Filters = (function () {
       return sessions.filter(function (s) {
         // キー配列習得の回は、どの記録ページにも入れない（docs/layout-learning.md。状況はキー配列習得のページ）
         if (s.mode === "layout-learning") return false;
+        // ノーミス連続タイプの回は、記録のページでモードに「ノーミス連続タイプ」を選んだときだけ使う（docs/no-mistype.md）
+        if (s.mode === "no-mistype" && !(f.mode && f.mode.value === "no-mistype")) return false;
         const day = localDate(s.finishedAt);
         return match(f.lang, s.lang) && match(f.layout, s.keyLayout) && modeMatch(s) &&
           (!f.from.value || day >= f.from.value) && (!f.to.value || day <= f.to.value);

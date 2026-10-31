@@ -228,6 +228,39 @@ body {
   user-select: none;
 }
 
+/* ノーミス連続タイプ：4つの段に行を順に入れる（js/app.js の nmLayout）。打ち終えた行を隠しても段の高さは残す */
+.text.nm-stream {
+  display: grid;
+  grid-template-rows: repeat(4, minmax(1.9em, auto));
+}
+
+.text.ja.nm-stream {
+  grid-template-rows: repeat(4, minmax(74px, auto));
+}
+
+/* ノーミス連続タイプの結果：ミスなしで打てた文字数と自己ベスト */
+.nm-result p {
+  margin: 0 0 4px;
+}
+
+.nm-count {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.nm-sub {
+  color: var(--sub);
+}
+
+.nm-best {
+  font-weight: 600;
+  margin-bottom: 12px !important;
+}
+
+.nm-best.level-up {
+  color: var(--level-up);
+}
+
 /* 日本語：次に打つローマ字の手引き。打ちかけ（灰色）・今のかなの残り（青）・その先（薄い灰色） */
 .romaji-guide {
   text-align: center;
@@ -1279,6 +1312,7 @@ a.text-btn {
 
 .level-table tbody th {
   vertical-align: middle;
+  white-space: nowrap; /* 「日本語」などの言語名を改行しない */
 }
 
 .level-name {

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern 記録</title>
-  <link rel="stylesheet" href="style.css?v=112">
+  <link rel="stylesheet" href="style.css?v=113">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -27,7 +27,7 @@
     <!-- レベルの達成度：全部の記録から出す（下のデータの絞り込みは効かない）。決まりは docs/levels.md -->
     <section class="stats-section level-section">
       <h2 class="stats-title">レベルの達成度</h2>
-      <p class="rhythm-legend">言語・モードごとの達成レベル（正確率 95% 以上の回の一番よいレベル）と、次の目標。全部の記録から出し、下の絞り込みは効きません。その他のモードは数えません。</p>
+      <p class="rhythm-legend">言語・モードごとの達成レベル（正確率 95% 以上の回の一番よいレベル）と、次の目標。全部の記録から出し、下の絞り込みは効きません。その他のモードは数えません。右の列は、ノーミス連続タイプの自己ベスト（ミスなしで打てた文字数の一番多い回。言語ごと）です。</p>
       <div id="levels" class="level-table-wrap"></div>
     </section>
 
@@ -52,6 +52,7 @@
           <option value="normal">文章</option>
           <option value="words">単語</option>
           <option value="other">その他</option>
+          <option value="no-mistype">ノーミス連続タイプ</option>
         </select>
       </label>
       <span class="filter">期間
@@ -99,19 +100,20 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=112"></script>
-  <script src="js/settings.js?v=112"></script>
-  <script src="js/page-footer.js?v=112"></script>
-  <script src="js/rhythm.js?v=112"></script>
-  <script src="js/keys.js?v=112"></script>
-  <script src="js/romaji.js?v=112"></script>
-  <script src="js/typer.js?v=112"></script>
-  <script src="js/kana-layout.js?v=112"></script>
-  <script src="js/ranking.js?v=112"></script>
-  <script src="js/levels.js?v=112"></script>
-  <script src="js/filters.js?v=112"></script>
-  <script src="js/trend.js?v=112"></script>
-  <script src="js/session-view.js?v=112"></script>
-  <script src="js/stats.js?v=112"></script>
+  <script src="js/store.js?v=113"></script>
+  <script src="js/settings.js?v=113"></script>
+  <script src="js/page-footer.js?v=113"></script>
+  <script src="js/rhythm.js?v=113"></script>
+  <script src="js/keys.js?v=113"></script>
+  <script src="js/romaji.js?v=113"></script>
+  <script src="js/typer.js?v=113"></script>
+  <script src="js/kana-layout.js?v=113"></script>
+  <script src="js/ranking.js?v=113"></script>
+  <script src="js/levels.js?v=113"></script>
+  <script src="js/filters.js?v=113"></script>
+  <script src="js/trend.js?v=113"></script>
+  <script src="js/no-mistype.js?v=113"></script>
+  <script src="js/session-view.js?v=113"></script>
+  <script src="js/stats.js?v=113"></script>
 </body>
 </html>
