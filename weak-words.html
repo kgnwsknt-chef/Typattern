@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Typattern 苦手な単語</title>
-  <link rel="stylesheet" href="style.css?v=111">
+  <link rel="stylesheet" href="style.css?v=112">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -65,6 +65,12 @@
     </section>
 
     <section class="stats-section">
+      <h3 class="hm-title">単語のキーごとの IKI（平均と SD）</h3>
+      <p class="rhythm-legend">上の表の行をクリックで切り替え（最初は遅い単語の1位）／ 表と同じ記録で、その単語を打った回ごとのキーの間隔を、キーの位置ごとに集計 ／ 棒 = 平均、縦線 = 平均 ± SD（標準偏差）／ 1つ目のキーは直前のスペースからの間隔 ／ 日本語は1つの打ち方（キーの並び）の回だけで集計し（かな配列は割り当て表どおりの打ち方、ローマ字は一番多かった打ち方）、キーの下にかなを書く ／ 点線 = 棒の平均。色はこれが基準 ／ 速い<span class="rhythm-scale"></span>遅い ／ 棒にマウスを乗せると平均・SD・回数を表示</p>
+      <div id="ww-keys"></div>
+    </section>
+
+    <section class="stats-section">
       <h3 class="hm-title">言語・配列で差のある bigram（差の大きい順）</h3>
       <p class="rhythm-legend">同じキーの組（bigram）を、言語・配列ごとに比べる ／ 練習モード以外のすべてのモードの記録（期間を指定しなければ、言語・配列ごとに直近の回だけ。回数は設定の「苦手な単語を数える回数」）を使い、絞り込みの言語・配列は効かせない ／ それぞれの言語・配列で5回以上出てきた bigram を比べ、一番速い言語・配列を基準に、遅い方を1行ずつ出す ／ 違い = 遅い方と速い方で違うもの（言語・配列・言語と配列）／ 差 = 遅い方の IKI − 速い方の IKI。速く打てている言語・配列があるので、遅い方も練習すれば速くなると見込める ／ 行をクリックで、表の上にその bigram の IKI の分布を言語・配列ごとに重ねて表示（縦軸は頻度の割合）</p>
       <!-- 表で選んだ bigram の IKI の分布を、言語・配列ごとに重ねて比べる（初めは表の一番上の行） -->
@@ -73,13 +79,18 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=111"></script>
-  <script src="js/keys.js?v=111"></script>
-  <script src="js/settings.js?v=111"></script>
-  <script src="js/page-footer.js?v=111"></script>
-  <script src="js/filters.js?v=111"></script>
-  <script src="js/ngram.js?v=111"></script>
-  <script src="js/weak-words.js?v=111"></script>
-  <script src="js/weak-words-page.js?v=111"></script>
+  <script src="js/store.js?v=112"></script>
+  <script src="js/keys.js?v=112"></script>
+  <script src="js/settings.js?v=112"></script>
+  <script src="js/page-footer.js?v=112"></script>
+  <script src="js/rhythm.js?v=112"></script>
+  <script src="js/romaji.js?v=112"></script>
+  <script src="js/typer.js?v=112"></script>
+  <script src="js/kana-layout.js?v=112"></script>
+  <script src="js/session-view.js?v=112"></script>
+  <script src="js/filters.js?v=112"></script>
+  <script src="js/ngram.js?v=112"></script>
+  <script src="js/weak-words.js?v=112"></script>
+  <script src="js/weak-words-page.js?v=112"></script>
 </body>
 </html>

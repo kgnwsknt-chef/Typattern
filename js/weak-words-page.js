@@ -17,13 +17,20 @@
   const KIND_NAME = { lang: "言語", layout: "配列", both: "言語と配列" };
   const fromEl = document.getElementById("f-from"); // 絞り込みの期間（指定したときだけ、その期間の全部の回で集計する）
   const toEl = document.getElementById("f-to");
+  const keysEl = document.getElementById("ww-keys"); // 選んだ単語のキーごとの IKI（平均と SD）
+  let keyGroups = new Map(); // "言語\t配列" → 単語 → 打ち方ごとのキーの間隔（WeakWords.addKeys）
+  let tables = null;         // 表を描き直すための { slow, miss, displays, many }
+  let layoutsShown = [];     // 登録した配列（割り当て表どおりの打ち方を求めるのに使う）
+  let wordSelected = { list: "slow", index: 0 }; // グラフに出している行（どちらの表の何行目か）
 
   let loadId = 0; // 古い読み込みの結果で上書きしないための番号
 
   function update() {
     const myId = ++loadId;
     summaryEl.textContent = "集計中…";
-    Store.getAllSessions().then(function (sessions) {
+    Promise.all([Store.getAllSessions(), Store.getAllLayouts()]).then(function (got) {
+      const sessions = got[0];
+      const layouts = got[1];
       if (myId !== loadId) return;
       // 単語モードの記録だけを使う（練習モードの回は使わない）
       let picked = filters.pick(sessions).filter(function (s) { return s.mode === "words" && !s.practice; });
@@ -45,6 +52,7 @@
         : "条件に合う単語モードの記録がありません。単語モードで打つと、ここに苦手な単語が出ます。";
       // 言語・配列が違えば別に数える
       const groups = new Map(); // "言語\t配列" → 単語の集計
+      const kGroups = new Map(); // "言語\t配列" → 単語のキーごとの間隔
       const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
       const ids = new Set(Array.from(byId.keys()).concat(Array.from(biById.keys())));
       return Store.eachRaw(ids, function (raw) {
@@ -53,6 +61,16 @@
           const key = s.lang + "\t" + s.keyLayout;
           if (!groups.has(key)) groups.set(key, new Map());
           WeakWords.add(groups.get(key), raw);
+          // 日本語は記録したキーを判定にもう一度通して、かなごとのキーを再現する（できない回は使わない）
+          let units = null;
+          if (s.lang === "ja") {
+            const how = SessionView.inputOf(raw.keyLayout, layouts);
+            units = how ? SessionView.replay(raw, how.optionsFn, null, how.eng) : null;
+          }
+          if (s.lang !== "ja" || units) {
+            if (!kGroups.has(key)) kGroups.set(key, new Map());
+            WeakWords.addKeys(kGroups.get(key), raw, units);
+          }
         }
         const b = biById.get(raw.id);
         if (b) {
@@ -76,8 +94,11 @@
           const many = groups.size > 1; // 言語・配列が複数あれば、どれの単語かも書く
           wwSummaryEl.textContent = picked.length ? "候補（" + WeakWords.MIN_COUNT + " 回以上打った単語）" + all.length + " 語" +
             (many ? " ／ 言語・配列が複数あるので、単語の横に書く" : "") : "";
-          drawTable(slowEl, WeakWords.slowList(all), displays, many);
-          drawTable(missEl, WeakWords.missList(all), displays, many);
+          keyGroups = kGroups;
+          layoutsShown = layouts;
+          tables = { slow: WeakWords.slowList(all), miss: WeakWords.missList(all), displays: displays, many: many };
+          wordSelected = { list: "slow", index: 0 }; // 集計し直したら、遅い単語の1位から
+          drawTables();
           biGroupsShown = biGroups;
           biSelected = 0; // 集計し直したら、差が一番大きい行から
           drawBigrams(WeakWords.bigramGaps(biGroups));
@@ -102,8 +123,15 @@
     return el;
   }
 
-  // 表：順位・単語・遅さ・ミスの割合・回数。日本語は表示する語と読みを出す
-  function drawTable(el, rows, displays, many) {
+  // 2つの表を描き、選んでいる行の単語のキーごとの IKI を出す
+  function drawTables() {
+    drawTable(slowEl, tables.slow, tables.displays, tables.many, "slow");
+    drawTable(missEl, tables.miss, tables.displays, tables.many, "miss");
+    drawKeys(tables[wordSelected.list][wordSelected.index] || null);
+  }
+
+  // 表：順位・単語・遅さ・ミスの割合・回数。日本語は表示する語と読みを出す。list は "slow"・"miss"（どちらの表か）
+  function drawTable(el, rows, displays, many, list) {
     el.textContent = "";
     const table = document.createElement("table");
     table.className = "bg-table";
@@ -135,6 +163,19 @@
       tr.appendChild(td("", String(Math.round(r.slow))));
       tr.appendChild(td("", (r.missRate * 100).toFixed(0) + "%"));
       tr.appendChild(td("", String(r.count)));
+      // クリック（または Enter）で、表の下のグラフをその単語のキーごとの IKI に切り替える
+      tr.className = "bg-row" + (wordSelected.list === list && wordSelected.index === i ? " bg-selected" : "");
+      tr.tabIndex = 0;
+      tr.title = "クリックで、表の下にこの単語のキーごとの IKI（平均と SD）を表示";
+      const pick = function () {
+        wordSelected = { list: list, index: i };
+        drawTables();
+        keysEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      };
+      tr.addEventListener("click", pick);
+      tr.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
+      });
       body.appendChild(tr);
     });
     if (!rows.length) {
@@ -145,6 +186,41 @@
       body.appendChild(tr);
     }
     el.appendChild(table);
+  }
+
+  // 選んだ単語のキーごとの IKI（平均と SD）を、結果画面の「キーごとの間隔」と同じ形の棒グラフで出す（決まりは docs/weak-words.md）
+  function drawKeys(row) {
+    keysEl.textContent = "";
+    if (!row) return;
+    const byWord = keyGroups.get(row.lang + "\t" + row.layout);
+    // かな配列は、割り当て表どおりの打ち方（拗音などは割り当てがあればそれを使う）の回で集計する
+    const how = row.lang === "ja" && row.layout !== "qwerty" ? SessionView.inputOf(row.layout, layoutsShown) : null;
+    const preferred = how && !how.eng ? WeakWords.layoutPattern(row.word, how.optionsFn) : null;
+    const prof = WeakWords.keyProfile(byWord ? byWord.get(row.word) : null, preferred);
+    const head = document.createElement("p");
+    head.className = "stats-summary";
+    const display = row.lang === "ja" ? tables.displays.get(row.word) : null;
+    let name = "「" + (display && display !== row.word ? display + "（" + row.word + "）" : row.word) + "」";
+    if (tables.many) name += "（" + groupName(row) + "）";
+    if (!prof) {
+      head.textContent = name + "：キーを再現できる記録がありません";
+      keysEl.appendChild(head);
+      return;
+    }
+    let how2 = "";
+    if (prof.byLayout) {
+      if (prof.count < prof.total) how2 = "（割り当て表どおりの打ち方 " + prof.keys + " の " + prof.count + " 回で集計）";
+    } else if (preferred) {
+      how2 = "（割り当て表どおりの打ち方で打った回がないので、一番多い " + prof.keys + " の " + prof.count + " 回で集計）";
+    } else if (prof.patterns > 1) {
+      how2 = "（打ち方が " + prof.patterns + " 通り。一番多い " + prof.keys + " の " + prof.count + " 回で集計）";
+    }
+    head.textContent = name + " ／ " + prof.total + " 回" + how2;
+    keysEl.appendChild(head);
+    const chart = document.createElement("div");
+    chart.className = "rhythm-chart";
+    keysEl.appendChild(chart);
+    Rhythm.renderStats(chart, prof.groups);
   }
 
   function groupName(g) {

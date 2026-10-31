@@ -565,6 +565,28 @@ body {
   border-top: 3px double var(--bg);
 }
 
+/* 平均 ± SD の縦線（苦手な単語のページ）。上下の端に短い横線 */
+.rh-sd {
+  position: absolute;
+  left: 50%;
+  width: 6px;
+  transform: translateX(-50%);
+  border-top: 1px solid var(--text);
+  border-bottom: 1px solid var(--text);
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.rh-sd::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px solid var(--text);
+  transform: translateX(-50%);
+}
+
 .rh-val {
   position: absolute;
   left: -4px;

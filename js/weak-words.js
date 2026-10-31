@@ -44,6 +44,106 @@ const WeakWords = (function () {
     });
   }
 
+  // ---- 単語のキーごとの IKI（苦手な単語のページで、表の行をクリックしたときのグラフ） ----
+  // 1回分の生データの単語ごとに、打ったキーの並びと間隔を map（単語 → Map(打ち方 → { groups, values, count })）に足す
+  //   英語（units なし）：文字ごとに1キー、間隔は intervals（各文字の最後の打鍵の間隔）
+  //   日本語：units（SessionView.replay で再現した、最後に残ったかなのまとまり）のキーごとに、直前のキーからの間隔
+  //   単語の1つ目のキーの間隔は、直前のスペースからの間隔
+  function addKeys(map, raw, units) {
+    eachWord(raw.text, function (word, start, end) {
+      const groups = []; // [{ caption: かな（英語は null）, chs: [キーの文字], vs: [間隔] }]
+      if (!units) {
+        for (let i = start; i < end; i++) groups.push({ caption: null, chs: [raw.text[i]], vs: [raw.intervals[i]] });
+      } else {
+        units.forEach(function (u) {
+          if (u.pos < start || u.pos >= end) return;
+          const caption = raw.text.substr(u.pos, u.len);
+          // 飛ばしたかな（打ち方がない）はキーがないので、空の列を1つ置く（結果画面と同じ）
+          if (!u.keyList.length) {
+            groups.push({ caption: caption, chs: [""], vs: [null] });
+            return;
+          }
+          groups.push({
+            caption: caption,
+            chs: u.keyList.map(function (k) { return k.ch === "\u0000" ? "?" : k.ch; }),
+            vs: u.keyList.map(function (k) { return k.prev === null ? null : k.time - k.prev; })
+          });
+        });
+      }
+      // 打ち方（かなとキーの並び）が同じ回だけを、キーの位置ごとにそろえて数える
+      const pattern = groups.map(function (g) { return (g.caption || "") + "=" + g.chs.join(""); }).join("|");
+      if (!map.has(word)) map.set(word, new Map());
+      const byPattern = map.get(word);
+      if (!byPattern.has(pattern)) {
+        byPattern.set(pattern, {
+          groups: groups.map(function (g) { return { caption: g.caption, chs: g.chs }; }),
+          values: [].concat.apply([], groups.map(function (g) { return g.vs.map(function () { return []; }); })),
+          count: 0
+        });
+      }
+      const p = byPattern.get(pattern);
+      p.count++;
+      let i = 0;
+      groups.forEach(function (g) {
+        g.vs.forEach(function (v) {
+          if (v !== null && v !== undefined) p.values[i].push(v);
+          i++;
+        });
+      });
+    });
+  }
+
+  // かな配列で、単語を割り当て表どおりに打つときの打ち方（addKeys と同じ形の文字列）
+  //   先頭から、割り当て表で打てる一番長いかな（「しぇ」の割り当てがあれば「し」＋「ぇ」より先）を、一番短いキーの並びで打つ
+  //   optionsFn は KanaLayout.create(…).options（長いかなを先、同じかなは短い並びを先に返す）。表にないかなは飛ばす（空の列）
+  function layoutPattern(word, optionsFn) {
+    const parts = [];
+    let pos = 0;
+    while (pos < word.length) {
+      const o = optionsFn(word, pos)[0];
+      if (!o) {
+        parts.push(word[pos] + "=");
+        pos++;
+        continue;
+      }
+      parts.push(word.substr(pos, o.len) + "=" + o.seq);
+      pos += o.len;
+    }
+    return parts.join("|");
+  }
+
+  // 単語のキーごとの IKI：キーごとに { ch, mean, sd, n } を求める（SD は n−1 で割る。n が 1 なら null）
+  //   preferred（layoutPattern の打ち方）を渡せば、その打ち方の回で集計する。渡さないか、その打ち方の回がなければ、一番多かった打ち方の回で
+  // 返り値 { groups: [{ caption, cols: [{ ch, mean, sd, n }] }], keys: 打ち方のキーの並び, count: その打ち方の回数, total: 全部の回数,
+  //   patterns: 打ち方の数, byLayout: 割り当て表どおりの打ち方で集計したか }
+  function keyProfile(byPattern, preferred) {
+    if (!byPattern || !byPattern.size) return null;
+    let best = null;
+    let total = 0;
+    byPattern.forEach(function (p) {
+      total += p.count;
+      if (!best || p.count > best.count) best = p;
+    });
+    const byLayout = !!preferred && byPattern.has(preferred);
+    if (byLayout) best = byPattern.get(preferred);
+    let i = 0;
+    const groups = best.groups.map(function (g) {
+      return {
+        caption: g.caption,
+        cols: g.chs.map(function (ch) {
+          const vs = best.values[i++];
+          const n = vs.length;
+          if (!n) return { ch: ch, mean: null, sd: null, n: 0 };
+          const mean = vs.reduce(function (a, b) { return a + b; }, 0) / n;
+          const sd = n > 1 ? Math.sqrt(vs.reduce(function (a, v) { return a + (v - mean) * (v - mean); }, 0) / (n - 1)) : null;
+          return { ch: ch, mean: mean, sd: sd, n: n };
+        })
+      };
+    });
+    const keys = best.groups.map(function (g) { return g.chs.join(""); }).join("");
+    return { groups: groups, keys: keys, count: best.count, total: total, patterns: byPattern.size, byLayout: byLayout };
+  }
+
   // 候補の行 { word, count, slow: 遅さ(ms/文字), misses: ミスした回数, missRate }（MIN_COUNT 回以上打った単語）
   function rows(map) {
     const out = [];
@@ -240,7 +340,7 @@ const WeakWords = (function () {
 
   return {
     MIN_COUNT: MIN_COUNT, LIST_SIZE: LIST_SIZE, PRACTICE_WORDS: PRACTICE_WORDS, REPEAT: REPEAT, BIGRAM_MIN: BIGRAM_MIN,
-    add: add, rows: rows, slowList: slowList, missList: missList, choose: choose,
+    add: add, addKeys: addKeys, layoutPattern: layoutPattern, keyProfile: keyProfile, rows: rows, slowList: slowList, missList: missList, choose: choose,
     practiceWords: practiceWords, results: results, load: load, loadDisplays: loadDisplays, recentRuns: recentRuns,
     recentPerGroup: recentPerGroup, fasterGoal: fasterGoal, bigramGaps: bigramGaps, loadFasterCandidates: loadFasterCandidates, chooseFaster: chooseFaster
   };

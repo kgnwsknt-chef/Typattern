@@ -52,6 +52,18 @@ const Rhythm = (function () {
     });
   }
 
+  // 平均と SD：キーごとの平均の棒に、平均 ± SD の縦線を重ねる（苦手な単語のページ）。平均間隔(ms, 整数)を返す
+  //   groups：[{ caption: かな（英語は null）, cols: [{ ch, mean, sd, n }] }]。英語は1つのまとまり、日本語はかなごとに下にかなを書く
+  function renderStats(container, groups) {
+    const toCols = function (g) {
+      return g.cols.map(function (c) { return { ch: c.ch, v: c.mean, missed: false, sd: c.sd, n: c.n }; });
+    };
+    const words = groups.length && groups[0].caption === null
+      ? [{ groups: [{ cols: [].concat.apply([], groups.map(toCols)) }] }]
+      : [{ groups: groups.map(function (g) { return { caption: g.caption, missed: false, cols: toCols(g) }; }) }];
+    return draw(container, words);
+  }
+
   // words：折り返しの単位 [{ breakBefore, groups: [{ caption, missed, cols: [{ ch, v, missed }] }] }]
   function draw(container, words) {
     container.textContent = "";
@@ -99,7 +111,7 @@ const Rhythm = (function () {
           word.appendChild(group);
         }
         g.cols.forEach(function (c) {
-          parent.appendChild(column(c.ch, c.v, c.missed, cap, toPx, toColor));
+          parent.appendChild(column(c.ch, c.v, c.missed, cap, toPx, toColor, c.n === undefined ? null : c));
         });
       });
       frag.appendChild(word);
@@ -128,8 +140,8 @@ const Rhythm = (function () {
     return "hsl(" + Math.round(h) + ", 70%, 42%)";
   }
 
-  // 1文字分の列（数値・棒・文字）
-  function column(ch, v, isMissed, cap, toPx, toColor) {
+  // 1文字分の列（数値・棒・文字）。stat（{ sd, n }）を渡すと、平均 ± SD の縦線を重ね、マウスを乗せると値を出す
+  function column(ch, v, isMissed, cap, toPx, toColor, stat) {
     const col = document.createElement("div");
     col.className = "rh-col";
 
@@ -144,11 +156,26 @@ const Rhythm = (function () {
       bar.style.background = toColor(v);
       track.appendChild(bar);
 
+      let top = px; // 数値を置く高さ（縦線があれば、その上）
+      if (stat && stat.sd !== null) {
+        const lo = toPx(Math.max(0, v - stat.sd));
+        const hi = toPx(v + stat.sd); // 最大を超える分は頭打ち
+        const sd = document.createElement("div");
+        sd.className = "rh-sd";
+        sd.style.bottom = lo + "px";
+        sd.style.height = hi - lo + "px";
+        track.appendChild(sd);
+        top = Math.max(top, hi);
+      }
+
       const val = document.createElement("span");
       val.className = "rh-val";
       val.textContent = Math.round(v);
-      val.style.bottom = px + 2 + "px";
+      val.style.bottom = top + 2 + "px";
       track.appendChild(val);
+    }
+    if (stat) {
+      col.title = v === null ? "間隔なし" : "平均 " + Math.round(v) + " ms ／ SD " + (stat.sd === null ? "-" : Math.round(stat.sd) + " ms") + " ／ " + stat.n + " 回";
     }
 
     const label = document.createElement("div");
@@ -165,5 +192,5 @@ const Rhythm = (function () {
     return colorFor(v, avg, readHue());
   }
 
-  return { render: render, renderKeys: renderKeys, kanaColumns: kanaColumns, color: color };
+  return { render: render, renderKeys: renderKeys, renderStats: renderStats, kanaColumns: kanaColumns, color: color };
 })();
