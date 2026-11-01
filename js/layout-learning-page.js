@@ -1,4 +1,4 @@
-// キー配列習得のページ（layout-learning.html）。選んだかな配列・英語の配列について、覚えた単位の数・達成項目・覚えたかなの図（かな配列だけ）・キー配列を出す
+// キー配列習得のページ（layout-learning.html）。選んだ配列（QWERTY・かな配列・英語の配列）について、覚えた単位の数・達成項目・覚えたかなの図（かな配列だけ）・キー配列を出す
 // 決まりは docs/layout-learning.md。求め方は js/layout-learning.js
 (function () {
   "use strict";
@@ -110,14 +110,11 @@
   PageFooter.init();
   Promise.all([Store.getAllLayouts(), Store.getAllSessions(), LayoutLearning.loadLists(fetchText, "ja"), LayoutLearning.loadLists(fetchText, "en")])
     .then(function (v) {
-      layouts = v[0].slice()
-        .sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      // 最初に QWERTY（入れ替えのない英語の配列として扱う）、その後に登録した配列を名前の順に
+      layouts = [{ id: "qwerty", name: "QWERTY", type: "eng", entries: [] }].concat(v[0].slice()
+        .sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; }));
       sessions = v[1];
       lists = { ja: v[2], en: v[3] };
-      if (!layouts.length) {
-        summaryEl.textContent = "かな配列・英語の配列がまだ登録されていません。「設定」のページから開く「キー配列」のページで、配列を登録してください。";
-        return;
-      }
       layouts.forEach(function (l) {
         const o = document.createElement("option");
         o.value = l.id;

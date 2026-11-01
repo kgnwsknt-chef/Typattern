@@ -278,17 +278,17 @@
 
   // お題のページで追加したお題のうち、今の言語・モードのもの（文章は { name, text, lines }、単語は { name, words }）
   // キー配列習得：単語リスト（日本語は A〜D、英語は A〜C）と、今の配列の割り当て表・キー配列習得の記録を読む。
-  // 日本語でかな配列を選んだときと、英語で英語の配列を選んだときだけ使える
+  // 日本語でかな配列を選んだときと、英語で QWERTY・英語の配列を選んだときだけ使える（QWERTY は、入れ替えのない英語の配列として扱う）
   // sources は1つだけ { name: LEARN, lists, plan, sessions }。sessions は、打ち終えた回を足していく（次のお題から使う）
   function loadLearnSources() {
     const id = keyLayoutEl.value;
-    const en = lang === "en" && engEntries[id];
+    const en = lang === "en" && (id === "qwerty" ? [] : engEntries[id]);
     if (!en && (lang !== "ja" || !kanaLayouts[id])) return Promise.reject(new Error("NO_LEARN"));
     return Promise.all([LayoutLearning.loadLists(fetchText, lang), Store.getAllSessions()]).then(function (v) {
       return [{
         name: LEARN,
         lists: v[0],
-        plan: en ? LayoutLearning.planEng(engEntries[id]) : LayoutLearning.plan(kanaLayouts[id].entries),
+        plan: en ? LayoutLearning.planEng(en) : LayoutLearning.plan(kanaLayouts[id].entries),
         sessions: v[1].filter(function (s) { return s.mode === LEARN && s.keyLayout === id; })
       }];
     });
@@ -443,7 +443,7 @@
       return;
     }
     if (err && err.message === "NO_LEARN") {
-      textEl.textContent = "キー配列習得は、言語を日本語にしてキー配列のページで登録したかな配列を選んだときと、言語を英語にして登録した英語の配列を選んだときに使えます。";
+      textEl.textContent = "キー配列習得は、言語を日本語にしてキー配列のページで登録したかな配列を選んだときと、言語を英語にして QWERTY か登録した英語の配列を選んだときに使えます。";
       input.disabled = true;
       return;
     }
