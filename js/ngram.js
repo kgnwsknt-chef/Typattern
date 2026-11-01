@@ -598,7 +598,7 @@ const NGram = (function () {
   //   skip：数えない位置の集まり（IKI 測定モードの1回目。js/iki-measurement.js）。その位置を打ったキーも false
   function keySequence(events, skip) {
     const seq = [];
-    const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す）
+    const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す。Shift 以外のキーの "u" の行は何もしない）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
     const hasUp = events.some(function (e) { return e[1] === "u"; });
     events.forEach(function (e) {

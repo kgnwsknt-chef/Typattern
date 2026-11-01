@@ -11,7 +11,7 @@ const SessionView = (function () {
   //     before は押す前の typer.expect()、result は typer.press の結果（Backspace のときはどちらも null）
   function replay(raw, optionsFn, observe, eng) {
     const typer = Typer.create(raw.text, optionsFn);
-    const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す）
+    const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す。Shift 以外のキーの "u" の行は何もしない）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
     const hasUp = raw.events.some(function (e) { return e[1] === "u"; });
     const added = []; // 再現した "+" の行 [時刻, かな, 位置, 判定]

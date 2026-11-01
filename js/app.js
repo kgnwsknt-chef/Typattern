@@ -130,6 +130,7 @@
   let keyTime = 0;     // 直前に押したキーの時刻。そのキーで入った文字の時刻に使う
   let preKeys = [];    // 計測開始前に押したキー { code, number, time }。開始したら events に移す
   const heldShifts = new Set(); // 今押されている Shift キーの e.code
+  const loggedKeys = new Set(); // "k" の行を残して、まだ離していないキーの e.code（離したら "u" の行を残す）
   let typer = null;    // 日本語のときの入力の状態（js/typer.js）。英語では null
   let showRomajiGuide = false; // ローマ字の手引きを出すか（日本語のローマ字入力で、設定の「手引き」が ON のときだけ。かな配列では出さない）
   let romajiLine = false;      // 日本語のお題の2行目をローマ字で出すか（ローマ字入力で、設定の「日本語のお題の2行目」がローマ字のとき）
@@ -570,6 +571,7 @@
     events = [];
     keyTime = 0;
     preKeys = [];
+    loggedKeys.clear();
     saveStatusEl.textContent = "";
     prevValue = "";
     startTime = 0;
@@ -1575,6 +1577,7 @@
   function pushKey(code, number, now, pos, judge) {
     if (startTime) {
       events.push([round1(now - startTime), "k", number, pos, judge]);
+      loggedKeys.add(code);
       return;
     }
     // 開始前：前に押したキーのうち、押したままの Shift だけを残す（大文字で打ち始めるときの Shift）
@@ -1590,6 +1593,7 @@
   function startKeys() {
     preKeys.forEach(function (k) {
       events.push([round1(k.time - startTime), "k", k.number, k.pos, k.judge]);
+      loggedKeys.add(k.code);
     });
     preKeys = [];
   }
@@ -1810,11 +1814,12 @@
     if (!Keys.isShift(e.code)) keyTime = now; // Shift だけでは入力欄は変わらない
     logKey(e, now);
   });
-  // Shift を離したときは "u" の行を残す（どのキーを Shift と同時に押したか分かるように。n-gram で使う）
+  // "k" の行を残したキーを離したときは "u" の行を残す（どのキーを Shift と同時に押したか、キーを重ねて押したかが分かるように）
   //   [経過ms, "u", 物理キーの番号, 打っている位置, null]
   input.addEventListener("keyup", function (e) {
-    if (!Keys.isShift(e.code)) return;
-    heldShifts.delete(e.code);
+    if (Keys.isShift(e.code)) heldShifts.delete(e.code);
+    if (!loggedKeys.has(e.code)) return;
+    loggedKeys.delete(e.code);
     if (startTime && !finished) {
       events.push([round1(performance.now() - startTime), "u", Keys.number(e.code), typer ? typer.pos : input.value.length, null]);
     }
@@ -1829,9 +1834,9 @@
   input.addEventListener("focus", function () { board.classList.remove("blurred"); });
   input.addEventListener("blur", function () {
     board.classList.add("blurred");
-    // 入力欄の外で Shift を離すと keyup が来ないので、ここで離したことにする
-    heldShifts.forEach(function (code) {
-      input.dispatchEvent(new KeyboardEvent("keyup", { code: code, key: "Shift" }));
+    // 入力欄の外でキーを離すと keyup が来ないので、押したままのキーはここで離したことにする
+    new Set(Array.from(heldShifts).concat(Array.from(loggedKeys))).forEach(function (code) {
+      input.dispatchEvent(new KeyboardEvent("keyup", { code: code, key: Keys.isShift(code) ? "Shift" : "" }));
     });
   });
 
