@@ -14,9 +14,9 @@ const NoMistype = (function () {
   // 何語目（1 から）の単語を、どの単語リストから選ぶか（日本語）。英語は最初から最後まで単語モードの単語リスト
   //   basic：単語モードの単語リスト（wordlists/ja/）、a〜d：キー配列習得の単語リスト A〜D（wordlists/layout-learning/）
   const STAGES = [
-    { upTo: 100, lists: ["a"] },
-    { upTo: 300, lists: ["a", "b"] },
-    { upTo: 500, lists: ["basic", "a", "b"] },
+    { upTo: 20, lists: ["a"] },
+    { upTo: 100, lists: ["a", "b"] },
+    { upTo: 200, lists: ["a", "b", "c"] },
     { upTo: Infinity, lists: ["basic", "a", "b", "c", "d"] }
   ];
 
