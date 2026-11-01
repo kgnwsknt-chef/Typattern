@@ -1,9 +1,9 @@
-// キー配列習得のページ（layout-learning.html）。選んだかな配列について、覚えた単位の数・達成項目・覚えたかなの図・キー配列を出す
+// キー配列習得のページ（layout-learning.html）。選んだかな配列・英語の配列について、覚えた単位の数・達成項目・覚えたかなの図（かな配列だけ）・キー配列を出す
 // 決まりは docs/layout-learning.md。求め方は js/layout-learning.js
 (function () {
   "use strict";
 
-  // タイピング画面で選んだキー配列（app.js と同じキー）。かな配列なら、最初はそれを出す
+  // タイピング画面で選んだキー配列（app.js と同じキー）。登録した配列なら、最初はそれを出す
   const KEY_LAYOUT_STORAGE = "typing-test.keyLayout";
   const ASSET_VERSION = new URL(document.currentScript.src).searchParams.get("v") || "";
   const layoutEl = document.getElementById("ll-layout");
@@ -21,20 +21,21 @@
   }
 
   let layouts = [];
-  let lists = null;
+  let lists = null; // 言語 → 単語リスト（日本語はかな配列、英語は英語の配列で使う）
   let sessions = [];
 
   function render() {
     const layout = layouts.filter(function (l) { return l.id === layoutEl.value; })[0];
     if (!layout) return;
-    const p = LayoutLearning.plan(layout.entries);
+    const en = layout.type === "eng";
+    const p = en ? LayoutLearning.planEng(layout.entries) : LayoutLearning.plan(layout.entries);
     const mine = sessions.filter(function (s) { return s.mode === LayoutLearning.MODE && s.keyLayout === layout.id; });
-    const s = LayoutLearning.state(p, lists, mine);
+    const s = LayoutLearning.state(p, lists[en ? "en" : "ja"], mine);
     const learned = s.learned;
 
     // 覚えた数と、今の段階・次に覚える単位
     const stage = s.stage === "1-1" ? "1-1. 頻出8字"
-      : s.stage === "1-2" ? "1-2. 2つずつ足す（頻出30字）"
+      : s.stage === "1-2" ? "1-2. 2つずつ足す（" + p.basicName + "）"
       : s.stage === "done" ? "習得完了"
       : s.areaIndex !== -1 ? "2. 学習区画「" + p.areas[s.areaIndex].name + "」" : "2. 配列ごとの学習区画";
     const got = p.units.filter(function (u) { return learned.has(u); }).length;
@@ -62,12 +63,16 @@
       milestonesEl.appendChild(tile);
     });
 
-    // 覚えたかなの図
-    KanaMandala.draw(mandalaEl, LayoutLearning.mandalaOpts(p, learned));
+    // 覚えたかなの図（かな配列だけ。英語の配列は下のキー配列の図で見る）
+    mandalaEl.closest("section").hidden = en;
+    if (!en) KanaMandala.draw(mandalaEl, LayoutLearning.mandalaOpts(p, learned));
 
     // キー配列：シフトなしの面のかなのキーに、覚えたかどうかの色を付ける
     // キー配列：選んだ面（シフトなしの面・シフト面）で、各キーが出すかなを書き、覚えた単位のキーに色を付ける
-    const base = KeyMap.kanaOf(KanaLayout.create(layout.entries));
+    // 英語の配列は、そのキーを押したときの文字（シフトのキーはない）
+    const base = en
+      ? { get: KanaLayout.engMap(layout.entries).toChar, shifts: { prefix: [], postfix: [] } }
+      : KeyMap.kanaOf(KanaLayout.create(layout.entries));
     const faces = [""].concat(p.faces);
     const prevFace = faceEl.value;
     faceEl.textContent = "";
@@ -103,14 +108,14 @@
   }
 
   PageFooter.init();
-  Promise.all([Store.getAllLayouts(), Store.getAllSessions(), LayoutLearning.loadLists(fetchText)])
+  Promise.all([Store.getAllLayouts(), Store.getAllSessions(), LayoutLearning.loadLists(fetchText, "ja"), LayoutLearning.loadLists(fetchText, "en")])
     .then(function (v) {
-      layouts = v[0].filter(function (l) { return l.type !== "eng"; })
+      layouts = v[0].slice()
         .sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
       sessions = v[1];
-      lists = v[2];
+      lists = { ja: v[2], en: v[3] };
       if (!layouts.length) {
-        summaryEl.textContent = "かな配列がまだ登録されていません。「設定」のページから開く「キー配列」のページで、かな配列を登録してください。";
+        summaryEl.textContent = "かな配列・英語の配列がまだ登録されていません。「設定」のページから開く「キー配列」のページで、配列を登録してください。";
         return;
       }
       layouts.forEach(function (l) {

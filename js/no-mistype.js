@@ -11,23 +11,31 @@ const NoMistype = (function () {
   const AHEAD_CHARS = 200; // 打っている位置からお題の終わりまでがこの文字数より短くなったら、行を足す
   const RECENT = 50;       // 同じ単語を、この語数のあいだは重ねない
 
-  // 何語目（1 から）の単語を、どの単語リストから選ぶか（日本語）。英語は最初から最後まで単語モードの単語リスト
-  //   basic：単語モードの単語リスト（wordlists/ja/）、a〜d：キー配列習得の単語リスト A〜D（wordlists/layout-learning/）
-  const STAGES = [
+  // 何語目（1 から）の単語を、どの単語リストから選ぶか（言語ごと）
+  //   basic：単語モードの単語リスト（wordlists/<言語>/）、a〜d：キー配列習得の単語リスト（wordlists/layout-learning/。日本語は A〜D、英語は A〜C）
+  const STAGES = {};
+  STAGES.ja = [
     { upTo: 20, lists: ["a"] },
     { upTo: 100, lists: ["a", "b"] },
     { upTo: 200, lists: ["a", "b", "c"] },
     { upTo: Infinity, lists: ["basic", "a", "b", "c", "d"] }
   ];
+  STAGES.en = [
+    { upTo: 20, lists: ["a"] },
+    { upTo: 100, lists: ["a", "b"] },
+    { upTo: 200, lists: ["a", "b", "c"] },
+    { upTo: Infinity, lists: ["basic", "a", "b", "c"] }
+  ];
 
-  // 単語の並びを作るもの。pools は { basic, a, b, c, d } → 単語の並び（英語は basic だけ）
+  // 単語の並びを作るもの。pools は { basic, a, b, c, d } → 単語の並び（英語は d がない）。lang を省くと日本語
   //   next(n)：続きの n 語。同じ単語は RECENT 語のあいだ重ねない（候補が少なくて選べなければ重ねる）
-  function stream(pools) {
+  function stream(pools, lang) {
+    const stages = STAGES[lang === "en" ? "en" : "ja"];
     let count = 0; // ここまでに出した単語の数
     const recent = [];
     const key = function (w) { return typeof w === "string" ? w : w.reading; };
     function poolFor(index) {
-      const stage = STAGES.find(function (s) { return index <= s.upTo; });
+      const stage = stages.find(function (s) { return index <= s.upTo; });
       let list = [].concat.apply([], stage.lists.map(function (k) { return pools[k] || []; }));
       // 配列にないかなを含む語を除いたら空になった段は、使える単語リストを全部使う
       if (!list.length) list = [].concat.apply([], ["basic", "a", "b", "c", "d"].map(function (k) { return pools[k] || []; }));

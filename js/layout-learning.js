@@ -1,4 +1,4 @@
-// キー配列習得（新しいかな配列の割り当てを覚える練習モード）の処理。決まりは docs/layout-learning.md
+// キー配列習得（新しいかな配列・英語の配列の割り当てを覚える練習モード）の処理。決まりは docs/layout-learning.md
 // 単位の一覧・学習区画・覚えたかどうか・次に覚える単位・お題の言葉の選び方・達成項目を求める
 // （タイピング画面 js/app.js と、キー配列習得のページ js/layout-learning-page.js で使う）
 const LayoutLearning = (function () {
@@ -7,6 +7,10 @@ const LayoutLearning = (function () {
   const MODE = "layout-learning";
   const BASIC30 = Array.from("いんうのかたとし、くにてるはなこがっき。ですつあらまをさりも");
   const FIRST8 = BASIC30.slice(0, 8);
+  // 英語の配列（docs/layout-learning.md の「英語の配列」）：覚える単位（英字26字と記号8つ）と、頻出20字（よく使う順。初めの8字が頻出8字）
+  const EN_UNITS = Array.from("abcdefghijklmnopqrstuvwxyz,.'-?!;:");
+  const EN_BASIC20 = Array.from("etaoinsrhdlcumwfgy,.");
+  const EN_FIRST8 = EN_BASIC20.slice(0, 8);
   // 覚える対象にしない単位（docs/layout-learning.md の「覚える単位」）
   const EXCLUDED = ["ぢゃ", "ぢゅ", "ぢょ", "ゎ"];
   // 割り当て表に1行としてあれば1つの単位にする組
@@ -24,17 +28,18 @@ const LayoutLearning = (function () {
   const TARGET_LENGTH = 300; // 1回のお題の長さ（読みの文字数。スペースを含む）
   const MAX_REPEAT = 3;      // 言葉が足りないときに、同じ言葉を出してよい回数（単語リスト D の単位は制限なし）
   const STUCK_NOTE = "（候補の条件を満たす割り当てがないので、言葉の多い割り当てから選んでいます）"; // 行き詰まったときに、新しく覚える割り当ての後ろに添える言葉
-  const LISTS = ["a", "b", "c", "d"];
+  const LISTS = { ja: ["a", "b", "c", "d"], en: ["a", "b", "c"] }; // 言語ごとの単語リスト（wordlists/layout-learning/<言語>-words-<x>.txt）
   const SHIFT_MIN = 5; // かな配列のシフトのキーの求め方（キー配列のページと同じ）
 
   function isKana(ch) { return /^[ぁ-ゖー、。]$/.test(ch); }
 
   // ---- 単語リスト ----
 
-  // 単語リスト A〜D を読む。返り値 { words: [{ display, reading, list }], dUnits: Set（単語リスト D の見出しの単位）}
-  function loadLists(fetchText) {
-    return Promise.all(LISTS.map(function (x) {
-      return fetchText("wordlists/layout-learning/ja-words-" + x + ".txt").then(function (t) { return { list: x, text: t }; });
+  // 単語リストを読む（日本語は A〜D、英語は A〜C。lang を省くと日本語）。返り値 { words: [{ display, reading, list }], dUnits: Set（単語リスト D の見出しの単位。英語は空）}
+  function loadLists(fetchText, lang) {
+    lang = lang === "en" ? "en" : "ja";
+    return Promise.all(LISTS[lang].map(function (x) {
+      return fetchText("wordlists/layout-learning/" + lang + "-words-" + x + ".txt").then(function (t) { return { list: x, text: t }; });
     })).then(function (loaded) {
       const words = [];
       const dUnits = new Set();
@@ -59,7 +64,8 @@ const LayoutLearning = (function () {
   // ---- 配列の単位と学習区画 ----
 
   // かな配列の割り当て表（[キーの並び, かな] の並び）から、その配列の覚え方の情報を作る
-  //   units：単位の一覧（割り当て表の順）、keyOf：単位 → それを打つ一番短いキーの並び、areas：学習区画の並び
+  //   units：単位の一覧（割り当て表の順）、keyOf：単位 → それを打つ一番短いキーの並び、areas：学習区画の並び、
+  //   first・basic：その配列にある頻出8字・頻出30字（英語は頻出20字。planEng）、basicName：その名前
   function plan(entries) {
     const keyOf = new Map();
     entries.forEach(function (e) {
@@ -89,12 +95,43 @@ const LayoutLearning = (function () {
       return { shift: shift, row: number ? Number(number[0]) : 9 };
     }
 
+    const made = areasOf(units.map(function (u) { return Object.assign({ unit: u }, place(u)); }));
+    return {
+      units: units, unitSet: unitSet, keyOf: keyOf, areas: made.areas, faces: made.faces,
+      first: FIRST8.filter(function (c) { return unitSet.has(c); }),
+      basic: BASIC30.filter(function (c) { return unitSet.has(c); }), basicName: "頻出30字"
+    };
+  }
+
+  // 英語の配列の割り当て表（[キー, 文字] の並び）から、plan と同じ形の情報を作る（docs/layout-learning.md の「英語の配列」）
+  //   単位は英字26字と記号8つのうち、その配列で打てるもの。keyOf は、その文字を打つ QWERTY のキーの文字（Shift ありなら Shift ありの文字）
+  function planEng(entries) {
+    const eng = KanaLayout.engMap(entries);
+    const keyOf = new Map();
+    EN_UNITS.forEach(function (u) {
+      const key = eng.toKey(u);
+      if (key !== null) keyOf.set(u, key);
+    });
+    const units = Array.from(keyOf.keys());
+    const unitSet = new Set(units);
+    const made = areasOf(units.map(function (u) {
+      const k = Keys.ofChar(keyOf.get(u));
+      return { unit: u, shift: k && k.shift ? "Shift" : "", row: k ? Number(k.number[0]) : 9 };
+    }));
+    return {
+      units: units, unitSet: unitSet, keyOf: keyOf, areas: made.areas, faces: made.faces,
+      first: EN_FIRST8.filter(function (c) { return unitSet.has(c); }),
+      basic: EN_BASIC20.filter(function (c) { return unitSet.has(c); }), basicName: "頻出20字"
+    };
+  }
+
+  // 単位ごとの面（シフトキー。シフトなしは ""）と行 [{ unit, shift, row }] から、学習区画の並びを作る。返り値 { areas, faces }
+  function areasOf(placed) {
     const ROWS = [[2, "ホーム行"], [1, "上の行"], [3, "下の行"], [0, "数字キーの行"]];
     const byFace = new Map();
-    units.forEach(function (u) {
-      const p = place(u);
+    placed.forEach(function (p) {
       if (!byFace.has(p.shift)) byFace.set(p.shift, []);
-      byFace.get(p.shift).push({ unit: u, row: p.row });
+      byFace.get(p.shift).push({ unit: p.unit, row: p.row });
     });
     const faces = Array.from(byFace.keys()).filter(function (s) { return s; })
       .sort(function (a, b) { return byFace.get(b).length - byFace.get(a).length; });
@@ -117,7 +154,7 @@ const LayoutLearning = (function () {
         areas.push({ name: "シフト面" + (i + 1) + "（" + s + "）", face: s, units: byFace.get(s).map(function (x) { return x.unit; }) });
       });
     }
-    return { units: units, unitSet: unitSet, keyOf: keyOf, areas: areas, faces: faces };
+    return { areas: areas, faces: faces };
   }
 
   // 読みを単位に分ける（割り当て表に組の行があれば組、なければ1文字ずつ）。返り値 [{ unit, pos, len }]。
@@ -217,8 +254,8 @@ const LayoutLearning = (function () {
     const st = status(sessions);
     const learned = learnedSet(st);
     const cache = new Map();
-    const basic = BASIC30.filter(function (c) { return p.unitSet.has(c); });
-    const first = FIRST8.filter(function (c) { return p.unitSet.has(c); });
+    const basic = p.basic;
+    const first = p.first;
     // 段階は、一度たどり着いたら戻さない（単位を忘れても、一度そろえた頻出8字・頻出30字の段階には戻らない）
     const ever = everSet(st);
     const reached = function (arr) { return arr.every(function (u) { return ever.has(u); }); };
@@ -334,7 +371,7 @@ const LayoutLearning = (function () {
     if (s.stage === "1-1") {
       // 頻出8字の段階：全部をこの8字だけでできた言葉にする。まだ覚えていない字は、言葉の少ない字から順に、
       // その字が NEW_WORDS 回ほど出てくるまで、その字を含む言葉を先に入れる（足りなければ同じ言葉を MAX_REPEAT 回まで）
-      const first = new Set(FIRST8);
+      const first = new Set(s.plan.first);
       const base = s.pool.filter(function (w) { return s.unitsOf(w).every(function (u) { return first.has(u); }); });
       const containing = function (u) { return base.filter(function (w) { return s.unitsOf(w).indexOf(u) !== -1; }); };
       const occurs = function (u) {
@@ -404,8 +441,8 @@ const LayoutLearning = (function () {
       return [].concat.apply([], p.areas.filter(function (a) { return a.face === f; }).map(function (a) { return a.units; }));
     };
     const list = [
-      item("頻出8字", FIRST8.filter(function (u) { return p.unitSet.has(u); })),
-      item("頻出30字", BASIC30.filter(function (u) { return p.unitSet.has(u); })),
+      item("頻出8字", p.first),
+      item(p.basicName, p.basic),
       item("シフトなしの面", inFace(""))
     ];
     p.faces.forEach(function (f, i) {
@@ -442,7 +479,7 @@ const LayoutLearning = (function () {
 
   return {
     MODE: MODE, STUCK_NOTE: STUCK_NOTE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, FORGET_ACC: FORGET_ACC, NEW_WORDS: NEW_WORDS,
-    loadLists: loadLists, plan: plan, segment: segment, tally: tally, status: status, learnedSet: learnedSet, everSet: everSet,
+    loadLists: loadLists, plan: plan, planEng: planEng, segment: segment, tally: tally, status: status, learnedSet: learnedSet, everSet: everSet,
     state: state, chooseWords: chooseWords, milestones: milestones, achieved: achieved, mandalaOpts: mandalaOpts
   };
 })();

@@ -83,11 +83,12 @@
   const GUIDE_IKI = "語を、押すキーの位置（QWERTY の文字）で打ちます。このモードの間、言語は英語、配列は QWERTY です。IME はオフにしてください。各語を5回ずつ打ちます（1回目は IKI のページに入れません）。";
   // 押したキーの QWERTY の文字を、そのまま入力の文字にする（IKI 測定。英語の配列の割り当て表と同じ形）
   const QWERTY_KEYS = { toChar: function (c) { return c; } };
-  // キー配列習得のモード（docs/layout-learning.md）：かな配列の割り当てを覚える。結果は新しい単位の正確率と達成項目
+  // キー配列習得のモード（docs/layout-learning.md）：かな配列（日本語）・英語の配列（英語）の割り当てを覚える。結果は新しい単位の正確率と達成項目
   const LEARN = LayoutLearning.MODE;
   const learnResultEl = document.getElementById("learn-result");
   const learnResultBodyEl = document.getElementById("learn-result-body");
   const GUIDE_LEARN = "読み（ひらがな）を、選んだかな配列で打ちます。IME はオフにしてください。押すキーは表示しません（割り当てを思い出して打ちます）。";
+  const GUIDE_LEARN_EN = "単語を、選んだ英語の配列で打ちます。押すキーは表示しません（割り当てを思い出して打ちます）。";
   // 練習モード（記録に practice: true を付け、レベルの達成度・ランキング・記録のページの推移に入れないモード）
   const PRACTICE_MODES = ["weak", FASTER, IKI, LEARN];
   // ノーミス連続タイプ（docs/no-mistype.md）：ミスなしでどこまで続けて打てるか。1回ミスしたら終わり。練習モードとは別のモード
@@ -137,6 +138,7 @@
   const statsEl = document.querySelector(".stats"); // 打っている間の数字の行（設定の「数字の行」で隠せる）
   const kanaLayouts = {}; // 登録したかな配列（配列名 → KanaLayout.create の結果）
   const engLayouts = {};  // 登録した英語の配列（配列名 → KanaLayout.engMap の結果 { toChar, toKey }）。英語と、日本語のローマ字で使う
+  const engEntries = {};  // 登録した英語の配列の割り当て表（配列名 → entries）。キー配列習得で使う
   let imeOn = false;   // IME がオンのまま打たれたか（日本語のとき、注意を出す）
   let timerId = 0;
   let finished = false;
@@ -232,7 +234,7 @@
     });
   }
 
-  // ノーミス連続タイプのモード：単語モードの単語リスト（basic）と、日本語はキー配列習得の単語リスト A〜D を読む（docs/no-mistype.md）
+  // ノーミス連続タイプのモード：単語モードの単語リスト（basic）と、キー配列習得の単語リスト（日本語は A〜D、英語は A〜C）を読む（docs/no-mistype.md）
   // かな配列では、割り当て表にないかなを含む語は使わない（配列にないかなはミスになるため）
   // sources は1つだけ { name: NO_MISTYPE, pools: { basic, a, b, c, d } }
   function loadNoMistypeSources() {
@@ -245,9 +247,11 @@
           return { display: cols[0].trim(), reading: (cols[1] || cols[0]).trim() };
         });
     };
-    const lists = lang === "ja" ? ["a", "b", "c", "d"] : [];
+    const lists = lang === "ja" ? ["a", "b", "c", "d"] : ["a", "b", "c"];
     return Promise.all([loadWordlists()].concat(lists.map(function (x) {
-      return fetchText("wordlists/layout-learning/ja-words-" + x + ".txt").then(parse);
+      // 英語の単語は、単語モードの単語リストと同じく文字列にする
+      return fetchText("wordlists/layout-learning/" + lang + "-words-" + x + ".txt").then(parse)
+        .then(function (ws) { return lang === "ja" ? ws : ws.map(function (w) { return w.reading; }); });
     }))).then(function (v) {
       const pools = { basic: [].concat.apply([], v[0].map(function (l) { return l.words; })) };
       lists.forEach(function (x, i) { pools[x] = v[i + 1]; });
@@ -273,16 +277,18 @@
   }
 
   // お題のページで追加したお題のうち、今の言語・モードのもの（文章は { name, text, lines }、単語は { name, words }）
-  // キー配列習得：単語リスト A〜D と、今の配列の割り当て表・キー配列習得の記録を読む。かな配列のときだけ使える
+  // キー配列習得：単語リスト（日本語は A〜D、英語は A〜C）と、今の配列の割り当て表・キー配列習得の記録を読む。
+  // 日本語でかな配列を選んだときと、英語で英語の配列を選んだときだけ使える
   // sources は1つだけ { name: LEARN, lists, plan, sessions }。sessions は、打ち終えた回を足していく（次のお題から使う）
   function loadLearnSources() {
     const id = keyLayoutEl.value;
-    if (lang !== "ja" || !kanaLayouts[id]) return Promise.reject(new Error("NO_LEARN"));
-    return Promise.all([LayoutLearning.loadLists(fetchText), Store.getAllSessions()]).then(function (v) {
+    const en = lang === "en" && engEntries[id];
+    if (!en && (lang !== "ja" || !kanaLayouts[id])) return Promise.reject(new Error("NO_LEARN"));
+    return Promise.all([LayoutLearning.loadLists(fetchText, lang), Store.getAllSessions()]).then(function (v) {
       return [{
         name: LEARN,
         lists: v[0],
-        plan: LayoutLearning.plan(kanaLayouts[id].entries),
+        plan: en ? LayoutLearning.planEng(engEntries[id]) : LayoutLearning.plan(kanaLayouts[id].entries),
         sessions: v[1].filter(function (s) { return s.mode === LEARN && s.keyLayout === id; })
       }];
     });
@@ -437,7 +443,7 @@
       return;
     }
     if (err && err.message === "NO_LEARN") {
-      textEl.textContent = "キー配列習得は、言語を日本語にして、キー配列のページで登録したかな配列を選んだときに使えます。";
+      textEl.textContent = "キー配列習得は、言語を日本語にしてキー配列のページで登録したかな配列を選んだときと、言語を英語にして登録した英語の配列を選んだときに使えます。";
       input.disabled = true;
       return;
     }
@@ -459,7 +465,7 @@
   function pickText(next) {
     if (mode === NO_MISTYPE) {
       // ノーミス連続タイプ：やり直しでも新しい単語の並びにする。打ち進むと nmExtend で後ろに足す
-      nmStream = NoMistype.stream(sources[0].pools);
+      nmStream = NoMistype.stream(sources[0].pools, lang);
       nmCarry = [];
       const lines = nmMakeLines(NoMistype.FIRST_LINES);
       current = {
@@ -492,7 +498,8 @@
       const src = sources[0];
       const s = LayoutLearning.state(src.plan, src.lists, src.sessions);
       const words = s.stage === "done" ? [] : LayoutLearning.chooseWords(s, src.lists.dUnits);
-      const made = words.length ? wordText(words) : { text: "" };
+      // 英語は表示する語の行を作らない（単語の並びだけ）
+      const made = !words.length ? { text: "" } : wordText(lang === "ja" ? words : words.map(function (w) { return w.reading; }));
       current = {
         name: LEARN, text: made.text, lines: made.lines, learn: s,
         emptyMessage: s.stage === "done" ? "この配列の割り当てを全部覚えました（習得完了）。" : "今覚えられる割り当てがありません。"
@@ -1311,13 +1318,14 @@
 
   // キー配列習得：お題の上の説明。今の段階と、新しく覚える単位
   function learnGuide(s) {
-    if (!s) return GUIDE_LEARN;
+    const guide = lang === "ja" ? GUIDE_LEARN : GUIDE_LEARN_EN;
+    if (!s) return guide;
     const stage = s.stage === "1-1" ? "1-1. 頻出8字"
-      : s.stage === "1-2" ? "1-2. 2つずつ足す（頻出30字）"
+      : s.stage === "1-2" ? "1-2. 2つずつ足す（" + s.plan.basicName + "）"
       : s.stage === "2" && s.areaIndex !== -1 ? "2. 学習区画「" + s.plan.areas[s.areaIndex].name + "」"
       : s.stage === "2" ? "2. 配列ごとの学習区画" : "習得完了";
     const units = s.newUnits.length ? "新しく覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + (s.stuck ? LayoutLearning.STUCK_NOTE : "") + "。" : "";
-    return "キー配列習得（" + stage + "）。" + units + GUIDE_LEARN;
+    return "キー配列習得（" + stage + "）。" + units + guide;
   }
 
   // キー配列習得の結果：新しい単位の今回の正確率と「覚えた」かどうか、今回覚えた単位、達成した達成項目を出す
@@ -1866,7 +1874,7 @@
   function addKanaLayouts(records) {
     records.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
     records.forEach(function (r) {
-      if (r.type === "eng") engLayouts[r.id] = KanaLayout.engMap(r.entries);
+      if (r.type === "eng") { engLayouts[r.id] = KanaLayout.engMap(r.entries); engEntries[r.id] = r.entries; }
       else kanaLayouts[r.id] = KanaLayout.create(r.entries);
       const o = document.createElement("option");
       o.value = r.id;
