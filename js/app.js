@@ -1316,7 +1316,7 @@
       : s.stage === "1-2" ? "1-2. 2つずつ足す（頻出30字）"
       : s.stage === "2" && s.areaIndex !== -1 ? "2. 学習区画「" + s.plan.areas[s.areaIndex].name + "」"
       : s.stage === "2" ? "2. 配列ごとの学習区画" : "習得完了";
-    const units = s.newUnits.length ? "新しく覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + "。" : "";
+    const units = s.newUnits.length ? "新しく覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + (s.stuck ? LayoutLearning.STUCK_NOTE : "") + "。" : "";
     return "キー配列習得（" + stage + "）。" + units + GUIDE_LEARN;
   }
 

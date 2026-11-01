@@ -40,7 +40,7 @@
     const got = p.units.filter(function (u) { return learned.has(u); }).length;
     summaryEl.textContent = "キー配列習得の回 " + mine.length + " 回 ／ 覚えた割り当て " + got + " / " + p.units.length +
       " ／ 今の段階：" + stage +
-      (s.newUnits.length ? " ／ 次に覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") : "");
+      (s.newUnits.length ? " ／ 次に覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + (s.stuck ? LayoutLearning.STUCK_NOTE : "") : "");
 
     // 達成項目
     milestonesEl.textContent = "";

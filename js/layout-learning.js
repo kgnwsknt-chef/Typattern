@@ -23,6 +23,7 @@ const LayoutLearning = (function () {
   const NEW_WORDS = 20;      // 新しい単位1つごとの言葉の数
   const TARGET_LENGTH = 300; // 1回のお題の長さ（読みの文字数。スペースを含む）
   const MAX_REPEAT = 3;      // 言葉が足りないときに、同じ言葉を出してよい回数（単語リスト D の単位は制限なし）
+  const STUCK_NOTE = "（候補の条件を満たす割り当てがないので、言葉の多い割り当てから選んでいます）"; // 行き詰まったときに、新しく覚える割り当ての後ろに添える言葉
   const LISTS = ["a", "b", "c", "d"];
   const SHIFT_MIN = 5; // かな配列のシフトのキーの求め方（キー配列のページと同じ）
 
@@ -211,7 +212,7 @@ const LayoutLearning = (function () {
   }
 
   // 学習の状態をまとめる。lists は loadLists の結果、sessions はその配列のキー配列習得の記録
-  //   返り値 { stage: "1-1" | "1-2" | "2" | "done", areaIndex, newUnits, learned, status, words, plan, eligible(u) }
+  //   返り値 { stage: "1-1" | "1-2" | "2" | "done", areaIndex, stuck, newUnits, learned, status, words, plan, eligible(u) }
   function state(p, lists, sessions) {
     const st = status(sessions);
     const learned = learnedSet(st);
@@ -249,6 +250,7 @@ const LayoutLearning = (function () {
     const carried = (last && last.learning.newUnits || []).filter(function (u) { return p.unitSet.has(u) && !learned.has(u); });
     let newUnits = [];
     let areaIndex = -1;
+    let stuck = false; // 行き詰まったか（下の段階 2 の説明）
     const shuffle = function (a) {
       a = a.slice();
       for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
@@ -282,12 +284,26 @@ const LayoutLearning = (function () {
       });
       // 忘れた単位 → 前の回から続けている単位 → 前に飛ばした単位 → 今の学習区画の単位 の順に選ぶ。
       // 枠が空いたら、次の学習区画の単位で埋める（今の学習区画を覚え終えると、その学習区画に進む）
-      shuffle(forgotten.filter(eligible)).concat(carried, shuffle(skipped), shuffle(reached), later).forEach(function (u) {
-        if (newUnits.length < NEW_COUNT && newUnits.indexOf(u) === -1) newUnits.push(u);
-      });
+      // 行き詰まったとき：覚えていない単位が残っているのに、候補の条件を満たすものが1つもない。
+      // 忘れた単位 → 前の回から続けている単位 → 覚えた単位だけでできた言葉の多い単位（同じ数なら学習区画の早い方）の順に選ぶ
+      stuck = !p.units.some(function (u) { return !learned.has(u) && eligible(u); });
+      if (stuck) {
+        const areaOf = function (u) { return p.areas.findIndex(function (a) { return a.units.indexOf(u) !== -1; }); };
+        const count = new Map();
+        p.units.forEach(function (u) { if (!learned.has(u)) count.set(u, wordsFor(u, learned).length); });
+        const rest = shuffle(Array.from(count.keys()).filter(function (u) { return count.get(u) > 0; }))
+          .sort(function (a, b) { return count.get(b) - count.get(a) || areaOf(a) - areaOf(b); });
+        shuffle(forgotten).concat(carried, rest).forEach(function (u) {
+          if (newUnits.length < NEW_COUNT && newUnits.indexOf(u) === -1) newUnits.push(u);
+        });
+      } else {
+        shuffle(forgotten.filter(eligible)).concat(carried, shuffle(skipped), shuffle(reached), later).forEach(function (u) {
+          if (newUnits.length < NEW_COUNT && newUnits.indexOf(u) === -1) newUnits.push(u);
+        });
+      }
     }
     return {
-      stage: stage, areaIndex: areaIndex, newUnits: newUnits, learned: learned, status: st, pool: pool,
+      stage: stage, areaIndex: areaIndex, stuck: stuck, newUnits: newUnits, learned: learned, status: st, pool: pool,
       plan: p, eligible: eligible, wordsFor: wordsFor, unitsOf: function (w) { return unitsOfWord(w, p.unitSet, cache); }
     };
   }
@@ -339,10 +355,14 @@ const LayoutLearning = (function () {
       });
     } else {
       // 新しい単位1つごとに 20 語（足りなければ同じ言葉を MAX_REPEAT 回まで。単語リスト D の単位は何回でも）
+      // 行き詰まったときは、一緒に選んだ新しい単位を含む言葉も使い、同じ言葉を何回出してもよい
+      const usable = s.stuck ? new Set(Array.from(known).concat(s.newUnits)) : known;
       s.newUnits.forEach(function (u) {
-        const ws = shuffle(s.wordsFor(u, known).filter(function (w) { return !used.has(w.reading); }));
+        const all = s.wordsFor(u, usable);
+        let ws = shuffle(all.filter(function (w) { return !used.has(w.reading); }));
+        if (!ws.length && s.stuck) ws = shuffle(all); // 行き詰まったときは、前の単位で使った言葉でもよい
         if (!ws.length) return;
-        const limit = dUnits.has(u) ? Infinity : MAX_REPEAT;
+        const limit = s.stuck || dUnits.has(u) ? Infinity : MAX_REPEAT;
         for (let n = 0, k = 0; n < NEW_WORDS; k++) {
           const w = ws[k % ws.length];
           if (Math.floor(k / ws.length) >= limit) break;
@@ -421,7 +441,7 @@ const LayoutLearning = (function () {
   }
 
   return {
-    MODE: MODE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, FORGET_ACC: FORGET_ACC, NEW_WORDS: NEW_WORDS,
+    MODE: MODE, STUCK_NOTE: STUCK_NOTE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, FORGET_ACC: FORGET_ACC, NEW_WORDS: NEW_WORDS,
     loadLists: loadLists, plan: plan, segment: segment, tally: tally, status: status, learnedSet: learnedSet, everSet: everSet,
     state: state, chooseWords: chooseWords, milestones: milestones, achieved: achieved, mandalaOpts: mandalaOpts
   };
