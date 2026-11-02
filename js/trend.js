@@ -1,5 +1,5 @@
 // 記録のページの「推移」グラフ。上段に平均 IKI（左軸 ms・右軸 打/s）、
-// 下段に正確率（修正後）とミスも数えた正確率を描く
+// 下段に正確率（修正後）とミスも数えた正確率（日ごと・月ごとは回数の棒も）を描く
 // 決まりは docs/records.md の「推移」を参照
 const Trend = (function () {
   "use strict";
@@ -8,7 +8,7 @@ const Trend = (function () {
   const MA_WINDOW = 10; // 移動平均の回数
 
   // 描画領域（viewBox の座標）
-  const W = 760, L = 58, R = 58, T = 20, PH1 = 230, GAP = 30, PH2 = 80, B = 40;
+  const W = 760, L = 58, R = 58, T = 20, PH1 = 230, GAP = 30, PH2 = 160, B = 40;
   const H = T + PH1 + GAP + PH2 + B;
   const PW = W - L - R;
   const T2 = T + PH1 + GAP; // 下段の上端
@@ -41,6 +41,7 @@ const Trend = (function () {
     legendEl.textContent += " ／ 「英語・単語 SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
     if (selectedId) legendEl.textContent += " ／ 緑の縦線：ランキングで選んだ回";
     legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
+    if (period) legendEl.textContent += "・棒：" + that + "の回数（右軸）";
 
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "trend-svg", role: "img", "aria-label": "成績の推移" });
 
@@ -138,6 +139,24 @@ const Trend = (function () {
       svg.appendChild(text(L - 6, YA(v) + 3, String(v), "end"));
     }
     svg.appendChild(text(L - 6, T2 - 8, "正確率 (%)", "end", "trend-axis-title"));
+    // 日ごと・月ごと：その日（その月）の回数の棒（右軸。正確率の線より下に描く）
+    if (period) {
+      const cMax = Math.max.apply(null, data.points.map(function (p) { return p.count; }));
+      const cStep = niceStep(cMax, 4, [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000]);
+      const cTop = Math.max(1, Math.ceil(cMax / cStep)) * cStep;
+      const YC = function (v) { return T2 + PH2 - (v / cTop) * PH2; };
+      const bw = Math.min(24, Math.max(1, (PW / (x1 - x0)) * 0.7));
+      data.points.forEach(function (p) {
+        const r = svgEl("rect", { x: X(p.x) - bw / 2, y: YC(p.count), width: bw, height: T2 + PH2 - YC(p.count), class: "trend-count" });
+        r.appendChild(title(p.tip));
+        svg.appendChild(r);
+      });
+      for (let v = 0; v <= cTop; v += cStep) {
+        svg.appendChild(line(L + PW, YC(v), L + PW + 4, YC(v), "trend-axis"));
+        svg.appendChild(text(L + PW + 7, YC(v) + 3, String(v), "start"));
+      }
+      svg.appendChild(text(L + PW + 7, T2 - 8, "回数", "start", "trend-axis-title"));
+    }
     // ランキング対象の基準
     svg.appendChild(line(L, YA(Store.RANK_MIN_ACCURACY), L + PW, YA(Store.RANK_MIN_ACCURACY), "trend-threshold"));
     selectedLine(T2, PH2);
@@ -375,6 +394,7 @@ const Trend = (function () {
       const p = {
         ids: ss.map(function (s) { return s.id; }),
         x: day,
+        count: ss.length,
         iki: iki,
         acc: acc,
         accRaw: accRaw,

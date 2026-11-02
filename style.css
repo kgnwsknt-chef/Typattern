@@ -39,8 +39,9 @@
   --kb-func: #e4dfd3;
   /* bigram の2次元ヒストグラム：データのないマス（回数 0・平均 IKI なし）の色 */
   --hm-none: #ffffff;
-  /* 推移のグラフ：移動平均（薄い紺）・日ごとの最高（濃い紺）・ミスも数えた正確率（灰色）・レベル達成（赤） */
+  /* 推移のグラフ：移動平均（薄い紺）・日ごとの最高（濃い紺）・ミスも数えた正確率（灰色）・日ごと（月ごと）の回数の棒（薄いベージュ）・レベル達成（赤） */
   --trend-ma: #7d97c4;
+  --trend-count: #e6dfcf;
   --trend-sub: #1d3f7a;
   --trend-raw: #8a8a8a;
   --trend-levelup: var(--level-up);
@@ -1433,6 +1434,11 @@ a.text-btn {
 
 .trend-raw-point {
   fill: var(--trend-raw);
+}
+
+/* 下段：日ごと・月ごとの回数の棒 */
+.trend-count {
+  fill: var(--trend-count);
 }
 
 .trend-best {
