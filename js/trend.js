@@ -38,10 +38,9 @@ const Trend = (function () {
         Store.RANK_MIN_ACCURACY + "% 以上の回がない（全回の平均）／ 下段は" + that + "の正確率の平均"
       : "● 1回ごとの平均 IKI ／ ○ 正確率 " + Store.RANK_MIN_ACCURACY + "% 未満（ランキング対象外。移動平均に含めない）／ ━ 移動平均（直近 " +
         MA_WINDOW + " 回）";
-    legendEl.textContent += " ／ 「英語・単語 SB達成」などの輪：達成レベルが上がった回（全部の記録で数える）";
     if (selectedId) legendEl.textContent += " ／ 緑の縦線：ランキングで選んだ回";
-    legendEl.textContent += " ／ 下段：● 正確率（修正後）・▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
-    if (period) legendEl.textContent += "・棒：" + that + "の回数（右軸）";
+    legendEl.textContent += " ／ 下段：● 正確率（修正後）、▪ ミスも数えた正確率（打鍵数 − ミス）÷ 打鍵数";
+    if (period) legendEl.textContent += "、棒：" + that + "の回数（右軸）";
 
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "trend-svg", role: "img", "aria-label": "成績の推移" });
 
@@ -183,7 +182,6 @@ const Trend = (function () {
     if (period) {
       const step = niceStep(x1 - x0, 7, period.steps);
       for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, period.fmt(d));
-      svg.appendChild(text(L + PW, H - 2, period.axis, "end", "trend-axis-title"));
     } else {
       const step = niceStep(x1 - x0, 10, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
       for (let n = Math.max(step, Math.ceil(x0 / step) * step); n <= x1; n += step) xTick(svg, X(n), axisY, String(n));
@@ -323,7 +321,6 @@ const Trend = (function () {
     if (period) {
       const step = niceStep(x1 - x0, 7, period.steps);
       for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, period.fmt(d));
-      svg.appendChild(text(L + PW, H - 2, period.axis, "end", "trend-axis-title"));
     } else {
       const step = niceStep(x1 - x0, 10, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
       for (let n = Math.max(step, Math.ceil(x0 / step) * step); n <= x1; n += step) xTick(svg, X(n), axisY, String(n));
@@ -364,8 +361,8 @@ const Trend = (function () {
 
   // 日ごと・月ごとのまとめ方。key：記録の日時 → 通し番号（横軸の値）、fmt：通し番号 → 目盛りの文字、steps：目盛りの間隔の候補
   const PERIODS = {
-    day: { name: "日", axis: "年月日", key: dayNumber, fmt: fmtDay, steps: [1, 2, 7, 14, 30, 61, 91, 182, 365, 730] },
-    month: { name: "月", axis: "年月", key: monthNumber, fmt: fmtMonth, steps: [1, 2, 3, 6, 12, 24, 60, 120] }
+    day: { name: "日", key: dayNumber, fmt: fmtDay, steps: [1, 2, 7, 14, 30, 61, 91, 182, 365, 730] },
+    month: { name: "月", key: monthNumber, fmt: fmtMonth, steps: [1, 2, 3, 6, 12, 24, 60, 120] }
   };
 
   // 日ごと・月ごと：横軸はこのPCの日付（の月）。その日（その月）の平均と最高は正確率が基準以上の回で出す
