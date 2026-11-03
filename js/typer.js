@@ -1,11 +1,18 @@
 // 日本語の入力の判定（ローマ字・かな配列で共通）。お題のかなに合う打ち方だけを正解とする（決まりは docs/measurement.md）
 // 打ち方の一覧を作る関数 optionsFn(text, pos) だけを入力方式ごとに差し替える
 //   ローマ字：Romaji.options（js/romaji.js）、かな配列：割り当て表の options（js/kana-layout.js）
-//   一覧の各要素 { seq: キーの並び（US の QWERTY の文字）, len: 確定するかなの数, doubled: ローマ字の「っ」の重ねの子音 }
+//   一覧の各要素 { seq: キーの並び（US の QWERTY の文字）, len: 確定するかなの数, doubled: ローマ字の「っ」の重ねの子音,
+//     chords: 同時押しの位置 [[始まり, 終わり（含まない）], …]（かな配列の同時押しだけ。押す順の並べ方ごとに別の要素） }
 //   - どの打ち方の続きにもならないキーを押したら、今のかなを間違いとして確定し、次のかなに進む
 //   - 打ち方が1つもないかな（かな配列の割り当て表にないかな）は、そこまで進んだときに間違いとして確定して飛ばす
 const Typer = (function () {
   "use strict";
+
+  // US キーボードの文字を打つ物理キーの番号（同時押しで、押されているキーと比べるのに使う）。打てない文字はその文字のまま
+  function keyNum(ch) {
+    const k = Keys.ofChar(ch);
+    return k ? k.number : ch;
+  }
 
   // 打ち方の一覧を、前のかなの「っ」の重ねに合わせて絞る（kka の2つ目の k から始まるものだけ）
   function constrain(opts, doubled) {
@@ -14,7 +21,18 @@ const Typer = (function () {
   }
 
   // お題1つ分の入力の状態を作る
-  function create(text, optionsFn) {
+  // term：同時押しの判定時間(ms)。割り当て表に同時押しがあるとき（optionsFn.chords。js/kana-layout.js）だけ使う
+  function create(text, optionsFn, term) {
+    // 同時押しの組（物理キーの番号を並べた名前 "27 28"）。組の最初のキーから term 以内に全部押し、どれも離していなければ同時押し
+    const chordNames = new Set();
+    let chordMax = 0;
+    if (optionsFn.chords && term) {
+      optionsFn.chords.forEach(function (g) {
+        chordNames.add(g.map(keyNum).sort().join(" "));
+        chordMax = Math.max(chordMax, g.length);
+      });
+    }
+    let recent = [];       // 直近に押したキー { num, time }（同時押しを見分けるのに使う。Backspace で空にする）
     let pos = 0;           // 確定したかなの数（次に打つかなの位置）
     let pending = "";      // 今のかなに打ちかけのキー
     let pendingStart = null; // 打ちかけの最初のキーの直前のキーの時刻
@@ -56,13 +74,49 @@ const Typer = (function () {
       }
     }
 
+    // このキーで、直前に押したキーと合わせて同時押しの組がそろったか（組の最初のキーから term 以内で、前のキーをどれも離していない）
+    function formedChord(num, time, held) {
+      for (let n = chordMax; n >= 2; n--) {
+        const prev = recent.slice(-(n - 1));
+        if (prev.length < n - 1 || time - prev[0].time > term) continue;
+        if (!prev.every(function (p) { return held.has(p.num); })) continue;
+        const nums = prev.map(function (p) { return p.num; }).concat([num]);
+        if (new Set(nums).size === n && chordNames.has(nums.sort().join(" "))) return true;
+      }
+      return false;
+    }
+
+    // 打ち方 o の i 番目のキーとして、今のキーを受け付けられるか（同時押しの決まり。docs/measurement.md の「かな配列」）
+    //   同時押しの2つ目から後：同じ組の前のキーを、組の最初のキーから term 以内に押していて、どれもまだ離していない
+    //   それ以外：このキーで同時押しの組がそろっていない（そろったら、お題にかかわらず同時押しなので、順に押す並びには合わない）
+    function fits(o, i, ctx) {
+      if (!chordNames.size) return true;
+      const r = (o.chords || []).filter(function (c) { return c[0] < i && i < c[1]; })[0];
+      if (r) {
+        const keys = pendingKeys.slice(r[0], i);
+        return keys.length === i - r[0] && ctx.time - keys[0].time <= term &&
+          keys.every(function (k) { return ctx.held.has(keyNum(k.ch)); });
+      }
+      return !ctx.formed;
+    }
+
     // キーを1つ押す。ch は US キーボードの文字、time は押した時刻
+    // held：押されているキーの物理キーの番号の Set（今のキーは含めない。同時押しを見分けるのに使う。同時押しのない配列では要らない）
     // 返り値 { pos: このキーを当てたかなの位置, judge: 正解 1・ミス 0, confirmed: このキーで確定したまとまり（飛ばしたかなを含む） }
-    function press(ch, time) {
+    function press(ch, time, held) {
+      const num = keyNum(ch);
+      const ctx = { time: time, held: held || new Set(), formed: false };
+      if (chordNames.size) {
+        ctx.formed = formedChord(num, time, ctx.held);
+        recent.push({ num: num, time: time });
+        if (recent.length > chordMax) recent.shift();
+      }
+      // 打ち方 o が、打ちかけ＋今のキー s で始まり、今のキーを受け付けられるか
+      const starts = function (o, s) { return o.seq.indexOf(s) === 0 && fits(o, s.length - 1, ctx); };
       const confirmed = [];
       skipUntypable(time, confirmed);
       let opts = current();
-      if (pending && !locked && !opts.some(function (o) { return o.seq.indexOf(pending + ch) === 0; })) {
+      if (pending && !locked && !opts.some(function (o) { return starts(o, pending + ch); })) {
         // 打ちかけがそれだけで完成していれば（ん の n など）、それを確定してから次のかなに当てる
         const done = opts.filter(function (o) { return o.seq === pending; })[0];
         if (done) {
@@ -89,14 +143,14 @@ const Typer = (function () {
         pendingKeys.push(key);
         lastPendingTime = time;
         if (s.length >= locked.seq.length) confirmed.push(confirm(locked.len, s, false, null, time));
-      } else if (opts.some(function (o) { return o.seq.indexOf(s) === 0; })) {
+      } else if (opts.some(function (o) { return starts(o, s); })) {
         judge = 1;
+        // 打ち方が完成し、それより長い打ち方の途中でもなければ確定する
+        const exact = opts.filter(function (o) { return o.seq === s && starts(o, s); })[0];
+        const longer = opts.some(function (o) { return o.seq.length > s.length && starts(o, s); });
         pending = s;
         pendingKeys.push(key);
         lastPendingTime = time;
-        // 打ち方が完成し、それより長い打ち方の途中でもなければ確定する
-        const exact = opts.filter(function (o) { return o.seq === s; })[0];
-        const longer = opts.some(function (o) { return o.seq.length > s.length && o.seq.indexOf(s) === 0; });
         if (exact && !longer) confirmed.push(confirm(exact.len, s, true, exact.doubled, time));
       } else {
         // どの打ち方の続きにもならない：打つべきだったキー1つ分のミスとして進める（docs/measurement.md の「間違い」）。
@@ -120,6 +174,7 @@ const Typer = (function () {
     // 返り値は消したまとまりの一覧（前から順。打ちかけのキーを消したときは空）。後ろの1文字だけ消したときは、その1文字の { pos, len: 1 }
     function backspace(time) {
       lastTime = time;
+      recent = [];
       if (pending) {
         pending = pending.slice(0, -1);
         pendingKeys.pop();

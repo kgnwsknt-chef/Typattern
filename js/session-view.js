@@ -9,18 +9,24 @@ const SessionView = (function () {
   //   再現した "+" の行が記録と合わないとき（判定の決まりがその後に変わったときなど）は null
   //   observe(e, before, result, shiftOn)：渡すと、Shift 以外の "k" の行ごとに呼ぶ（ミスタイプのページで使う）。
   //     before は押す前の typer.expect()、result は typer.press の結果（Backspace のときはどちらも null）
+  //   同時押しのあるかな配列の記録は、打ったときの判定時間（raw.chordTerm）と、"k"・"u" の行から求めた押されているキーで判定する
   function replay(raw, optionsFn, observe, eng) {
-    const typer = Typer.create(raw.text, optionsFn);
+    const typer = Typer.create(raw.text, optionsFn, raw.chordTerm);
     const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す。Shift 以外のキーの "u" の行は何もしない）
+    const held = new Set(); // 押されているキーの番号（"k" の行で足し、"u" の行で離す）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
     const hasUp = raw.events.some(function (e) { return e[1] === "u"; });
     const added = []; // 再現した "+" の行 [時刻, かな, 位置, 判定]
     raw.events.forEach(function (e) {
       if (e[1] === "u") {
         shiftDown.delete(e[2]);
+        held.delete(e[2]);
         return;
       }
       if (e[1] !== "k") return;
+      // 今のキーを押す前に押されていたキー（判定に渡す）。このキーは判定の後で足す
+      const before = new Set(held);
+      held.add(e[2]);
       if (Keys.isShiftNumber(e[2])) {
         shiftDown.add(e[2]);
         return;
@@ -30,13 +36,13 @@ const SessionView = (function () {
         if (observe) observe(e, null, null, shiftDown.size > 0);
         return;
       }
-      const before = observe ? typer.expect() : null;
+      const expected = observe ? typer.expect() : null;
       const shiftOn = shiftDown.size > 0;
       // 文字のないキー（JIS の「ろ」など）は、どの打ち方にも合わない文字として渡す（タイピング画面と同じ）
       let ch = Keys.charOf(e[2], shiftOn);
       if (eng && ch !== null) ch = eng.toChar(ch);
-      const r = typer.press(ch || "\u0000", e[0]);
-      if (observe) observe(e, before, r, shiftOn);
+      const r = typer.press(ch || "\u0000", e[0], before);
+      if (observe) observe(e, expected, r, shiftOn);
       r.confirmed.forEach(function (u) {
         for (let j = 0; j < u.len; j++) added.push([u.time, raw.text[u.pos + j], u.pos + j, u.correct ? 1 : 0]);
       });

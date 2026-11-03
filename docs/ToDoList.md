@@ -12,7 +12,7 @@
 
 ## 日本語入力（`docs/japanese-input.md` の「6. まだ決まっていないこと」）
 
-- （保留）キーの同時押し。当面対応しない（しばらく考えない）と決めてある。対応するときに決め直すことは `docs/japanese-input.md` の「1. 基本の方針と理由」に書いてある。対応の案（分析・割り当て表の書き方 `+`・判定）は [docs/zzz-memo-simultaneous-press.md](zzz-memo-simultaneous-press.md)。
+- （保留）同時押しの配列の分析（bigram に「重なり」の印を付けるなど）と、同時押しの配列でのキー配列習得。タイピング（判定と記録）は対応済み。分析の案は [docs/zzz-memo-simultaneous-press.md](zzz-memo-simultaneous-press.md)。
 - キーストローク数の数え方の残り（かな配列のシフト用のキー単独の押下、1文字あたりのキーストローク数（KSPC））。
 
 ## キー配列（`docs/layouts.md` の「まだ決まっていないこと」）

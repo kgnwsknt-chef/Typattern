@@ -1179,6 +1179,12 @@ a.text-btn {
   overflow-y: auto;
 }
 
+/* キー配列のページ：配列図の下の同時押しの一覧 */
+.chord-list {
+  font-size: 13px;
+  color: var(--sub);
+}
+
 .entry-keys {
   font-family: var(--mono);
   color: var(--sub);
@@ -1922,6 +1928,22 @@ a.text-btn {
   border-radius: 6px;
   background: var(--field-bg);
   line-height: 1.7;
+}
+
+/* タイピング画面：タッチ操作の端末で開いたときの案内（マウスなどで操作する端末では出さない） */
+.touch-note {
+  display: none;
+  margin: 0 auto 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--error);
+  text-align: center;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .touch-note {
+    display: block;
+  }
 }
 
 /* お題のページ */

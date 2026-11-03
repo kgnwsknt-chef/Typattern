@@ -35,6 +35,9 @@
   const heldShifts = new Set(); // 押されている Shift の e.code
   let qwertyOutput = "";    // QWERTY の試し打ちの結果
   let conv = null;          // かな配列・英語の配列の試し打ちの変換器
+  let hasChord = false;     // 表示中の配列に同時押しがあるか
+  let chordTimer = 0;       // 同時押しを待っている間の時間切れのタイマー
+  let downChars = {};       // 押したままのキーの e.code → 押したときの文字（離したときに変換器に知らせる）
 
   function current() {
     return layouts.filter(function (l) { return l.id === layoutEl.value; })[0] || layouts[0];
@@ -204,7 +207,11 @@
     qwertyOutput = "";
     const layout = current();
     // 英語の配列も同じ変換器で打つ（1キー → 1文字なので、押すたびにすぐ確定する）
-    conv = layout.type !== "qwerty" ? layout.kana.converter() : null;
+    // 同時押しのあるかな配列は、設定の判定時間で同時押しを見分ける（docs/layouts.md の「同時押し」）
+    hasChord = layout.type === "kana" && KanaLayout.hasChord(layout.entries);
+    conv = layout.type !== "qwerty" ? layout.kana.converter(Settings.get("chordTerm")) : null;
+    clearTimeout(chordTimer);
+    downChars = {};
     lastEl.textContent = "";
     renderOutput();
   }
@@ -221,6 +228,8 @@
     // Ctrl などとの組み合わせ（ページの操作）と Tab（枠から出る）は、ブラウザに任せる
     if (e.ctrlKey || e.altKey || e.metaKey || e.code === "Tab") return;
     e.preventDefault();
+    // 同時押しのある配列では、押し続けたときの連打を受け付けない（タイピング画面と同じ）
+    if (e.repeat && hasChord && e.code !== "Backspace") return;
 
     setPressed(e.code, true);
     if (Keys.isShift(e.code)) heldShifts.add(e.code);
@@ -230,7 +239,11 @@
     if (conv) {
       if (e.code === "Backspace") conv.backspace();
       else if (e.code === "Enter" || e.code === "NumpadEnter") conv.confirm(); // 打ちかけの並びを確定する
-      else if (ch !== null) conv.press(ch);
+      else if (ch !== null) {
+        downChars[e.code] = ch;
+        conv.press(ch, e.timeStamp);
+        waitChord();
+      }
     } else if (e.code === "Backspace") {
       qwertyOutput = qwertyOutput.slice(0, -1);
     } else if (ch !== null) {
@@ -243,8 +256,30 @@
       (ch !== null && ch !== " " ? " ／ 文字 " + ch : "");
   });
 
+  // 同時押しを待っている間は、判定時間が過ぎたら決めて書き直す
+  function waitChord() {
+    clearTimeout(chordTimer);
+    if (!conv || !conv.state().waiting) return;
+    chordTimer = setTimeout(function () {
+      if (conv && conv.tick(performance.now())) {
+        renderOutput();
+        drawLabels();
+      }
+    }, Settings.get("chordTerm") + 5);
+  }
+
   trialEl.addEventListener("keyup", function (e) {
     setPressed(e.code, false);
+    if (conv && downChars[e.code] !== undefined) {
+      const waiting = conv.state().waiting;
+      conv.release(downChars[e.code]);
+      delete downChars[e.code];
+      if (waiting && !conv.state().waiting) {
+        clearTimeout(chordTimer);
+        renderOutput();
+        drawLabels();
+      }
+    }
     if (Keys.isShift(e.code)) {
       heldShifts.delete(e.code);
       keyboardEl.classList.toggle("shift-on", heldShifts.size > 0);
@@ -255,6 +290,8 @@
   trialEl.addEventListener("blur", function () {
     Object.keys(keyEls).forEach(function (id) { keyEls[id].classList.remove("pressed"); });
     heldShifts.clear();
+    if (conv) Object.keys(downChars).forEach(function (code) { conv.release(downChars[code]); });
+    downChars = {};
     keyboardEl.classList.remove("shift-on");
     renderOutput();
   });
@@ -460,8 +497,27 @@
     });
   }
 
+  // 同時押しの一覧（配列図には描かないので、図の下に「j+k → ぱ」の形で並べる）
+  function renderChords() {
+    const layout = current();
+    const el = document.getElementById("chord-list");
+    el.textContent = "";
+    const rows = layout.type === "kana" ? layout.entries.filter(function (e) { return e[0].length > 1 && e[0].indexOf("+") !== -1; }) : [];
+    el.hidden = rows.length === 0;
+    if (!rows.length) return;
+    el.appendChild(document.createTextNode("同時押し（配列図には描かない。" + Settings.get("chordTerm") + " ms 以内に全部押す）："));
+    rows.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }).forEach(function (r) {
+      const item = document.createElement("span");
+      item.className = "entry";
+      item.appendChild(span("entry-keys", r[0]));
+      item.appendChild(span("entry-kana", r[1]));
+      el.appendChild(item);
+    });
+  }
+
   // 割り当て表の一覧（キーの並びの順）
   function renderEntries() {
+    renderChords();
     const layout = current();
     entriesEl.textContent = "";
     entriesEl.parentElement.hidden = layout.type === "qwerty";

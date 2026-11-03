@@ -111,7 +111,9 @@
   Promise.all([Store.getAllLayouts(), Store.getAllSessions(), LayoutLearning.loadLists(fetchText, "ja"), LayoutLearning.loadLists(fetchText, "en")])
     .then(function (v) {
       // 最初に QWERTY（入れ替えのない英語の配列として扱う）、その後に登録した配列を名前の順に
-      layouts = [{ id: "qwerty", name: "QWERTY", type: "eng", entries: [] }].concat(v[0].slice()
+      // 同時押しのあるかな配列は、まだキー配列習得に使えないので出さない（docs/layout-learning.md）
+      layouts = [{ id: "qwerty", name: "QWERTY", type: "eng", entries: [] }].concat(v[0]
+        .filter(function (l) { return l.type === "eng" || !KanaLayout.hasChord(l.entries); })
         .sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; }));
       sessions = v[1];
       lists = { ja: v[2], en: v[3] };

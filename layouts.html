@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=121">
+  <link rel="stylesheet" href="style.css?v=122">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -56,9 +56,11 @@
     <div class="kb-scroll">
       <div id="keyboard" class="kb"></div>
     </div>
+    <!-- 同時押しのあるかな配列のとき：同時押しの一覧（配列図には描かない） -->
+    <div id="chord-list" class="entries chord-list" hidden></div>
 
     <h2 class="stats-title">試し打ち</h2>
-    <p class="rhythm-legend">下の枠をクリックしてからキーを押すと、配列図のそのキーの色が変わり、打った文字が出ます。かな配列では、打ちかけの並び（薄い文字）を Enter で確定できます。IME はオフにしてください。記録には残りません。</p>
+    <p class="rhythm-legend">下の枠をクリックしてからキーを押すと、配列図のそのキーの色が変わり、打った文字が出ます。かな配列では、打ちかけの並び（薄い文字）を Enter で確定できます。同時押しは、設定のページの「同時押しの判定時間」のうちに組のキーを全部押すと、同時押しのかなになります。IME はオフにしてください。記録には残りません。</p>
     <div id="trial" class="trial" tabindex="0" aria-label="試し打ち">
       <div id="trial-output" class="trial-output"></div>
       <div id="trial-hint" class="trial-hint">ここをクリックして打ってください</div>
@@ -100,13 +102,13 @@ j&apos;e pya'></textarea>
     <ul id="import-errors" class="import-errors" hidden></ul>
   </main>
 
-  <script src="js/store.js?v=121"></script>
-  <script src="js/keys.js?v=121"></script>
-  <script src="js/keyboard-shapes.js?v=121"></script>
-  <script src="js/romaji.js?v=121"></script>
-  <script src="js/kana-layout.js?v=121"></script>
-  <script src="js/settings.js?v=121"></script>
-  <script src="js/page-footer.js?v=121"></script>
-  <script src="js/layouts-page.js?v=121"></script>
+  <script src="js/store.js?v=122"></script>
+  <script src="js/keys.js?v=122"></script>
+  <script src="js/keyboard-shapes.js?v=122"></script>
+  <script src="js/romaji.js?v=122"></script>
+  <script src="js/kana-layout.js?v=122"></script>
+  <script src="js/settings.js?v=122"></script>
+  <script src="js/page-footer.js?v=122"></script>
+  <script src="js/layouts-page.js?v=122"></script>
 </body>
 </html>

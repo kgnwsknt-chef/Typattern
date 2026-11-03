@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=121">
+  <link rel="stylesheet" href="style.css?v=122">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -59,6 +59,11 @@
         <label class="setting-label" for="s-idle">入力がないときに止めるまで</label>
         <span class="setting-input"><input id="s-idle" class="layout-select setting-number" type="number" data-setting="idleStopSec"> 秒</span>
         <p class="setting-help">打ち始めてから、この秒数のあいだ何もキーを押さなかったら停止します。停止した回は記録せず、続きからは打てません（もう一度（Esc）か次のお題（Shift+Enter）を選びます）。<span class="setting-range"></span></p>
+      </div>
+      <div class="setting">
+        <label class="setting-label" for="s-chord">同時押しの判定時間</label>
+        <span class="setting-input"><input id="s-chord" class="layout-select setting-number" type="number" data-setting="chordTerm"> ms</span>
+        <p class="setting-help">同時押しのあるかな配列で使います。同時押しの組の最初のキーを押してから、この時間のうちに組のキーを全部押せば（どれも離さずに）同時押しとみなします。キー配列のページの試し打ちも同じです。<span class="setting-range"></span></p>
       </div>
       <div class="setting">
         <label class="setting-label" for="s-rhythm">キーごとの間隔の棒の最大</label>
@@ -179,12 +184,12 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=121"></script>
-  <script src="js/keys.js?v=121"></script>
-  <script src="js/settings.js?v=121"></script>
-  <script src="js/keyboard-shapes.js?v=121"></script>
-  <script src="js/key-map.js?v=121"></script>
-  <script src="js/page-footer.js?v=121"></script>
-  <script src="js/settings-page.js?v=121"></script>
+  <script src="js/store.js?v=122"></script>
+  <script src="js/keys.js?v=122"></script>
+  <script src="js/settings.js?v=122"></script>
+  <script src="js/keyboard-shapes.js?v=122"></script>
+  <script src="js/key-map.js?v=122"></script>
+  <script src="js/page-footer.js?v=122"></script>
+  <script src="js/settings-page.js?v=122"></script>
 </body>
 </html>

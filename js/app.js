@@ -133,6 +133,7 @@
   const heldShifts = new Set(); // 今押されている Shift キーの e.code
   const loggedKeys = new Set(); // "k" の行を残して、まだ離していないキーの e.code（離したら "u" の行を残す）
   let typer = null;    // 日本語のときの入力の状態（js/typer.js）。英語では null
+  let chordTerm = null; // 同時押しのあるかな配列で打つときの判定時間(ms)。生データにも残す。同時押しがなければ null
   let showRomajiGuide = false; // ローマ字の手引きを出すか（日本語のローマ字入力で、設定の「手引き」が ON のときだけ。かな配列では出さない）
   let romajiLine = false;      // 日本語のお題の2行目をローマ字で出すか（ローマ字入力で、設定の「日本語のお題の2行目」がローマ字のとき）
   const statsEl = document.querySelector(".stats"); // 打っている間の数字の行（設定の「数字の行」で隠せる）
@@ -284,6 +285,8 @@
     const id = keyLayoutEl.value;
     const en = lang === "en" && (id === "qwerty" ? [] : engEntries[id]);
     if (!en && (lang !== "ja" || !kanaLayouts[id])) return Promise.reject(new Error("NO_LEARN"));
+    // 同時押しのあるかな配列は、まだキー配列習得に使えない（docs/layout-learning.md）
+    if (!en && kanaLayouts[id].options.chords.length) return Promise.reject(new Error("NO_LEARN_CHORD"));
     return Promise.all([LayoutLearning.loadLists(fetchText, lang), Store.getAllSessions()]).then(function (v) {
       return [{
         name: LEARN,
@@ -447,6 +450,11 @@
       input.disabled = true;
       return;
     }
+    if (err && err.message === "NO_LEARN_CHORD") {
+      textEl.textContent = "同時押しのあるかな配列は、まだキー配列習得に使えません。";
+      input.disabled = true;
+      return;
+    }
     if (err && err.message === "NO_FASTER") {
       // 他では速い bigram は、ふだんのモードの記録をほかの言語・配列と比べて選ぶので、まだなければ案内する
       textEl.textContent = "この言語・配列が遅い方になっている bigram はまだありません。ほかの言語・配列とあわせて、ふだんのモードで打つと出ます（それぞれの言語・配列で " +
@@ -601,7 +609,8 @@
     // IKI 測定は、日本語のときも英語と同じく1文字1キーで打つ（押したキーの QWERTY の文字で判定する）
     const jp = lang === "ja" && mode !== IKI;
     const kana = kanaLayouts[keyLayoutEl.value];
-    typer = !jp ? null : Typer.create(target, kana ? kana.options : Romaji.options);
+    chordTerm = jp && kana && kana.options.chords.length ? Settings.get("chordTerm") : null;
+    typer = !jp ? null : Typer.create(target, kana ? kana.options : Romaji.options, chordTerm);
     const romajiInput = jp && !kana;
     // 手引きとお題の2行目のローマ字は、ローマ字で打つときだけ。どちらも設定で選ぶ（docs/settings.md）
     showRomajiGuide = romajiInput && Settings.get("showGuide");
@@ -1507,6 +1516,8 @@
       intervals: intervals.map(round1),
       missedPositions: missed.reduce(function (acc, m, i) { if (m) acc.push(i); return acc; }, [])
     };
+    // 同時押しのある配列：記録を判定にもう一度通すときに、打ったときの判定時間を使う（docs/storage.md）
+    if (chordTerm) raw.chordTerm = chordTerm;
 
     saveStatusEl.textContent = "記録を保存中…";
     if (practice) {
@@ -1673,6 +1684,9 @@
       return;
     }
 
+    // 同時押しのある配列では、押し続けたときの連打を受け付けない（同時押しの組の最初のキーを押したまま待つと、連打でミスになるため）
+    if (e.repeat && chordTerm) return;
+
     if (!startTime) {
       startTime = now;
       dropReleasedPreKeys();
@@ -1685,7 +1699,9 @@
     let ch = Keys.char(e.code, e.shiftKey);
     const eng = engLayouts[keyLayoutEl.value];
     if (eng && ch !== null) ch = eng.toChar(ch);
-    const r = typer.press(ch || "\u0000", now);
+    // 押したままのキー（同時押しを見分けるのに使う）
+    const held = new Set(Array.from(loggedKeys).map(Keys.number));
+    const r = typer.press(ch || "\u0000", now, held);
     pushKey(e.code, number, now, r.pos, r.judge);
     // ミスは間違えたキーの数（1つのかなで2回間違えれば2）。そのかなに「ミスあり」の印を付ける
     if (r.judge === 0 && r.pos < target.length) {
