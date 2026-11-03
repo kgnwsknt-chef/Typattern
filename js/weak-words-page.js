@@ -156,7 +156,7 @@
       if (many) {
         const tag = document.createElement("span");
         tag.className = "ww-tag";
-        tag.textContent = LANG_NAME[r.lang] + "・" + (r.layout === "qwerty" ? "QWERTY" : r.layout);
+        tag.textContent = LANG_NAME[r.lang] + "・" + (r.layout === "qwerty" ? "QWERTY配列" : r.layout);
         word.appendChild(tag);
       }
       tr.appendChild(word);
@@ -224,7 +224,7 @@
   }
 
   function groupName(g) {
-    return LANG_NAME[g.lang] + "・" + (g.layout === "qwerty" ? "QWERTY" : g.layout);
+    return LANG_NAME[g.lang] + "・" + (g.layout === "qwerty" ? "QWERTY配列" : g.layout);
   }
 
   // 言語・配列で差のある bigram の表：順位・bigram・違い・遅い方（言語・配列・IKI・回数）・速い方（同じ）・差

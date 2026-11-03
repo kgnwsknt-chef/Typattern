@@ -235,7 +235,7 @@ const Trend = (function () {
         const r = s.result;
         return {
           x: i + 1, chars: s.textLength, iki: r.avgIki,
-          tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + LANG_NAME[s.lang] + "・" + (s.keyLayout === "qwerty" ? "QWERTY" : s.keyLayout) +
+          tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + LANG_NAME[s.lang] + "・" + (s.keyLayout === "qwerty" ? "QWERTY配列" : s.keyLayout) +
             "\nミスなしで " + s.textLength + " 文字（打鍵 " + (s.lang === "ja" ? r.correctKeys : s.textLength) + " ／ " + r.timeSec.toFixed(1) + " 秒）" +
             "\n平均 IKI " + (r.avgIki === null ? "-" : r.avgIki.toFixed(1) + " ms") + "（" + speedText(s) + "）"
         };

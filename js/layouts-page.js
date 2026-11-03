@@ -28,7 +28,7 @@
 
   // 配列の一覧。QWERTY は最初から入っている。かな配列・英語の配列は割り当て表を読み込むと足す（まだ保存はしない）
   // 登録した配列は { id, name, type: "kana" か "eng", entries, source, kana: KanaLayout.create の結果 }（英語の配列も kana に入れる）
-  const layouts = [{ id: "qwerty", name: "QWERTY", type: "qwerty" }];
+  const layouts = [{ id: "qwerty", name: "QWERTY配列", type: "qwerty" }];
 
   let shape = null;         // 今のキーボードの形（KeyboardShapes.layout の結果）
   let keyEls = {};          // 配列図のキーの要素。物理キーの番号（番号のないキーは e.code）で引く
@@ -325,6 +325,7 @@
   // 上書き保存と削除は2回押しで確かめる（確認のダイアログ confirm は、出さないブラウザでは押せなくなるので使わない）。
   // 1回目で注意を出してボタンを「上書きして保存する」「本当に削除する」に変え、6秒たつか配列を変えると元に戻す
   const SAVE_LABEL = saveBtn.textContent;
+  const SAVE_TITLE = saveBtn.title;
   const DELETE_LABEL = deleteBtn.textContent;
   let armed = null; // 2回目を待っているボタン
   let armTimer = 0;
@@ -349,18 +350,27 @@
     deleteBtn.classList.remove("tm-danger");
   }
 
+  // 最初から入っている配列と同じ名前か（記録の名前 qwerty と、表示する名前 QWERTY配列 のどちらも。大文字・小文字は区別しない）
+  function isBuiltinName(name) {
+    return layouts.some(function (l) { return l.type === "qwerty" && (l.id.toLowerCase() === name.toLowerCase() || l.name.toLowerCase() === name.toLowerCase()); });
+  }
+
   function updateActions() {
     const layout = current();
     disarm();
     saveBtn.hidden = !(layout.type !== "qwerty" && isUnsaved(layout));
     deleteBtn.hidden = !(layout.type !== "qwerty" && !isUnsaved(layout));
+    // 最初から入っている配列の名前で読み込んだものは保存できないので、ボタンを押せなくする
+    const builtin = isBuiltinName(layout.name);
+    saveBtn.disabled = builtin;
+    saveBtn.title = builtin ? "「" + layout.name + "」は最初から入っている配列の名前なので保存できません。別の名前で読み込み直してください" : SAVE_TITLE;
   }
 
   saveBtn.addEventListener("click", function () {
     const layout = current();
     const name = layout.name;
     // 最初から入っている配列と同じ名前は使えない（記録の keyLayout が区別できなくなるため）
-    if (layouts.some(function (l) { return l.type === "qwerty" && l.id.toLowerCase() === name.toLowerCase(); })) {
+    if (isBuiltinName(name)) {
       layoutMsgEl.textContent = "「" + name + "」は最初から入っている配列の名前なので使えません。別の名前で読み込み直してください。";
       return;
     }
@@ -481,7 +491,9 @@
     layoutMsgEl.textContent = "";
     importMsgEl.textContent = parsed.entries.length + " 行を読み込みました" +
       (parsed.romaji ? "（うち " + parsed.romaji + " 行はローマ字からかなに直しました）" : "") +
-      "。まだ保存していません。配列図の上の「この配列を保存する」で保存します。" +
+      (isBuiltinName(name)
+        ? "。「" + name + "」は最初から入っている配列の名前なので保存できません（保存するときは、別の名前で読み込み直してください）。"
+        : "。まだ保存していません。配列図の上の「この配列を保存する」で保存します。") +
       (parsed.errors.length ? "読めなかった行が " + parsed.errors.length + " 行あります（下の一覧）。" : "");
   });
 
@@ -556,14 +568,35 @@
     fillForm();
   }
 
-  // 表示中の配列（かな配列・英語の配列）の種類・名前と割り当て表を、登録のフォームに出す（直して読み込み直せるように）
+  // 表示中の配列の種類・名前と割り当て表を、登録のフォームに出す（直して読み込み直せるように）
   // 割り当て表は、読み込んだときの文字列（ローマ字で書いたならローマ字のまま）。それがない配列は「キーの並び<タブ>かな」で書き出す
+  // QWERTY は英語の配列として、各キーがそのキーの文字を出す表を出す（英語の配列を作るときのひな形にもなる）
   function fillForm() {
     const layout = current();
-    if (layout.type === "qwerty") return; // QWERTY のときは、書きかけのフォームをそのままにする
+    if (layout.type === "qwerty") {
+      kindEl.value = "eng";
+      nameEl.value = layout.name;
+      tableTextEl.value = qwertyTable();
+      return;
+    }
     kindEl.value = layout.type;
     nameEl.value = layout.name;
     tableTextEl.value = layout.source || layout.entries.map(function (e) { return e[0] + "\t" + e[1]; }).join("\n");
+  }
+
+  // QWERTY の割り当て表（英語の配列の形。キーの並びの順。英字の大文字は小文字の行から作られるので書かない。スペースは書かない）
+  function qwertyTable() {
+    const lines = [];
+    ["0", "1", "2", "3"].forEach(function (row) {
+      "0123456789abcdef".split("").forEach(function (col) {
+        const plain = Keys.charOf(row + col, false);
+        if (plain === null || plain === " ") return;
+        const shifted = Keys.charOf(row + col, true);
+        lines.push(plain + "\t" + plain);
+        if (shifted !== null && shifted !== plain.toUpperCase()) lines.push(shifted + "\t" + shifted);
+      });
+    });
+    return lines.join("\n");
   }
 
   KeyboardShapes.SHAPES.forEach(function (s) {

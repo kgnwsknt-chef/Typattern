@@ -110,7 +110,7 @@
     td.appendChild(line("level-name", b.textLength + " 文字"));
     td.appendChild(line("level-sub", "打鍵 " + keys + " ／ " + r.timeSec.toFixed(1) + " 秒"));
     td.appendChild(line("level-sub", "平均 IKI " + (r.avgIki === null ? "-" : r.avgIki.toFixed(1)) + " ms（" + speed + "）"));
-    td.appendChild(line("level-sub", Filters.localDate(b.finishedAt).replace(/-/g, "/") + " ／ " + (b.keyLayout === "qwerty" ? "QWERTY" : b.keyLayout)));
+    td.appendChild(line("level-sub", Filters.localDate(b.finishedAt).replace(/-/g, "/") + " ／ " + (b.keyLayout === "qwerty" ? "QWERTY配列" : b.keyLayout)));
     return td;
   }
 

@@ -1210,7 +1210,7 @@
     const grams = NGram.accumulate(new Map(), 2, events);
     const values = intervals.filter(function (v) { return v !== null; });
     const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
-    const groupName = function (g) { return LANG_NAME[g.lang] + "・" + (g.layout === "qwerty" ? "QWERTY" : g.layout); };
+    const groupName = function (g) { return LANG_NAME[g.lang] + "・" + (g.layout === "qwerty" ? "QWERTY配列" : g.layout); };
     const table = document.createElement("table");
     table.className = "bg-table";
     const hr = document.createElement("tr");

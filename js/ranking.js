@@ -5,14 +5,14 @@ const Ranking = (function () {
   const LANG_LABEL = { en: "英語", ja: "日本語" };
   const MODE_LABEL = { normal: "文章", words: "単語", other: "その他" };
 
-  // 区分（言語・モード・配列）の表示名（例: 英語・文章・QWERTY、日本語・文章・tsukimisou-v2）
+  // 区分（言語・モード・配列）の表示名（例: 英語・文章・QWERTY配列、日本語・文章・tsukimisou-v2）
   // 登録した配列は、利用者が付けた配列名のまま出す
   function categoryLabel(s) {
     return (LANG_LABEL[s.lang] || s.lang) + "・" + (MODE_LABEL[s.mode] || s.mode) + "・" + layoutLabel(s.keyLayout);
   }
 
   function layoutLabel(keyLayout) {
-    return keyLayout === "qwerty" ? "QWERTY" : keyLayout;
+    return keyLayout === "qwerty" ? "QWERTY配列" : keyLayout;
   }
 
   // rows は平均 IKI の小さい順（同じなら正確率の高い順）の概要の記録。currentId の行を目立たせる

@@ -101,7 +101,7 @@ const SessionView = (function () {
     };
   }
 
-  // その回の数値を1行にする（例「1位 ／ 2026/10/18 18:15 ／ tardigrade ／ 英語・文章・QWERTY ／ 平均 IKI 187.6 ms（64 WPM）／ …」）
+  // その回の数値を1行にする（例「1位 ／ 2026/10/18 18:15 ／ tardigrade ／ 英語・文章・QWERTY配列 ／ 平均 IKI 187.6 ms（64 WPM）／ …」）
   function summary(session, rank) {
     const r = session.result;
     const speed = session.lang === "ja" ? Math.round(r.kanaPerMin) + " かな/分" : Math.round(r.wpm) + " WPM";
