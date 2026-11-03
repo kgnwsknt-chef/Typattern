@@ -8,7 +8,7 @@ const Trend = (function () {
   const MA_WINDOW = 10; // 移動平均の回数
 
   // 描画領域（viewBox の座標）
-  const W = 760, L = 58, R = 58, T = 20, PH1 = 230, GAP = 30, PH2 = 160, B = 40;
+  const W = 760, L = 58, R = 58, T = 20, PH1 = 230, GAP = 44, PH2 = 160, B = 40;
   const H = T + PH1 + GAP + PH2 + B;
   const PW = W - L - R;
   const T2 = T + PH1 + GAP; // 下段の上端
@@ -177,17 +177,7 @@ const Trend = (function () {
       svg.appendChild(c);
     });
 
-    // 横軸の目盛り
-    const axisY = T2 + PH2;
-    if (period) {
-      const step = niceStep(x1 - x0, 7, period.steps);
-      for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, period.fmt(d));
-    } else {
-      const step = niceStep(x1 - x0, 10, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
-      for (let n = Math.max(step, Math.ceil(x0 / step) * step); n <= x1; n += step) xTick(svg, X(n), axisY, String(n));
-      if (x0 < 1 && 1 <= x1 && step > 1) xTick(svg, X(1), axisY, "1");
-      svg.appendChild(text(L + PW, H - 2, "回", "end", "trend-axis-title"));
-    }
+    xAxis(svg, X, x0, x1, period);
 
     container.appendChild(svg);
   }
@@ -316,17 +306,7 @@ const Trend = (function () {
       });
     }
 
-    // 横軸の目盛り
-    const axisY = T2 + PH2;
-    if (period) {
-      const step = niceStep(x1 - x0, 7, period.steps);
-      for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, period.fmt(d));
-    } else {
-      const step = niceStep(x1 - x0, 10, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
-      for (let n = Math.max(step, Math.ceil(x0 / step) * step); n <= x1; n += step) xTick(svg, X(n), axisY, String(n));
-      if (x0 < 1 && 1 <= x1 && step > 1) xTick(svg, X(1), axisY, "1");
-      svg.appendChild(text(L + PW, H - 2, "回", "end", "trend-axis-title"));
-    }
+    xAxis(svg, X, x0, x1, period);
     container.appendChild(svg);
   }
 
@@ -486,6 +466,21 @@ const Trend = (function () {
 
   function hline(svg, y) {
     svg.appendChild(line(L, y, L + PW, y, "trend-grid"));
+  }
+
+  // 横軸の目盛り。上段と下段のそれぞれの下に、同じ目盛りを書く（軸の名前「回」は下段の下だけ）
+  function xAxis(svg, X, x0, x1, period) {
+    [T + PH1, T2 + PH2].forEach(function (axisY) {
+      if (period) {
+        const step = niceStep(x1 - x0, 7, period.steps);
+        for (let d = Math.ceil(x0 / step) * step; d <= x1; d += step) xTick(svg, X(d), axisY, period.fmt(d));
+      } else {
+        const step = niceStep(x1 - x0, 10, [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
+        for (let n = Math.max(step, Math.ceil(x0 / step) * step); n <= x1; n += step) xTick(svg, X(n), axisY, String(n));
+        if (x0 < 1 && 1 <= x1 && step > 1) xTick(svg, X(1), axisY, "1");
+      }
+    });
+    if (!period) svg.appendChild(text(L + PW, H - 2, "回", "end", "trend-axis-title"));
   }
 
   function xTick(svg, x, y, label) {
