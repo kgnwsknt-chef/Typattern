@@ -23,7 +23,7 @@
   const lastEl = document.getElementById("trial-last");
 
   const LEGEND_QWERTY = "左上の小さな数字は物理キーの番号（行＋列。列は16進数）。大きい文字は Shift なし、右上の小さい文字は Shift を押したときの文字。";
-  const LEGEND_KANA = "左上の小さな数字は物理キーの番号、右下の小さな文字はそのキーの QWERTY の文字。大きい文字は、表示中のシフト面でそのキーを押したときのかな（右上は Shift を押したとき）。外形線がオレンジのキーは前置シフト、紫のキーは後置シフト（両方なら二重線）。";
+  const LEGEND_KANA = "左上の小さな数字は物理キーの番号、右下の小さな文字はそのキーの QWERTY の文字。大きい文字は、表示中のシフト面でそのキーを押したときのかな（右上は Shift を押したとき）。外形線がオレンジのキーは前置シフト、紫のキーは後置シフト（両方なら二重線）、緑のキーは同時押しシフト。";
   const LEGEND_ENG = "左上の小さな数字は物理キーの番号。大きい文字はそのキーを押したときの文字（右上は Shift を押したとき。英字の大文字は書かない）、右下の小さな文字は入れ替えたキーの QWERTY の文字。";
 
   // 配列の一覧。QWERTY は最初から入っている。かな配列・英語の配列は割り当て表を読み込むと足す（まだ保存はしない）
@@ -78,6 +78,8 @@
     const view = layout.type === "kana" ? currentView(layout) : null;
     // かな配列のシフト用のキー（前置・後置）。外形線の色を変えて示す
     const shifts = layout.type === "kana" ? layout.kana.shiftKeys(SHIFT_MIN) : { prefix: [], postfix: [] };
+    const chordKeys = layout.type === "kana"
+      ? [].concat.apply([], layout.kana.chordShifts(SHIFT_MIN).map(function (g) { return g.keys; })) : [];
     keyboardEl.classList.toggle("kb-kana", layout.type === "kana");
     // 「自動」のときだけ、今どのシフト面を出しているかを選択の横に書く（ほかは選択に出ているので書かない）
     viewNowEl.hidden = !view || viewEl.value !== "auto";
@@ -106,6 +108,7 @@
         el.appendChild(span("kb-qwerty", plain));
         if (shifts.prefix.indexOf(plain) !== -1) el.classList.add("kb-prefix");
         if (shifts.postfix.indexOf(plain) !== -1) el.classList.add("kb-postfix");
+        if (chordKeys.indexOf(plain) !== -1) el.classList.add("kb-chord");
         return;
       }
       if (layout.type === "eng") {
@@ -127,12 +130,24 @@
   }
 
   // かな配列の表示中のシフト面。{ label, kana(ch) }：キーの文字 ch を押したときのかな（なければ null）
-  //   自動：試し打ちの打ちかけの並びに続けて押したとき（何も打ちかけていなければ単独）
-  //   前置 x：x の次に押したとき。後置 y：そのキーの次に y を押したとき
+  //   自動：同時押しシフトのキーを押している間は、その同時押しシフト。それ以外は、試し打ちの打ちかけの並びに続けて押したとき
+  //     （何も打ちかけていなければ単独）
+  //   前置 x：x の次に押したとき。後置 y：そのキーの次に y を押したとき。同時押しシフト：シフトのキーと同時に押したとき
   function currentView(layout) {
     const v = viewEl.value;
     const get = layout.kana.get;
+    const chordView = function (g) {
+      return {
+        label: g.keys.map(function (k) { return "「" + k + "」"; }).join("か") + "と同時に押したとき",
+        kana: function (ch) { return ch === null ? null : g.kana(ch); }
+      };
+    };
     if (v === "auto") {
+      const held = Object.keys(downChars).map(function (code) { return downChars[code]; });
+      const shift = layout.kana.chordShifts(SHIFT_MIN).find(function (g) {
+        return g.keys.some(function (k) { return held.indexOf(k) !== -1; });
+      });
+      if (shift) return chordView(shift);
       const st = conv ? conv.state() : { pending: "", tentative: "" };
       const pending = st.pending;
       return {
@@ -146,6 +161,7 @@
     if (type === "a") {
       return { label: "シフトなし（そのキーだけを押したとき）", kana: function (ch) { return ch === null ? null : get(ch); } };
     }
+    if (type === "c") return chordView(layout.kana.chordShifts(SHIFT_MIN)[Number(key)]);
     if (type === "p") {
       return { label: "「" + key + "」の次に押したとき（前置）", kana: function (ch) { return ch === null ? null : get(key + ch); } };
     }
@@ -171,6 +187,7 @@
     const shifts = layout.kana.shiftKeys(SHIFT_MIN);
     shifts.prefix.forEach(function (k) { add("p:" + k, "前置シフト「" + k + "」"); });
     shifts.postfix.forEach(function (k) { add("s:" + k, "後置シフト「" + k + "」"); });
+    layout.kana.chordShifts(SHIFT_MIN).forEach(function (g, i) { add("c:" + i, "同時押しシフト「" + g.keys.join("・") + "」"); });
   }
 
   function span(className, text) {
@@ -277,8 +294,8 @@
       if (waiting && !conv.state().waiting) {
         clearTimeout(chordTimer);
         renderOutput();
-        drawLabels();
       }
+      if (hasChord) drawLabels(); // 自動のシフト面は、同時押しシフトのキーを離したら戻す
     }
     if (Keys.isShift(e.code)) {
       heldShifts.delete(e.code);
@@ -294,6 +311,7 @@
     downChars = {};
     keyboardEl.classList.remove("shift-on");
     renderOutput();
+    if (hasChord) drawLabels();
   });
   trialEl.addEventListener("focus", renderOutput);
 
@@ -509,12 +527,20 @@
     });
   }
 
-  // 同時押しの一覧（配列図には描かないので、図の下に「j+k → ぱ」の形で並べる）
+  // 同時押しシフトの配列図に出ない同時押しの一覧（図の下に「j+k → ぱ」の形で並べる）
   function renderChords() {
     const layout = current();
     const el = document.getElementById("chord-list");
     el.textContent = "";
-    const rows = layout.type === "kana" ? layout.entries.filter(function (e) { return e[0].length > 1 && e[0].indexOf("+") !== -1; }) : [];
+    const shiftKeys = layout.type === "kana"
+      ? [].concat.apply([], layout.kana.chordShifts(SHIFT_MIN).map(function (g) { return g.keys; })) : [];
+    // 2キーの組で、どちらかが同時押しシフトのキーなら配列図に出る
+    const shown = function (keys) {
+      return keys.length === 3 && (shiftKeys.indexOf(keys[0]) !== -1 || shiftKeys.indexOf(keys[2]) !== -1);
+    };
+    const rows = layout.type === "kana" ? layout.entries.filter(function (e) {
+      return e[0].length > 1 && e[0].indexOf("+") !== -1 && !shown(e[0]);
+    }) : [];
     el.hidden = rows.length === 0;
     if (!rows.length) return;
     el.appendChild(document.createTextNode("同時押し（配列図には描かない。" + Settings.get("chordTerm") + " ms 以内に全部押す）："));

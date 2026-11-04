@@ -264,14 +264,14 @@
   // IKI 測定のモード：「少ない bigram」で使う、記録の中の bigram の回数（全部の言語・配列をまとめる。IKI 測定の回は各語の1回目を数えない）。
   // sources は1つだけ { name: IKI, counts: bigram → 回数 }。語は、お題を出すたびに設定から作る（pickText）
   function loadIkiSources() {
-    return Store.getAllSessions().then(function (sessions) {
-      const byId = new Map(sessions.map(function (s) { return [s.id, s]; }));
+    return Promise.all([Store.getAllSessions(), Store.getAllLayouts()]).then(function (v) {
+      const byId = new Map(v[0].map(function (s) { return [s.id, s]; }));
       const grams = new Map();
       return Store.eachRaw(new Set(byId.keys()), function (raw) {
-        NGram.accumulate(grams, 2, raw.events, null, IkiMeasurement.skipOf(byId.get(raw.id), raw));
+        NGram.accumulate(grams, 2, raw.events, null, IkiMeasurement.skipOf(byId.get(raw.id), raw), NGram.chordsOf(raw, v[1]));
       }).then(function () {
         const counts = new Map();
-        grams.forEach(function (e, g) { counts.set(g, e.values.length); });
+        grams.forEach(function (e, g) { if (!e.chord) counts.set(g, e.values.length); });
         return [{ name: IKI, counts: counts }];
       });
     });
@@ -1207,7 +1207,8 @@
   // 他では速い bigram の練習の結果：練習した bigram ごとに、今回の IKI・記録の IKI（遅い方）・目標（速い方）の表を出す
   function showFasterResult() {
     // 今回の IKI は、この回の打鍵から IKI のページと同じ決まりで求める（js/ngram.js）。お題のどこに出てきても数える
-    const grams = NGram.accumulate(new Map(), 2, events);
+    const kana = kanaLayouts[keyLayoutEl.value];
+    const grams = NGram.accumulate(new Map(), 2, events, null, null, chordTerm ? { groups: kana.options.chords, term: chordTerm } : null);
     const values = intervals.filter(function (v) { return v !== null; });
     const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
     const groupName = function (g) { return LANG_NAME[g.lang] + "・" + (g.layout === "qwerty" ? "QWERTY配列" : g.layout); };

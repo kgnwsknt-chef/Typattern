@@ -100,6 +100,44 @@ const KanaLayout = (function () {
     return entries.some(function (e) { return e[0].length > 1 && e[0].indexOf("+") !== -1; });
   }
 
+  // 押したキーの並びから、同時押しの組がそろったかを見分ける（決まりは docs/measurement.md の「かな配列」）
+  //   groups：組の一覧 [["j","k"], …]（options.chords）。term：判定時間(ms)。タイピングの判定（js/typer.js）と IKI の集計（js/ngram.js）で共通
+  //   press(num, time, held)：キーを押すたびに呼ぶ。num は物理キーの番号、held は押されているキーの番号の Set（今のキーは含めない）
+  //     このキーで組がそろったら、組のキーの数を返す。そろわなければ 0
+  //   reset()：Backspace のときに呼ぶ（Backspace の前に押したキーとは組にしない）
+  function chordFinder(groups, term) {
+    const names = new Set(); // 組（物理キーの番号を並べた名前 "27 28"）
+    let max = 0;
+    groups.forEach(function (g) {
+      names.add(g.map(function (ch) {
+        const k = Keys.ofChar(ch);
+        return k ? k.number : ch;
+      }).sort().join(" "));
+      max = Math.max(max, g.length);
+    });
+    let recent = []; // 直近に押したキー { num, time }
+    function formed(num, time, held) {
+      for (let n = max; n >= 2; n--) {
+        const prev = recent.slice(-(n - 1));
+        if (prev.length < n - 1 || time - prev[0].time > term) continue;
+        if (!prev.every(function (p) { return held.has(p.num); })) continue;
+        const nums = prev.map(function (p) { return p.num; }).concat([num]);
+        if (new Set(nums).size === n && names.has(nums.sort().join(" "))) return n;
+      }
+      return 0;
+    }
+    return {
+      size: names.size,
+      press: function (num, time, held) {
+        const n = formed(num, time, held);
+        recent.push({ num: num, time: time });
+        if (recent.length > max) recent.shift();
+        return n;
+      },
+      reset: function () { recent = []; }
+    };
+  }
+
   // 同時押しのまとまりを、押す順のすべての並べ方にする（[["j","k"],["l"]] → "jkl"・"kjl"）
   //   返り値 [{ seq: キーの並び（+ なし）, chords: [[始まり, 終わり（含まない）], …]（同時押しの位置。なければ空） }]
   function orders(groups) {
@@ -262,6 +300,52 @@ const KanaLayout = (function () {
       return { prefix: pick(first), postfix: pick(second) };
     }
 
+    // 同時押しシフトの一覧 [{ keys: ["d","k"], kana(ch) }]（docs/layouts.md の「配列図」）
+    // 2キーの同時押しに minCount 回以上出てくるキーをシフトのキーとし、組む相手とかなが同じキーを1つにまとめる。
+    // kana(ch)：シフトのキーと ch を同時に押したときのかな（なければ null）。並びは割り当ての多い順（同じならキーの文字の順）
+    function chordShifts(minCount) {
+      const partners = new Map(); // キー → (組む相手 → かな)
+      const link = function (a, b, kana) {
+        if (!partners.has(a)) partners.set(a, new Map());
+        partners.get(a).set(b, kana);
+      };
+      entries.forEach(function (e) {
+        if (e[0].length !== 3 || e[0][1] !== "+") return;
+        link(e[0][0], e[0][2], e[1]);
+        link(e[0][2], e[0][0], e[1]);
+      });
+      // 2つのキーが、共通の相手 minCount 個以上で、どれも同じかなになるか
+      const same = function (a, b) {
+        let shared = 0;
+        const ok = Array.from(partners.get(a)).every(function (p) {
+          if (!partners.get(b).has(p[0])) return true;
+          shared++;
+          return partners.get(b).get(p[0]) === p[1];
+        });
+        return ok && shared >= minCount;
+      };
+      const groups = [];
+      Array.from(partners.keys())
+        .filter(function (k) { return partners.get(k).size >= minCount; })
+        .sort(function (a, b) { return partners.get(b).size - partners.get(a).size || (a < b ? -1 : 1); })
+        .forEach(function (k) {
+          const g = groups.find(function (x) { return same(x.keys[0], k); });
+          if (g) g.keys.push(k);
+          else groups.push({ keys: [k] });
+        });
+      groups.forEach(function (g) {
+        g.keys.sort();
+        g.kana = function (ch) {
+          for (let i = 0; i < g.keys.length; i++) {
+            const kana = partners.get(g.keys[i]).get(ch);
+            if (kana) return kana;
+          }
+          return null;
+        };
+      });
+      return groups;
+    }
+
     // 試し打ち用の変換器。最長一致：続けて押したキーが表のどの並びの始まりにもならなくなったら、
     // それまでの並びを確定する（表にない並びは、打ったキーの文字のまま出す）
     // 同時押し（docs/layouts.md の「同時押し」）：同時押しの組に入るキーを押したら、判定時間 term(ms) のあいだ待つ。
@@ -374,9 +458,10 @@ const KanaLayout = (function () {
       get: function (keys) { return table.has(keys) ? table.get(keys) : null; },
       options: options,
       shiftKeys: shiftKeys,
+      chordShifts: chordShifts,
       converter: converter
     };
   }
 
-  return { parse: parse, parseEng: parseEng, engMap: engMap, create: create, hasChord: hasChord };
+  return { parse: parse, parseEng: parseEng, engMap: engMap, create: create, hasChord: hasChord, chordFinder: chordFinder };
 })();

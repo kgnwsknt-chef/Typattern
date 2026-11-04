@@ -22,6 +22,7 @@
   /* キー配列の配列図：前置シフト・後置シフトのキーの外形線の色 */
   --kb-prefix: #e07b00;
   --kb-postfix: #8a3fd1;
+  --kb-chord: #1f8a5b;
   /* キー配列の配列図：文字キー（白より少しだけ暗い）・その枠・機能キー（Shift・Tab など） */
   --kb-key: #fbfaf6;
   /* 設定のページの指の割り当ての配列図：指ごとの色（人差し指・中指・薬指・小指） */
@@ -853,6 +854,10 @@ a.text-btn {
   border: 2px solid var(--kb-postfix);
 }
 
+.kb-key.kb-chord {
+  border: 2px solid var(--kb-chord);
+}
+
 .kb-key.kb-prefix.kb-postfix {
   border-color: var(--kb-prefix);
   box-shadow: 0 0 0 2px var(--kb-postfix);
@@ -1562,6 +1567,11 @@ a.text-btn {
 }
 
 /* bigram の2次元ヒストグラム（js/ngram.js の drawHeatmap） */
+/* IKI のページの2次元ヒストグラムの軸が多いときは、2枚を上下に並べる */
+.ngram-grid.hm-stack {
+  grid-template-columns: 1fr;
+}
+
 .hm-title {
   margin: 0 0 4px;
   font-size: 13px;

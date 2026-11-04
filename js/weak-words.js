@@ -242,7 +242,7 @@ const WeakWords = (function () {
     groups.forEach(function (map, key) {
       const k = key.split("\t");
       map.forEach(function (e, gram) {
-        if (e.values.length < BIGRAM_MIN) return;
+        if (e.chord || e.values.length < BIGRAM_MIN) return; // 同時押しの組を含む bigram は比べない
         const avg = e.values.reduce(function (a, b) { return a + b; }, 0) / e.values.length;
         // 1回ごとの IKI の標本標準偏差（n-1 で割る。BIGRAM_MIN 回以上あるので求められる）。他では速い bigram の練習の目標に使う
         const sd = Math.sqrt(e.values.reduce(function (a, v) { return a + (v - avg) * (v - avg); }, 0) / (e.values.length - 1));
@@ -270,15 +270,15 @@ const WeakWords = (function () {
   // 他では速い bigram の練習の候補（Promise）：練習モード以外の記録（言語・配列ごとに直近 recentRuns() 回）から、
   // 遅い方が lang・keyLayout になっている bigramGaps の行を、差の大きい方から LIST_SIZE 個
   function loadFasterCandidates(lang, keyLayout) {
-    return Store.getAllSessions().then(function (sessions) {
-      const picked = recentPerGroup(sessions.filter(Store.isRegular));
+    return Promise.all([Store.getAllSessions(), Store.getAllLayouts()]).then(function (v) {
+      const picked = recentPerGroup(v[0].filter(Store.isRegular));
       const byId = new Map(picked.map(function (s) { return [s.id, s]; }));
       const groups = new Map();
       return Store.eachRaw(new Set(byId.keys()), function (raw) {
         const s = byId.get(raw.id);
         const key = s.lang + "\t" + s.keyLayout;
         if (!groups.has(key)) groups.set(key, new Map());
-        NGram.accumulate(groups.get(key), 2, raw.events);
+        NGram.accumulate(groups.get(key), 2, raw.events, null, null, NGram.chordsOf(raw, v[1]));
       }).then(function () { return bigramGaps(groups, { lang: lang, layout: keyLayout }); });
     });
   }

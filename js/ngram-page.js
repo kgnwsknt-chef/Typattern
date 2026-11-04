@@ -9,6 +9,8 @@
   const trigramEl = document.getElementById("trigram");
   const hmCountEl = document.getElementById("hm-count"); // bigram の2次元ヒストグラム（回数）
   const hmIkiEl = document.getElementById("hm-iki");     // 同じく平均 IKI
+  const hmGridEl = document.getElementById("hm-grid");   // 2枚を入れる枠
+  const HM_SIDE_MAX = 32; // 軸のキーと組の数がこれ以下なら2枚を横に、超えたら上下に並べる
   let hmRows = [];        // 2次元ヒストグラムに描いている bigram
   let hmBase = 0;         // 色の基準
   // bigram の表で分布を出す行が変わったら、2次元ヒストグラムのそのマスを枠で囲み直す
@@ -28,6 +30,17 @@
   const loadingEl = document.getElementById("page-loading"); // 集計し終えるまで出す「Loading...」
   const trendEl = document.getElementById("f-trend"); // 分布の下の IKI の推移の横軸（回数・日付）
   let trendInfo = { mode: "run", runs: 0, firstDay: null, lastDay: null }; // NGram.setTrend に渡したもの
+  // 同時押し（決まりは docs/analysis_iki.md の「同時押しのあるかな配列」）。どれも同時押しの記録があるときだけ出す
+  const biKindBoxEl = document.getElementById("f-bi-kind-box");
+  const biKindEl = document.getElementById("f-bi-kind"); // bigram の表の種類の絞り込み
+  const chordSectionEl = document.getElementById("chord-section");
+  const chordTableEl = document.getElementById("chord-table");
+  const chordDistEl = document.getElementById("chord-dist");
+  let biRows = [];        // bigram の表に出せる行（「回数」で絞ったもの。種類の絞り込みの前）
+  let biBase = 0;         // bigram の表の色の基準
+  let chordRows = [];     // 同時押しの表の行
+  let chordUpper = 0;     // ずれの分布の横軸の最大（選んだ記録の判定時間の最大）
+  let chordSelected = null; // ずれの分布を出している組
 
   function update() {
     const myId = ++loadId;
@@ -47,12 +60,13 @@
       NGram.setTrend(trendInfo);
       if (picked.length === 0) {
         ngramSummaryEl.textContent = "";
-        bigramTable.renderRows(bigramEl, [], 0, "データなし");
+        drawBigrams([], 0);
         trigramTable.renderRows(trigramEl, [], 0, "データなし");
         drawKeyIki([], 0, kana);
         drawHeatmaps([], 0);
         drawClasses([], [], 0);
         drawCorr([], []);
+        drawChords([], 0);
         return;
       }
 
@@ -61,12 +75,19 @@
       const bigrams = new Map();
       let strokes = 0; // 総打鍵数：選んだ記録の、押したキー（events の "k" の行）の数。Shift・Backspace・間違えたキーも数える
       const trigrams = new Map();
+      const spreads = new Map(); // 同時押しの組 → ずれ
+      let maxTerm = 0;           // 選んだ記録の判定時間の最大
       ngramSummaryEl.textContent = "集計中…";
       return Store.eachRaw(ids, function (raw) {
         // 押したキーの記録（events の "k" の行）から数える。英語も日本語も同じ。IKI 測定モードの回は、各語の1回目を数えない
         const skip = IkiMeasurement.skipOf(byId.get(raw.id), raw);
-        NGram.accumulate(bigrams, 2, raw.events, tags.get(raw.id), skip);
-        NGram.accumulate(trigrams, 3, raw.events, tags.get(raw.id), skip);
+        const chords = NGram.chordsOf(raw, v[1]); // 同時押しの組は1打として数える
+        NGram.accumulate(bigrams, 2, raw.events, tags.get(raw.id), skip, chords);
+        NGram.accumulate(trigrams, 3, raw.events, tags.get(raw.id), skip, chords);
+        if (chords) {
+          NGram.accumulateSpreads(spreads, raw.events, skip, chords);
+          maxTerm = Math.max(maxTerm, chords.term);
+        }
         raw.events.forEach(function (e) { if (e[1] === "k") strokes++; });
       }).then(function () {
         if (myId !== loadId) return;
@@ -83,12 +104,16 @@
         const bi = allBi.filter(keep);
         const allTri = NGram.toRows(trigrams);
         const tri = allTri.filter(keep);
+        // キーごとの IKI・相関の図は、同時押しの組を含まないものだけを使う
+        const single = function (r) { return !r.chord; };
+        const singleBi = allBi.filter(single);
         drawClasses(allBi, allTri, base); // 指と行(row)で分けた分類は「回数」で絞らない
-        bigramTable.renderRows(bigramEl, bi, base);
+        drawBigrams(bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
-        drawKeyIki(allBi, base, kana);
+        drawKeyIki(singleBi, base, kana);
         drawHeatmaps(bi, base);
-        drawCorr(tri, allBi);
+        drawCorr(tri.filter(single), singleBi);
+        drawChords(NGram.toRows(spreads).filter(keep), maxTerm);
         ngramSummaryEl.textContent = "総打鍵数 " + strokes.toLocaleString() + " ／ bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
       });
     }).catch(function (err) {
@@ -97,6 +122,80 @@
     }).then(function () {
       if (myId === loadId) loadingEl.hidden = true;
     });
+  }
+
+  // bigram の表を描く。同時押しの組を含む行があるときだけ、種類の絞り込みを出す
+  function drawBigrams(rows, base) {
+    biRows = rows;
+    biBase = base;
+    biKindBoxEl.hidden = !rows.some(function (r) { return r.chord; });
+    if (biKindBoxEl.hidden) biKindEl.value = "all";
+    renderBigrams();
+  }
+
+  function renderBigrams() {
+    const kind = biKindEl.value;
+    const rows = kind === "all" ? biRows.slice() : biRows.filter(function (r) { return r.kind === kind; });
+    bigramTable.renderRows(bigramEl, rows, biBase, biRows.length ? undefined : "データなし");
+  }
+
+  // 同時押しの表：組ごとの回数とずれの中央値。行をクリックすると、その組のずれの分布を出す
+  function drawChords(rows, upper) {
+    chordRows = rows.slice().sort(function (x, y) { return y.count - x.count || (x.gram < y.gram ? -1 : 1); });
+    chordUpper = upper;
+    chordSectionEl.hidden = upper === 0;
+    if (!chordRows.some(function (r) { return r.gram === chordSelected; })) chordSelected = chordRows.length ? chordRows[0].gram : null;
+    redrawChords();
+  }
+
+  function median(values) {
+    const s = values.slice().sort(function (a, b) { return a - b; });
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+
+  function redrawChords() {
+    chordTableEl.textContent = "";
+    const table = document.createElement("table");
+    table.className = "bg-table";
+    const hr = document.createElement("tr");
+    ["組", "回数", "ずれの中央値(ms)"].forEach(function (t) {
+      hr.appendChild(document.createElement("th")).textContent = t;
+    });
+    table.appendChild(document.createElement("thead")).appendChild(hr);
+    const body = table.appendChild(document.createElement("tbody"));
+    const cell = function (tr, className, text) {
+      const td = tr.appendChild(document.createElement("td"));
+      td.className = className;
+      td.textContent = text;
+      return td;
+    };
+    if (!chordRows.length) {
+      cell(body.appendChild(document.createElement("tr")), "bg-empty-cell", "データなし").colSpan = 3;
+    }
+    chordRows.forEach(function (r) {
+      const tr = body.appendChild(document.createElement("tr"));
+      cell(tr, "bg-name", r.gram);
+      cell(tr, "bg-count", r.count);
+      cell(tr, "bg-count", Math.round(median(r.values)));
+      tr.className = "bg-row" + (r.gram === chordSelected ? " bg-selected" : "");
+      tr.tabIndex = 0;
+      tr.title = "クリックでずれの分布を表示";
+      const pick = function () {
+        chordSelected = r.gram;
+        redrawChords();
+        chordDistEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      };
+      tr.addEventListener("click", pick);
+      tr.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
+      });
+    });
+    chordTableEl.appendChild(table);
+    const row = chordRows.find(function (r) { return r.gram === chordSelected; });
+    // 棒の色は、判定時間の半分を基準にする（0 に近いほど青、判定時間で赤）
+    if (row) NGram.drawDistribution(chordDistEl, row, "同時押し", chordUpper / 2, { what: "ずれ", upper: chordUpper });
+    else chordDistEl.textContent = "";
   }
 
   // キーごとの IKI：そのキーを押すまでの間隔（直前のキーからそのキーまで。bigram の2キー目がそのキーの間隔）の平均を、
@@ -137,9 +236,17 @@
 
   function redrawHeatmaps() {
     // W A S D で動かしたとき（byKey）はページをスクロールしない。データのないマスに止まったら（r が null）分布を消す
-    const opts = { selected: bigramTable.selected(), keyMove: true, onSelect: function (r, byKey) { bigramTable.show(r ? r.gram : null, byKey); } };
-    NGram.drawHeatmap(hmCountEl, hmRows, "count", hmBase, opts);
+    const opts = { selected: bigramTable.selected(), keyMove: true, onSelect: function (r, byKey) {
+      // 種類の絞り込みで表から外れている行を選んだら、絞り込みを外す
+      if (r && biKindEl.value !== "all" && biKindEl.value !== r.kind) {
+        biKindEl.value = "all";
+        renderBigrams();
+      }
+      bigramTable.show(r ? r.gram : null, byKey);
+    } };
+    const n = NGram.drawHeatmap(hmCountEl, hmRows, "count", hmBase, opts);
     NGram.drawHeatmap(hmIkiEl, hmRows, "iki", hmBase, opts);
+    hmGridEl.classList.toggle("hm-stack", n > HM_SIDE_MAX);
   }
 
   // ---- trigram と bigram の相関（決まりは docs/analysis_iki.md の「trigram と bigram の相関」） ----
@@ -186,7 +293,7 @@
   function node(name, ids, level, desc) { return { name: name, ids: ids, level: level || 0, desc: desc || "" }; }
   const PAIRS = ["12", "13", "14", "23", "24", "34"]; // 指の組（内側の指・外側の指）
   const pairName = function (p) { return FingerMap.FINGER_NAME[p[0]] + "と" + FingerMap.FINGER_NAME[p[1]]; };
-  const NONE = node("分類しない", ["none"], 0, "指を割り当てていないキー（初期値では数字キーの行など）を含む組");
+  const NONE = node("分類しない", ["none"], 0, "指を割り当てていないキー（初期値では数字キーの行など）や、同時押しの組を含む組");
   function staggerNodes(side, name, desc) {
     const ids = PAIRS.map(function (p) { return "stagger-" + side + "-" + p; });
     return [node(name, ids, 1, desc)].concat(PAIRS.map(function (p, i) { return node(pairName(p), [ids[i]], 2); }));
@@ -271,7 +378,7 @@
     let total = 0;
     rows.forEach(function (r) {
       total += r.count;
-      table.idsOf(r.gram).forEach(function (id) {
+      (r.chord ? ["none"] : table.idsOf(r.gram)).forEach(function (id) {
         if (!byId.has(id)) byId.set(id, []);
         byId.get(id).push(r);
       });
@@ -369,6 +476,7 @@
   }
 
   minEl.addEventListener("change", update);
+  biKindEl.addEventListener("change", renderBigrams);
   // 推移の横軸を切り替えたら、集計し直さずに分布の下の推移だけを描き直す
   trendEl.addEventListener("change", function () {
     trendInfo.mode = trendEl.value;

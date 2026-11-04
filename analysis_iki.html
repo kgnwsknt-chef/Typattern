@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=126">
+  <link rel="stylesheet" href="style.css?v=127">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -91,7 +91,8 @@
     <section class="stats-section">
       <h2 class="stats-title">bigram の2次元ヒストグラム</h2>
       <p class="rhythm-legend">横軸 = 1キー目、縦軸 = 2キー目（QWERTY の文字。キーボードの行の順で、行が変わるところに実線、左手と右手の境に点線）。下の表と同じ bigram（「回数」の絞り込みも同じ）を、マスの色で表示 ／ マスにマウスを乗せると値を表示 ／ マスをクリックで分布を表示（W A S D で隣のマスへ）</p>
-      <div class="ngram-grid">
+      <!-- ふだんは横に2枚。軸のキーと組が多いときは上下に並べる（js/ngram-page.js が hm-stack を付ける） -->
+      <div id="hm-grid" class="ngram-grid">
         <div class="ngram-col">
           <h3 class="hm-title">回数</h3>
           <div id="hm-count" class="hm"></div>
@@ -111,6 +112,16 @@
           <select id="f-trend" class="layout-select">
             <option value="run">回数（1回ごとの平均）</option>
             <option value="day">日付（1日ごとの平均）</option>
+          </select>
+        </label>
+        <!-- 同時押しの組を含む行があるときだけ出す -->
+        <label id="f-bi-kind-box" class="filter" hidden>種類
+          <select id="f-bi-kind" class="layout-select">
+            <option value="all">すべて</option>
+            <option value="ss">単打→単打</option>
+            <option value="sc">単打→同時押し</option>
+            <option value="cs">同時押し→単打</option>
+            <option value="cc">同時押し→同時押し</option>
           </select>
         </label>
       </div>
@@ -154,6 +165,16 @@
       </div>
     </section>
 
+    <!-- 同時押しの記録があるときだけ出す -->
+    <section id="chord-section" class="stats-section" hidden>
+      <h2 class="stats-title">同時押し</h2>
+      <p class="rhythm-legend">ずれ = 組の最初のキーを押してから、最後のキーを押すまでの時間 ／ 上の bigram・trigram の表では、組を1打として数える（時刻は組の最後のキーを押した時刻）。2次元ヒストグラムには組も1打として軸に並べる。キーごとの IKI と相関の図には、組を含むものを入れない ／ 間違えたキーを含む組は数えない ／ 行をクリックで、その組のずれの分布を表示（横軸の最大は、選んだ記録の判定時間の最大）</p>
+      <div class="ng-block">
+        <div id="chord-table" class="ngram-scroll ng-table"></div>
+        <div id="chord-dist" class="ngram-dist ng-dist"></div>
+      </div>
+    </section>
+
     <section class="stats-section">
       <h2 class="stats-title">trigram と bigram の相関</h2>
       <p class="rhythm-legend">点は trigram（上の trigram の表と同じもの。「回数」の絞り込みも同じ）／ trigram abc の中の間隔 = abc と打ったときの a→b（1つ目）と b→c（2つ目）／ bigram 全体の平均 = ab をどの並びの中で打ったかを問わない平均（bigram の表の値）／ 軸の最大値よりも大きい値は最大値のところに描く ／ r = 相関係数（ピアソン。1 に近いほど一直線に並ぶ）／ 点にマウスを乗せると値を表示、クリックでその trigram の分布を表示</p>
@@ -164,19 +185,19 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=126"></script>
-  <script src="js/keys.js?v=126"></script>
-  <script src="js/settings.js?v=126"></script>
-  <script src="js/page-footer.js?v=126"></script>
-  <script src="js/rhythm.js?v=126"></script>
-  <script src="js/keyboard-shapes.js?v=126"></script>
-  <script src="js/kana-layout.js?v=126"></script>
-  <script src="js/key-map.js?v=126"></script>
-  <script src="js/point-trend.js?v=126"></script>
-  <script src="js/ngram.js?v=126"></script>
-  <script src="js/finger-map.js?v=126"></script>
-  <script src="js/iki-measurement.js?v=126"></script>
-  <script src="js/filters.js?v=126"></script>
-  <script src="js/ngram-page.js?v=126"></script>
+  <script src="js/store.js?v=127"></script>
+  <script src="js/keys.js?v=127"></script>
+  <script src="js/settings.js?v=127"></script>
+  <script src="js/page-footer.js?v=127"></script>
+  <script src="js/rhythm.js?v=127"></script>
+  <script src="js/keyboard-shapes.js?v=127"></script>
+  <script src="js/kana-layout.js?v=127"></script>
+  <script src="js/key-map.js?v=127"></script>
+  <script src="js/point-trend.js?v=127"></script>
+  <script src="js/ngram.js?v=127"></script>
+  <script src="js/finger-map.js?v=127"></script>
+  <script src="js/iki-measurement.js?v=127"></script>
+  <script src="js/filters.js?v=127"></script>
+  <script src="js/ngram-page.js?v=127"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@ const NGram = (function () {
   "use strict";
 
   const SVG_NS = "http://www.w3.org/2000/svg";
+  const ARROW = " → "; // 同時押しの組を含む n-gram の、1打と1打の間
 
   // n 文字ごとの一覧表を1つ作る。並び順は表ごとに持ち、やり直しても維持する
   // distEl を渡すと、行のクリックで分布のグラフをそこに描く
@@ -205,7 +206,10 @@ const NGram = (function () {
 
   // 1つの n-gram の IKI の分布をヒストグラムで描く。平均を点線、1回ごとの値を軸の下の短い線で示す
   // 分布はいつも出しておくので、閉じるボタンは付けない
-  function drawDistribution(el, row, label, baseAvg) {
+  // opts：what（見出しの値の名前。省略時は「IKI」）・upper（横軸の最大。省略時は設定の「分布の横軸の最大」）
+  function drawDistribution(el, row, label, baseAvg, opts) {
+    opts = opts || {};
+    const what = opts.what || "IKI";
     el.textContent = "";
     const values = row.values;
     // 値が多いとき（分類ごとにまとめた数万個など）でも動くよう、apply ではなく1つずつ比べる
@@ -217,7 +221,7 @@ const NGram = (function () {
     head.className = "dist-head";
     const title = document.createElement("span");
     title.className = "dist-title";
-    title.textContent = label + "「" + row.gram + "」の IKI の分布";
+    title.textContent = label + "「" + row.gram + "」の" + (opts.what ? "" : " ") + what + (opts.what ? "" : " ") + "の分布";
     const info = document.createElement("span");
     info.className = "dist-info";
     info.textContent = row.count + " 回 ／ 平均 " + Math.round(row.avg) + " ms ／ SD " +
@@ -227,7 +231,7 @@ const NGram = (function () {
     el.appendChild(head);
 
     // 横軸は 0〜設定の最大（js/settings.js の ngramMaxMs。初期値 2000 ms）で、100 個の区間に分ける。最大以上の値は一番右の区間に入れる
-    const upper = Settings.get("ngramMaxMs");
+    const upper = opts.upper || Settings.get("ngramMaxMs");
     const nb = 100;
     const bw = upper / nb; // 最大は 50 ms 刻みなので、幅は 0.5 ms 刻み（表示は fmt で小数第1位まで）
     const fmt = function (v) { return String(Math.round(v * 10) / 10); };
@@ -244,7 +248,7 @@ const NGram = (function () {
     const y = function (c) { return T + ph - (c / maxCount) * ph; };
 
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg", role: "img",
-      "aria-label": label + " " + row.gram + " の IKI の分布" });
+      "aria-label": label + " " + row.gram + " の" + what + "の分布" });
 
     // 棒
     counts.forEach(function (c, i) {
@@ -411,7 +415,24 @@ const NGram = (function () {
     return LEFT_HAND.indexOf(ch) >= 0;
   }
 
-  // bigram の2次元ヒストグラム（ヒートマップ）。横軸 = 1キー目、縦軸 = 2キー目、マスの色 = 値
+  // bigram の名前を、1打目と2打目に分ける（"df" → ["d","f"]、"d → j+k" → ["d","j+k"]）
+  function partsOf(gram) {
+    return gram.indexOf(ARROW) !== -1 ? gram.split(ARROW) : [gram[0], gram[1]];
+  }
+
+  // 1打目と2打目から bigram の名前を作る（partsOf の逆）。同時押しの組は2文字以上
+  function gramOf(first, second) {
+    return first.length > 1 || second.length > 1 ? first + ARROW + second : first + second;
+  }
+
+  // 軸の並び順の値：キーはキーボードの行の順、同時押しの組はキーの後ろに、組の最初のキーの順で
+  function rankOf(k) {
+    const i = KEY_ORDER.indexOf(k[0]);
+    const rank = i < 0 ? 999 : i;
+    return k.length > 1 ? 1000 + rank : rank;
+  }
+
+  // bigram の2次元ヒストグラム（ヒートマップ）。横軸 = 1打目、縦軸 = 2打目、マスの色 = 値。同時押しの組も1打として軸に並べる
   //   kind："count"（回数。0 回は白、一番多いマスが一番濃い。回数に比例）か "iki"（平均 IKI。表と同じ配色、baseAvg が基準）、
   //     "miss"（ミス率 r.rate。0 は白、baseAvg のミス率以上が一番濃い赤。ミスタイプのページで使う）
   //   rows：toRows の結果（bigram）。軸には rows に出てくるキーだけを並べる。"miss" は { gram, count, misses, rate }
@@ -430,17 +451,20 @@ const NGram = (function () {
     const used = new Set();
     rows.forEach(function (r) {
       cells.set(r.gram, r);
-      used.add(r.gram[0]);
-      used.add(r.gram[1]);
+      partsOf(r.gram).forEach(function (k) { used.add(k); });
     });
     const keys = Array.from(used).sort(function (a, b) {
-      const ia = KEY_ORDER.indexOf(a), ib = KEY_ORDER.indexOf(b);
-      return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || (a < b ? -1 : 1);
+      const ia = rankOf(a), ib = rankOf(b);
+      return ia - ib || (a < b ? -1 : 1);
     });
     const maxCount = Math.max.apply(null, rows.map(function (r) { return r.count; }));
 
     const C = 16;           // マスの大きさ
-    const L = 40, T = 34;   // 軸のラベルの場所
+    const CH = 7;           // ラベルの1文字の幅
+    // 同時押しの組のラベルは長いので、その分だけ軸のラベルの場所を広げる（横軸のラベルは縦に書く）
+    const longest = keys.reduce(function (m, k) { return Math.max(m, k.length); }, 1);
+    const extra = longest > 1 ? longest * CH : 0;
+    const L = 40 + extra, T = 34 + extra; // 軸のラベルの場所
     const LEG = 34;         // 下の凡例の場所
     const n = keys.length;
     const W = L + n * C + 6, H = T + n * C + LEG;
@@ -450,26 +474,31 @@ const NGram = (function () {
 
     // 軸のラベル（キーの QWERTY の文字）。分布を表示中のマスの1キー目（横軸）と2キー目（縦軸）は、
     // 青い四角の上に白い文字で出して強調する（「'」「,」のような小さい記号でも分かるように）
-    const sel = opts.selected && cells.has(opts.selected) ? opts.selected : null;
+    const selGram = opts.selected && cells.has(opts.selected) ? opts.selected : null;
+    const sel = selGram ? partsOf(selGram) : null;
     keys.forEach(function (k, i) {
-      const xl = svgText(L + i * C + C / 2, T - 4, k, "middle");
+      const long = k.length > 1; // 同時押しの組
+      const box = long ? k.length * CH + 6 : C; // 強調の四角の長さ
+      const cx = L + i * C + C / 2;
+      const xl = long ? svgText(cx + 4, T - 4, k, "start") : svgText(cx, T - 4, k, "middle");
+      if (long) xl.setAttribute("transform", "rotate(-90 " + (cx + 4) + " " + (T - 4) + ")");
       const yl = svgText(L - 4, T + i * C + C / 2 + 3.5, k, "end");
       if (sel && k === sel[0]) {
-        svg.appendChild(svgEl("rect", { x: L + i * C + 1, y: T - C - 1, width: C - 2, height: C, rx: 2, class: "hm-label-box" }));
-        xl.setAttribute("x", L + i * C + C / 2);
+        svg.appendChild(svgEl("rect", { x: L + i * C + 1, y: T - box - 1, width: C - 2, height: box, rx: 2, class: "hm-label-box" }));
         xl.classList.add("hm-label-selected");
       }
       if (sel && k === sel[1]) {
-        svg.appendChild(svgEl("rect", { x: L - C - 2, y: T + i * C + 1, width: C, height: C - 2, rx: 2, class: "hm-label-box" }));
-        yl.setAttribute("x", L - C / 2 - 2);
+        svg.appendChild(svgEl("rect", { x: L - box - 2, y: T + i * C + 1, width: box, height: C - 2, rx: 2, class: "hm-label-box" }));
+        yl.setAttribute("x", L - box / 2 - 2);
         yl.setAttribute("text-anchor", "middle");
         yl.classList.add("hm-label-selected");
       }
       svg.appendChild(xl);
       svg.appendChild(yl);
     });
-    svg.appendChild(svgText(L, 10, "1キー目 →", "start"));
-    const yTitle = svgText(12, T, "2キー目 →", "start");
+    const unit = extra ? "打" : "キー"; // 同時押しの組があるときは「1打目」
+    svg.appendChild(svgText(L, 10, "1" + unit + "目 →", "start"));
+    const yTitle = svgText(12, T, "2" + unit + "目 →", "start");
     yTitle.setAttribute("transform", "rotate(90 12 " + T + ")");
     svg.appendChild(yTitle);
 
@@ -479,15 +508,17 @@ const NGram = (function () {
     // （W・S は2キー目、A・D は1キー目。端では反対の端に回る）。動いた先にデータがあれば onSelect(行, true)、
     // なければ onSelect(null, true)（選択を外す）。矢印キーはブラウザに任せる
     const keyMove = !!(opts.keyMove && opts.onSelect);
-    const inGrid = function (g) { return !!g && keys.indexOf(g[0]) !== -1 && keys.indexOf(g[1]) !== -1; };
-    const cursor = sel || (inGrid(el._hmCursor) ? el._hmCursor : rows[0].gram);
+    const inGrid = function (g) {
+      return !!g && partsOf(g).every(function (k) { return keys.indexOf(k) !== -1; });
+    };
+    const cursor = selGram || (inGrid(el._hmCursor) ? el._hmCursor : rows[0].gram);
     const rectOf = new Map();
     const MOVES = { KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0] };
     function move(e, xi, yi) {
       const mv = MOVES[e.code];
       if (!keyMove || !mv || e.ctrlKey || e.altKey || e.metaKey) return false;
       e.preventDefault();
-      const g = keys[(xi + mv[0] + n) % n] + keys[(yi + mv[1] + n) % n];
+      const g = gramOf(keys[(xi + mv[0] + n) % n], keys[(yi + mv[1] + n) % n]);
       choose(g, cells.get(g) || null, true);
       return true;
     }
@@ -501,22 +532,23 @@ const NGram = (function () {
     }
     keys.forEach(function (first, xi) {
       keys.forEach(function (second, yi) {
-        const r = cells.get(first + second);
+        const gram = gramOf(first, second);
+        const r = cells.get(gram);
         let fill;
         if (kind === "count") fill = r ? countColor(r.count / maxCount) : "var(--hm-none)";
         else if (kind === "miss") fill = r ? missColor(r.rate / baseAvg) : "var(--hm-none)";
         else fill = r ? Rhythm.color(r.avg, baseAvg) : "var(--hm-none)";
         const rect = svgEl("rect", { x: L + xi * C, y: T + yi * C, width: C, height: C, fill: fill, class: "hm-cell" });
         const tip = svgEl("title", {});
-        tip.textContent = first + second + "：" + (!r ? "なし"
+        tip.textContent = gram + "：" + (!r ? "なし"
           : kind === "miss" ? r.count + " 回中 " + r.misses + " 回押し間違い（" + (r.rate * 100).toFixed(1) + "%）"
           : r.count + " 回・平均 " + Math.round(r.avg) + " ms");
         rect.appendChild(tip);
         if (opts.onSelect && (r || keyMove)) {
           // keyMove なら、データのないマスもキーで止まれるようにフォーカスできる（クリック・Enter では何もしない）
           rect.setAttribute("class", r ? "hm-cell hm-click" : "hm-cell hm-nav");
-          rect.setAttribute("tabindex", !keyMove || first + second === cursor ? "0" : "-1");
-          rectOf.set(first + second, rect);
+          rect.setAttribute("tabindex", !keyMove || gram === cursor ? "0" : "-1");
+          rectOf.set(gram, rect);
           if (r) rect.addEventListener("click", function () { choose(r.gram, r, false); });
           rect.addEventListener("keydown", function (e) {
             if (move(e, xi, yi)) return;
@@ -541,12 +573,13 @@ const NGram = (function () {
     }
     svg.appendChild(svgEl("rect", { x: L, y: T, width: n * C, height: n * C, class: "hm-frame" }));
     // 分布を表示中のマスを枠で囲む
-    if (opts.selected && cells.has(opts.selected)) {
-      const sx = keys.indexOf(opts.selected[0]), sy = keys.indexOf(opts.selected[1]);
+    if (sel) {
+      const sx = keys.indexOf(sel[0]), sy = keys.indexOf(sel[1]);
       svg.appendChild(svgEl("rect", { x: L + sx * C, y: T + sy * C, width: C, height: C, class: "hm-selected" }));
     } else if (keyMove && inGrid(el._hmCursor)) {
       // W A S D でデータのないマスに止まっているとき：そのマスを点線の枠で囲む（隣のマスに線が隠れないよう、最後に描く）
-      const cx = keys.indexOf(el._hmCursor[0]), cy = keys.indexOf(el._hmCursor[1]);
+      const at = partsOf(el._hmCursor);
+      const cx = keys.indexOf(at[0]), cy = keys.indexOf(at[1]);
       svg.appendChild(svgEl("rect", { x: L + cx * C, y: T + cy * C, width: C, height: C, class: "hm-cursor" }));
     }
 
@@ -569,6 +602,7 @@ const NGram = (function () {
 
     el.appendChild(svg);
     el._hmRects = rectOf; // キーで動いた後、描き直した図の同じマスにフォーカスを戻すのに使う
+    return n;
   }
 
   // 回数の色。f = 回数 ÷ 一番多い回数（0〜1）。白に近い青 → 濃い青
@@ -596,15 +630,22 @@ const NGram = (function () {
   // 生データの events から、押したキーの並び [{ t, label, ok }] を作る（Shift は並びに入れない）
   //   ok：n-gram に使えるキーか。間違えたキー・Backspace・スペース・文字のないキー・Shift と同時に押したキーは false
   //   skip：数えない位置の集まり（IKI 測定モードの1回目。js/iki-measurement.js）。その位置を打ったキーも false
-  function keySequence(events, skip) {
+  //   chords：同時押しのあるかな配列の回の { groups, term }（chordsOf の結果）。同時押しの組は1打にまとめ、
+  //     { t: 最後のキーの時刻, first: 最初のキーの時刻, label: "j+k", ok, chord: true } にする（docs/analysis_iki.md の「同時押しのあるかな配列」）
+  function keySequence(events, skip, chords) {
     const seq = [];
     const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す。Shift 以外のキーの "u" の行は何もしない）
+    const finder = chords ? KanaLayout.chordFinder(chords.groups, chords.term) : null;
+    const held = new Set(); // 押されているキーの番号（同時押しの組を見分けるのに使う）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
     const hasUp = events.some(function (e) { return e[1] === "u"; });
     events.forEach(function (e) {
       if (e[1] === "u") {
         shiftDown.delete(e[2]);
+        held.delete(e[2]);
       } else if (e[1] === "k") {
+        const before = finder ? new Set(held) : null; // 今のキーを押す前に押されていたキー
+        held.add(e[2]);
         if (Keys.isShiftNumber(e[2])) {
           shiftDown.add(e[2]);
           return;
@@ -612,11 +653,50 @@ const NGram = (function () {
         const label = Keys.label(e[2]);
         const ok = e[4] === 1 && shiftDown.size === 0 && label !== null && e[2] !== Keys.SPACE && e[2] !== Keys.BACKSPACE &&
           !(skip && skip.has(e[3]));
-        seq.push({ t: e[0], label: label, ok: ok });
+        seq.push({ t: e[0], first: e[0], label: label, keys: [label], ok: ok, chord: false });
+        if (finder) {
+          if (e[2] === Keys.BACKSPACE) finder.reset();
+          else {
+            const n = finder.press(e[2], e[0], before);
+            if (n) mergeChord(seq, n);
+          }
+        }
         if (!hasUp) shiftDown.clear();
       }
     });
     return seq;
+  }
+
+  // seq の後ろの n キー分を、同時押しの1打にまとめる（3キーの組は、先に2キーでそろった組を含むことがある）
+  function mergeChord(seq, n) {
+    const parts = [];
+    let count = 0;
+    while (count < n && seq.length) {
+      const s = seq.pop();
+      parts.unshift(s);
+      count += s.keys.length;
+    }
+    const keys = [].concat.apply([], parts.map(function (s) { return s.keys; })).sort();
+    seq.push({
+      t: parts[parts.length - 1].t,
+      first: parts[0].first,
+      label: keys.join("+"),
+      keys: keys,
+      ok: parts.every(function (s) { return s.ok; }),
+      chord: true
+    });
+  }
+
+  // その回の同時押しの組を見分けるのに使うもの { groups, term }。同時押しのない回と、配列が消えていて分からない回は null
+  //   layouts：登録した配列（Store.getAllLayouts の結果）
+  const chordGroups = new WeakMap(); // 配列 → 組の一覧（同じ配列の回で作り直さない）
+  function chordsOf(raw, layouts) {
+    if (!raw.chordTerm) return null;
+    const layout = layouts.find(function (l) { return l.id === raw.keyLayout; });
+    if (!layout) return null;
+    if (!chordGroups.has(layout)) chordGroups.set(layout, KanaLayout.create(layout.entries).options.chords);
+    const groups = chordGroups.get(layout);
+    return groups.length ? { groups: groups, term: raw.chordTerm } : null;
   }
 
   // 生データの events から、連続する n 個のキーごとの IKI を map に足し込む
@@ -625,8 +705,10 @@ const NGram = (function () {
   // n-gram の IKI = 中の (n-1) 個のキーの間隔の平均。名前はキーの QWERTY の文字。ルールは docs/analysis_iki.md を参照
   // 中の間隔ごとの合計も足しておく（trigram の中の1つ目・2つ目の間隔。trigram と bigram の相関の図に使う）
   // skip を渡すと、その位置を打ったキーが絡むものは除く（IKI 測定モードの1回目。IkiMeasurement.skipOf）
-  function accumulate(map, n, events, tag, skip) {
-    const seq = keySequence(events, skip);
+  // chords を渡すと（chordsOf の結果）、同時押しの組を1打として数える。組を含むものは名前を "d → j+k" のように書き、
+  // chord: true と kind（bigram の種類。単打 s・同時押し c を並べた "sc" など）を持たせる
+  function accumulate(map, n, events, tag, skip, chords) {
+    const seq = keySequence(events, skip, chords);
     for (let end = n - 1; end < seq.length; end++) {
       const start = end - n + 1;
       let ok = true;
@@ -634,8 +716,11 @@ const NGram = (function () {
         if (!seq[i].ok) { ok = false; break; } // 使えないキーが絡んだものは除く
       }
       if (!ok) continue;
-      const key = seq.slice(start, end + 1).map(function (k) { return k.label; }).join("");
-      const e = map.get(key) || { values: [], tags: [], stepSums: new Array(n - 1).fill(0) };
+      const part = seq.slice(start, end + 1);
+      const chord = part.some(function (k) { return k.chord; });
+      const key = part.map(function (k) { return k.label; }).join(chord ? ARROW : "");
+      const e = map.get(key) || { values: [], tags: [], stepSums: new Array(n - 1).fill(0), chord: chord,
+        kind: part.map(function (k) { return k.chord ? "c" : "s"; }).join("") };
       e.values.push((seq[end].t - seq[start].t) / (n - 1)); // 1回ごとの値（分布・標準偏差に使う）
       for (let i = start; i < end; i++) e.stepSums[i - start] += seq[i + 1].t - seq[i].t;
       e.tags.push(tag || null);
@@ -644,8 +729,20 @@ const NGram = (function () {
     return map;
   }
 
-  // accumulate の結果を一覧表の行 { gram, avg, sd, count, values, tags, steps } にする（tags は values と同じ並びで、その値の記録。
-  // steps は中の間隔ごとの平均。trigram なら [1つ目, 2つ目]）
+  // 生データの events から、同時押しの組ごとのずれ（組の最初のキーから最後のキーまでの時間）を map に足し込む。
+  // 結果は accumulate と同じ形で、toRows で行にできる。間違えたキーを含む組は数えない
+  function accumulateSpreads(map, events, skip, chords) {
+    keySequence(events, skip, chords).forEach(function (s) {
+      if (!s.chord || !s.ok) return;
+      const e = map.get(s.label) || { values: [], tags: [], stepSums: [], chord: true, kind: "c" };
+      e.values.push(s.t - s.first);
+      map.set(s.label, e);
+    });
+    return map;
+  }
+
+  // accumulate の結果を一覧表の行 { gram, avg, sd, count, values, tags, steps, chord, kind } にする（tags は values と同じ並びで、その値の記録。
+  // steps は中の間隔ごとの平均。trigram なら [1つ目, 2つ目]。chord は同時押しの組を含むか、kind は accumulate と同じ）
   // sd は IKI の標本標準偏差（n-1 で割る）。1回しか出ないものは null
   function toRows(map) {
     return Array.from(map, function (entry) {
@@ -656,7 +753,8 @@ const NGram = (function () {
         ? Math.sqrt(values.reduce(function (a, v) { return a + (v - avg) * (v - avg); }, 0) / (count - 1))
         : null;
       const steps = entry[1].stepSums.map(function (s) { return s / count; });
-      return { gram: entry[0], avg: avg, sd: sd, count: count, values: values, tags: entry[1].tags, steps: steps };
+      return { gram: entry[0], avg: avg, sd: sd, count: count, values: values, tags: entry[1].tags, steps: steps,
+        chord: !!entry[1].chord, kind: entry[1].kind };
     });
   }
 
@@ -673,5 +771,5 @@ const NGram = (function () {
     return el;
   }
 
-  return { create: create, accumulate: accumulate, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution, drawScatter: drawScatter };
+  return { create: create, accumulate: accumulate, accumulateSpreads: accumulateSpreads, chordsOf: chordsOf, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution, drawScatter: drawScatter };
 })();

@@ -76,7 +76,7 @@
         if (b) {
           const key = b.lang + "\t" + b.keyLayout;
           if (!biGroups.has(key)) biGroups.set(key, new Map());
-          NGram.accumulate(biGroups.get(key), 2, raw.events);
+          NGram.accumulate(biGroups.get(key), 2, raw.events, null, null, NGram.chordsOf(raw, layouts));
         }
       }).then(function () {
         const all = [];

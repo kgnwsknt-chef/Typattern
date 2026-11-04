@@ -23,17 +23,9 @@ const Typer = (function () {
   // お題1つ分の入力の状態を作る
   // term：同時押しの判定時間(ms)。割り当て表に同時押しがあるとき（optionsFn.chords。js/kana-layout.js）だけ使う
   function create(text, optionsFn, term) {
-    // 同時押しの組（物理キーの番号を並べた名前 "27 28"）。組の最初のキーから term 以内に全部押し、どれも離していなければ同時押し
-    const chordNames = new Set();
-    let chordMax = 0;
-    if (optionsFn.chords && term) {
-      optionsFn.chords.forEach(function (g) {
-        chordNames.add(g.map(keyNum).sort().join(" "));
-        chordMax = Math.max(chordMax, g.length);
-      });
-    }
-    let recent = [];       // 直近に押したキー { num, time }（同時押しを見分けるのに使う。Backspace で空にする）
-    let pos = 0;           // 確定したかなの数（次に打つかなの位置）
+    // 同時押しの組がそろったかを見分けるもの。組の最初のキーから term 以内に全部押し、どれも離していなければ同時押し
+    const finder = optionsFn.chords && optionsFn.chords.length && term ? KanaLayout.chordFinder(optionsFn.chords, term) : null;
+    let pos = 0;          // 確定したかなの数（次に打つかなの位置）
     let pending = "";      // 今のかなに打ちかけのキー
     let pendingStart = null; // 打ちかけの最初のキーの直前のキーの時刻
     let lastTime = null;   // 直前のキー（Backspace を含む）の時刻
@@ -74,23 +66,11 @@ const Typer = (function () {
       }
     }
 
-    // このキーで、直前に押したキーと合わせて同時押しの組がそろったか（組の最初のキーから term 以内で、前のキーをどれも離していない）
-    function formedChord(num, time, held) {
-      for (let n = chordMax; n >= 2; n--) {
-        const prev = recent.slice(-(n - 1));
-        if (prev.length < n - 1 || time - prev[0].time > term) continue;
-        if (!prev.every(function (p) { return held.has(p.num); })) continue;
-        const nums = prev.map(function (p) { return p.num; }).concat([num]);
-        if (new Set(nums).size === n && chordNames.has(nums.sort().join(" "))) return true;
-      }
-      return false;
-    }
-
     // 打ち方 o の i 番目のキーとして、今のキーを受け付けられるか（同時押しの決まり。docs/measurement.md の「かな配列」）
     //   同時押しの2つ目から後：同じ組の前のキーを、組の最初のキーから term 以内に押していて、どれもまだ離していない
     //   それ以外：このキーで同時押しの組がそろっていない（そろったら、お題にかかわらず同時押しなので、順に押す並びには合わない）
     function fits(o, i, ctx) {
-      if (!chordNames.size) return true;
+      if (!finder) return true;
       const r = (o.chords || []).filter(function (c) { return c[0] < i && i < c[1]; })[0];
       if (r) {
         const keys = pendingKeys.slice(r[0], i);
@@ -106,11 +86,7 @@ const Typer = (function () {
     function press(ch, time, held) {
       const num = keyNum(ch);
       const ctx = { time: time, held: held || new Set(), formed: false };
-      if (chordNames.size) {
-        ctx.formed = formedChord(num, time, ctx.held);
-        recent.push({ num: num, time: time });
-        if (recent.length > chordMax) recent.shift();
-      }
+      if (finder) ctx.formed = finder.press(num, time, ctx.held) > 0;
       // 打ち方 o が、打ちかけ＋今のキー s で始まり、今のキーを受け付けられるか
       const starts = function (o, s) { return o.seq.indexOf(s) === 0 && fits(o, s.length - 1, ctx); };
       const confirmed = [];
@@ -174,7 +150,7 @@ const Typer = (function () {
     // 返り値は消したまとまりの一覧（前から順。打ちかけのキーを消したときは空）。後ろの1文字だけ消したときは、その1文字の { pos, len: 1 }
     function backspace(time) {
       lastTime = time;
-      recent = [];
+      if (finder) finder.reset();
       if (pending) {
         pending = pending.slice(0, -1);
         pendingKeys.pop();
