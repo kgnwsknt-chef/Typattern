@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=127">
+  <link rel="stylesheet" href="style.css?v=128">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -64,6 +64,11 @@
         <label class="setting-label" for="s-chord">同時押しの判定時間</label>
         <span class="setting-input"><input id="s-chord" class="layout-select setting-number" type="number" data-setting="chordTerm"> ms</span>
         <p class="setting-help">同時押しのあるかな配列で使います。同時押しの組の最初のキーを押してから、この時間のうちに組のキーを全部押せば（どれも離さずに）同時押しとみなします。キー配列のページの試し打ちも同じです。<span class="setting-range"></span></p>
+      </div>
+      <div class="setting">
+        <label class="setting-label" for="s-hold">長押しシフトの判定時間</label>
+        <span class="setting-input"><input id="s-hold" class="layout-select setting-number" type="number" data-setting="holdTerm"> ms</span>
+        <p class="setting-help">長押しシフトのあるかな配列で使います。シフトのキーをこの時間より長く押していたら、シフトとみなします。この時間のうちでも、次のキーを先に離せばシフト、シフトのキーを先に離せば順に打ったものとみなします。キー配列のページの試し打ちも同じです。<span class="setting-range"></span></p>
       </div>
       <div class="setting">
         <label class="setting-label" for="s-rhythm">キーごとの間隔の棒の最大</label>
@@ -184,12 +189,12 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=127"></script>
-  <script src="js/keys.js?v=127"></script>
-  <script src="js/settings.js?v=127"></script>
-  <script src="js/keyboard-shapes.js?v=127"></script>
-  <script src="js/key-map.js?v=127"></script>
-  <script src="js/page-footer.js?v=127"></script>
-  <script src="js/settings-page.js?v=127"></script>
+  <script src="js/store.js?v=128"></script>
+  <script src="js/keys.js?v=128"></script>
+  <script src="js/settings.js?v=128"></script>
+  <script src="js/keyboard-shapes.js?v=128"></script>
+  <script src="js/key-map.js?v=128"></script>
+  <script src="js/page-footer.js?v=128"></script>
+  <script src="js/settings-page.js?v=128"></script>
 </body>
 </html>

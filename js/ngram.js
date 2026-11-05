@@ -635,35 +635,60 @@ const NGram = (function () {
   function keySequence(events, skip, chords) {
     const seq = [];
     const shiftDown = new Set(); // 押されている Shift の番号（"u" の行で離す。Shift 以外のキーの "u" の行は何もしない）
-    const finder = chords ? KanaLayout.chordFinder(chords.groups, chords.term) : null;
+    const finder = chords && chords.groups.length && chords.term ? KanaLayout.chordFinder(chords.groups, chords.term) : null;
+    const hold = chords && chords.holdFinder && chords.holdTerm ? chords.holdFinder(chords.holdTerm) : null;
     const held = new Set(); // 押されているキーの番号（同時押しの組を見分けるのに使う）
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
     const hasUp = events.some(function (e) { return e[1] === "u"; });
+
+    // 1キーを並びに足す。before は今のキーを押す前に押されていたキー（同時押しの組を見分けるのに使う）
+    function addKey(e, before) {
+      const label = Keys.label(e[2]);
+      seq.push({ t: e[0], first: e[0], label: label, keys: [label], ok: isOk(e, label), chord: false });
+      if (finder) {
+        if (e[2] === Keys.BACKSPACE) finder.reset();
+        else {
+          const n = finder.press(e[2], e[0], before);
+          if (n) mergeChord(seq, n);
+        }
+      }
+    }
+    function isOk(e, label) {
+      return e[4] === 1 && shiftDown.size === 0 && label !== null && e[2] !== Keys.SPACE && e[2] !== Keys.BACKSPACE &&
+        !(skip && skip.has(e[3]));
+    }
+    // 長押しシフトの見分けが決めた打鍵を足す。シフトのキーとの組は、時刻がそのキーを押した時刻の1打（ずれは数えない）
+    function strokes(list) {
+      list.forEach(function (s) {
+        if (s.keys.length === 1) addKey(s.ref, new Set(held));
+        else seq.push({ t: s.ref[0], first: s.ref[0], label: s.label, keys: s.keys, ok: isOk(s.ref, s.label), chord: true, hold: true });
+      });
+    }
+
     events.forEach(function (e) {
       if (e[1] === "u") {
         shiftDown.delete(e[2]);
         held.delete(e[2]);
+        if (hold) strokes(hold.up(e[2], e[0]));
       } else if (e[1] === "k") {
         const before = finder ? new Set(held) : null; // 今のキーを押す前に押されていたキー
         held.add(e[2]);
         if (Keys.isShiftNumber(e[2])) {
           shiftDown.add(e[2]);
+          if (hold) strokes(hold.tick(e[0]));
           return;
         }
-        const label = Keys.label(e[2]);
-        const ok = e[4] === 1 && shiftDown.size === 0 && label !== null && e[2] !== Keys.SPACE && e[2] !== Keys.BACKSPACE &&
-          !(skip && skip.has(e[3]));
-        seq.push({ t: e[0], first: e[0], label: label, keys: [label], ok: ok, chord: false });
-        if (finder) {
-          if (e[2] === Keys.BACKSPACE) finder.reset();
-          else {
-            const n = finder.press(e[2], e[0], before);
-            if (n) mergeChord(seq, n);
-          }
+        if (!hold) addKey(e, before);
+        else if (e[2] === Keys.BACKSPACE) {
+          strokes(hold.flush(e[0]));
+          addKey(e, before);
+        } else {
+          strokes(hold.down(Keys.charOf(e[2], shiftDown.size > 0) || "\u0000", e[0], e, e[2]));
         }
         if (!hasUp) shiftDown.clear();
       }
     });
+    if (hold) strokes(hold.tick(Infinity));
     return seq;
   }
 
@@ -687,16 +712,18 @@ const NGram = (function () {
     });
   }
 
-  // その回の同時押しの組を見分けるのに使うもの { groups, term }。同時押しのない回と、配列が消えていて分からない回は null
+  // その回の同時押しの組と長押しシフトを見分けるのに使うもの { groups, term, holdFinder, holdTerm }。
+  // どちらもない回と、配列が消えていて分からない回は null
   //   layouts：登録した配列（Store.getAllLayouts の結果）
-  const chordGroups = new WeakMap(); // 配列 → 組の一覧（同じ配列の回で作り直さない）
+  const layoutOptions = new WeakMap(); // 配列 → 打ち方の一覧（同じ配列の回で作り直さない）
   function chordsOf(raw, layouts) {
-    if (!raw.chordTerm) return null;
+    if (!raw.chordTerm && !raw.holdTerm) return null;
     const layout = layouts.find(function (l) { return l.id === raw.keyLayout; });
     if (!layout) return null;
-    if (!chordGroups.has(layout)) chordGroups.set(layout, KanaLayout.create(layout.entries).options.chords);
-    const groups = chordGroups.get(layout);
-    return groups.length ? { groups: groups, term: raw.chordTerm } : null;
+    if (!layoutOptions.has(layout)) layoutOptions.set(layout, KanaLayout.create(layout.entries).options);
+    const o = layoutOptions.get(layout);
+    if (!o.chords.length && !o.holdFinder) return null;
+    return { groups: o.chords, term: raw.chordTerm, holdFinder: o.holdFinder, holdTerm: raw.holdTerm };
   }
 
   // 生データの events から、連続する n 個のキーごとの IKI を map に足し込む
@@ -733,7 +760,7 @@ const NGram = (function () {
   // 結果は accumulate と同じ形で、toRows で行にできる。間違えたキーを含む組は数えない
   function accumulateSpreads(map, events, skip, chords) {
     keySequence(events, skip, chords).forEach(function (s) {
-      if (!s.chord || !s.ok) return;
+      if (!s.chord || s.hold || !s.ok) return; // 長押しシフトのずれは数えない（時間の上限がないため）
       const e = map.get(s.label) || { values: [], tags: [], stepSums: [], chord: true, kind: "c" };
       e.values.push(s.t - s.first);
       map.set(s.label, e);

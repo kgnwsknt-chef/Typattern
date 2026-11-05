@@ -23,7 +23,7 @@
   const lastEl = document.getElementById("trial-last");
 
   const LEGEND_QWERTY = "左上の小さな数字は物理キーの番号（行＋列。列は16進数）。大きい文字は Shift なし、右上の小さい文字は Shift を押したときの文字。";
-  const LEGEND_KANA = "左上の小さな数字は物理キーの番号、右下の小さな文字はそのキーの QWERTY の文字。大きい文字は、表示中のシフト面でそのキーを押したときのかな（右上は Shift を押したとき）。外形線がオレンジのキーは前置シフト、紫のキーは後置シフト（両方なら二重線）、緑のキーは同時押しシフト。";
+  const LEGEND_KANA = "左上の小さな数字は物理キーの番号、右下の小さな文字はそのキーの QWERTY の文字。大きい文字は、表示中のシフト面でそのキーを押したときのかな（右上は Shift を押したとき）。外形線がオレンジのキーは前置シフト、紫のキーは後置シフト（両方なら二重線）、緑のキーは同時押しシフト・長押しシフト。";
   const LEGEND_ENG = "左上の小さな数字は物理キーの番号。大きい文字はそのキーを押したときの文字（右上は Shift を押したとき。英字の大文字は書かない）、右下の小さな文字は入れ替えたキーの QWERTY の文字。";
 
   // 配列の一覧。QWERTY は最初から入っている。かな配列・英語の配列は割り当て表を読み込むと足す（まだ保存はしない）
@@ -138,7 +138,7 @@
     const get = layout.kana.get;
     const chordView = function (g) {
       return {
-        label: g.keys.map(function (k) { return "「" + k + "」"; }).join("か") + "と同時に押したとき",
+        label: g.keys.map(function (k) { return "「" + k + "」"; }).join("か") + (g.hold ? "を押しながら押したとき" : "と同時に押したとき"),
         kana: function (ch) { return ch === null ? null : g.kana(ch); }
       };
     };
@@ -187,7 +187,9 @@
     const shifts = layout.kana.shiftKeys(SHIFT_MIN);
     shifts.prefix.forEach(function (k) { add("p:" + k, "前置シフト「" + k + "」"); });
     shifts.postfix.forEach(function (k) { add("s:" + k, "後置シフト「" + k + "」"); });
-    layout.kana.chordShifts(SHIFT_MIN).forEach(function (g, i) { add("c:" + i, "同時押しシフト「" + g.keys.join("・") + "」"); });
+    layout.kana.chordShifts(SHIFT_MIN).forEach(function (g, i) {
+      add("c:" + i, (g.hold ? "長押しシフト" : "同時押しシフト") + "「" + g.keys.join("・") + "」");
+    });
   }
 
   function span(className, text) {
@@ -226,7 +228,7 @@
     // 英語の配列も同じ変換器で打つ（1キー → 1文字なので、押すたびにすぐ確定する）
     // 同時押しのあるかな配列は、設定の判定時間で同時押しを見分ける（docs/layouts.md の「同時押し」）
     hasChord = layout.type === "kana" && KanaLayout.hasChord(layout.entries);
-    conv = layout.type !== "qwerty" ? layout.kana.converter(Settings.get("chordTerm")) : null;
+    conv = layout.type !== "qwerty" ? layout.kana.converter(Settings.get("chordTerm"), Settings.get("holdTerm")) : null;
     clearTimeout(chordTimer);
     downChars = {};
     lastEl.textContent = "";
@@ -277,22 +279,24 @@
   function waitChord() {
     clearTimeout(chordTimer);
     if (!conv || !conv.state().waiting) return;
+    const layout = current();
+    const term = layout.kana.options.holdFinder ? Settings.get("holdTerm") : Settings.get("chordTerm");
     chordTimer = setTimeout(function () {
       if (conv && conv.tick(performance.now())) {
         renderOutput();
         drawLabels();
       }
-    }, Settings.get("chordTerm") + 5);
+    }, term + 5);
   }
 
   trialEl.addEventListener("keyup", function (e) {
     setPressed(e.code, false);
     if (conv && downChars[e.code] !== undefined) {
       const waiting = conv.state().waiting;
-      conv.release(downChars[e.code]);
+      conv.release(downChars[e.code], e.timeStamp);
       delete downChars[e.code];
-      if (waiting && !conv.state().waiting) {
-        clearTimeout(chordTimer);
+      if (waiting) {
+        if (!conv.state().waiting) clearTimeout(chordTimer);
         renderOutput();
       }
       if (hasChord) drawLabels(); // 自動のシフト面は、同時押しシフトのキーを離したら戻す
@@ -307,7 +311,7 @@
   trialEl.addEventListener("blur", function () {
     Object.keys(keyEls).forEach(function (id) { keyEls[id].classList.remove("pressed"); });
     heldShifts.clear();
-    if (conv) Object.keys(downChars).forEach(function (code) { conv.release(downChars[code]); });
+    if (conv) Object.keys(downChars).forEach(function (code) { conv.release(downChars[code], performance.now()); });
     downChars = {};
     keyboardEl.classList.remove("shift-on");
     renderOutput();

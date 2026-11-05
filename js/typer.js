@@ -82,8 +82,9 @@ const Typer = (function () {
 
     // キーを1つ押す。ch は US キーボードの文字、time は押した時刻
     // held：押されているキーの物理キーの番号の Set（今のキーは含めない。同時押しを見分けるのに使う。同時押しのない配列では要らない）
+    // label：キーの一覧に残す名前（長押しシフトの打鍵は ch が判定用の1文字なので、"d+j" を渡す。省略時は ch）
     // 返り値 { pos: このキーを当てたかなの位置, judge: 正解 1・ミス 0, confirmed: このキーで確定したまとまり（飛ばしたかなを含む） }
-    function press(ch, time, held) {
+    function press(ch, time, held, label) {
       const num = keyNum(ch);
       const ctx = { time: time, held: held || new Set(), formed: false };
       if (finder) ctx.formed = finder.press(num, time, ctx.held) > 0;
@@ -107,7 +108,7 @@ const Typer = (function () {
         lastTime = time;
         return { pos: at, judge: 0, confirmed: confirmed };
       }
-      const key = { ch: ch, time: time, prev: lastTime };
+      const key = { ch: label || ch, time: time, prev: lastTime };
       if (pending === "") pendingStart = lastTime;
       const s = pending + ch;
       let judge;

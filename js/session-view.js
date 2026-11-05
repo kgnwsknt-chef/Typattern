@@ -17,10 +17,28 @@ const SessionView = (function () {
     // "u" の行（Shift を離した）を記録する前の記録では、Shift の次の1キーだけを Shift と同時に押したとみなす
     const hasUp = raw.events.some(function (e) { return e[1] === "u"; });
     const added = []; // 再現した "+" の行 [時刻, かな, 位置, 判定]
+    // 長押しシフトのある配列の記録は、打ったときの判定時間（raw.holdTerm）で、打ったときと同じように打鍵を見分ける
+    const hold = optionsFn.holdFinder && raw.holdTerm ? optionsFn.holdFinder(raw.holdTerm) : null;
+
+    // 1打分を判定にかける
+    function enter(ch, time, before, e, label) {
+      const expected = observe ? typer.expect() : null;
+      const shiftOn = shiftDown.size > 0;
+      const r = typer.press(ch, time, before, label);
+      if (observe) observe(e, expected, r, shiftOn);
+      r.confirmed.forEach(function (u) {
+        for (let j = 0; j < u.len; j++) added.push([u.time, raw.text[u.pos + j], u.pos + j, u.correct ? 1 : 0]);
+      });
+    }
+    function strokes(list) {
+      list.forEach(function (s) { enter(s.tok, s.time, new Set(held), s.ref, s.label); });
+    }
+
     raw.events.forEach(function (e) {
       if (e[1] === "u") {
         shiftDown.delete(e[2]);
         held.delete(e[2]);
+        if (hold) strokes(hold.up(e[2], e[0]));
         return;
       }
       if (e[1] !== "k") return;
@@ -29,25 +47,23 @@ const SessionView = (function () {
       held.add(e[2]);
       if (Keys.isShiftNumber(e[2])) {
         shiftDown.add(e[2]);
+        if (hold) strokes(hold.tick(e[0]));
         return;
       }
       if (e[2] === Keys.BACKSPACE) {
+        if (hold) strokes(hold.flush(e[0]));
         typer.backspace(e[0]);
         if (observe) observe(e, null, null, shiftDown.size > 0);
         return;
       }
-      const expected = observe ? typer.expect() : null;
-      const shiftOn = shiftDown.size > 0;
       // 文字のないキー（JIS の「ろ」など）は、どの打ち方にも合わない文字として渡す（タイピング画面と同じ）
-      let ch = Keys.charOf(e[2], shiftOn);
+      let ch = Keys.charOf(e[2], shiftDown.size > 0);
       if (eng && ch !== null) ch = eng.toChar(ch);
-      const r = typer.press(ch || "\u0000", e[0], before);
-      if (observe) observe(e, expected, r, shiftOn);
-      r.confirmed.forEach(function (u) {
-        for (let j = 0; j < u.len; j++) added.push([u.time, raw.text[u.pos + j], u.pos + j, u.correct ? 1 : 0]);
-      });
+      if (hold) strokes(hold.down(ch || "\u0000", e[0], e, e[2]));
+      else enter(ch || "\u0000", e[0], before, e);
       if (!hasUp) shiftDown.clear();
     });
+    if (hold) strokes(hold.tick(Infinity)); // 最後のキーが時間で決まったとき
     const recorded = raw.events.filter(function (e) { return e[1] === "+"; });
     const same = typer.done() && recorded.length === added.length && recorded.every(function (e, i) {
       const a = added[i];

@@ -4,6 +4,8 @@
 const KanaLayout = (function () {
   "use strict";
 
+  const HOLD_ROW = "shift"; // 割り当て表の entries の、長押しシフトのキーを持つ行の名前
+
   // 割り当て表の文字列を読む。返り値 { entries: [[キーの並び, かな], …], errors: [{ line: 行番号, text: 行, reason: 理由 }, …], romaji: ローマ字から直した行の数 }
   // 1行に1つ。次の2つの形を読める。空の行と、# か // で始まる行は読み飛ばす
   //   {"j'", "ぴ"},      … 波かっこと二重引用符の形（行末のカンマはあってもなくてもよい。\" と \\ が使える）
@@ -13,13 +15,15 @@ const KanaLayout = (function () {
   // キーの並びの + は同時押し（j+k。docs/layouts.md の「同時押し」）。同時押しの中のキーは文字の順に並べてそろえる
   // 割り当て表の各行を「キーの並び」と「出す文字」に分け、row(keys, out, 行番号, 行) を呼ぶ（かな配列・英語の配列で共通）
   // 分けられない行は errors に足す（理由は what の「キーの並びと○○に分けられません」）
-  function readLines(text, what, errors, row) {
+  // special(行, 行番号) を渡すと、先に呼ぶ。true を返した行は読み終えたものとする
+  function readLines(text, what, errors, row, special) {
     const BRACE = /^\{\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"\s*\}\s*,?$/;
     const SPACED = /^(\S+)\s+(\S+)$/; // \s はタブ・半角スペース・全角スペースを含む
     const unescape = function (s) { return s.replace(/\\(.)/g, "$1"); };
     text.split(/\r?\n/).forEach(function (raw, i) {
       const line = raw.trim();
       if (!line || line[0] === "#" || line.indexOf("//") === 0) return;
+      if (special && special(line, i + 1)) return;
       let keys = null;
       let out = null;
       const m = BRACE.exec(line);
@@ -43,6 +47,7 @@ const KanaLayout = (function () {
     const map = new Map();
     const errors = [];
     let romaji = 0;
+    let holdKeys = []; // 長押しシフトのキー（「shift d k」の行。docs/layouts.md の「長押しシフト」）
     readLines(text, "かな", errors, function (keys, kana, lineNo, line) {
       const i = lineNo - 1;
       // + は同時押しの印。同時押しの中のキーは決まった順に並べてそろえる（k+j も j+k にする）
@@ -62,8 +67,15 @@ const KanaLayout = (function () {
         romaji++;
       }
       map.set(joinGroups(g.groups), kana);
+    }, function (line) {
+      if (!/^shift(\s+\S)+$/.test(line)) return false;
+      holdKeys = line.split(/\s+/).slice(1);
+      return true;
     });
-    return { entries: Array.from(map), errors: errors, romaji: romaji };
+    const entries = Array.from(map);
+    // 長押しシフトのキーは、割り当て表の行と一緒に保存できるよう、特別な1行として持つ（create で取り出す）
+    if (holdKeys.length) entries.unshift([HOLD_ROW, holdKeys.join(" ")]);
+    return { entries: entries, errors: errors, romaji: romaji };
   }
 
   // かな配列のキーの並びを、続けて押すまとまりに分ける（+ でつないだキーは1つのまとまり＝同時押し）
@@ -138,11 +150,174 @@ const KanaLayout = (function () {
     };
   }
 
+  // 長押しシフトの見分け（決まりは docs/measurement.md の「長押しシフト」）。キーを押す・離すたびに呼び、決まった打鍵の一覧を返す
+  //   holdKeys：シフトのキーの文字の一覧。hasRow(keys)：そのキーの組の行が割り当て表にあるか。tokenOf(keys)：判定（js/typer.js）に渡す1文字
+  //   term：判定時間(ms)。これより長く押したシフトのキーは、シフトと決める
+  //   down(ch, time, ref, id)：キーを押した。ref は打鍵の記録（返す打鍵に入れて返す）、id はそのキーの名前（up に渡す）
+  //   up(id, time)：キーを離した。tick(time)：時間だけ進める。flush(time)：決まっていないキーを順に打ったものとして決める（Backspace のとき）
+  //   nextAt()：次に時間で決まる時刻（なければ null）。waiting()：決まっていないキーの文字の一覧
+  //   打鍵 { tok: 判定に渡す文字, keys: キーの文字の一覧（文字の順）, label: "d+j" か "d", time: そのキーを押した時刻,
+  //     ref: そのキーの記録, refs: 初めて使ったシフトのキーの記録の一覧 }
+  function holdFinder(holdKeys, hasRow, tokenOf, term) {
+    // 押している途中のキー { ch, id, time, ref, shift, active: シフトと決まった, used: シフトとして打った }
+    // シフトのキーと、シフトかどうかを待っているキーだけを持つ
+    let presses = [];
+
+    const latestShift = function (before) {
+      const end = before === undefined ? presses.length : before;
+      for (let i = end - 1; i >= 0; i--) if (presses[i].shift) return presses[i];
+      return null;
+    };
+    const remove = function (p) { presses = presses.filter(function (x) { return x !== p; }); };
+
+    // そのキーだけを打った。シフト専用のキー（単独の行がない）は何も打たない
+    function tap(p, out) {
+      remove(p);
+      if (p.shift && !hasRow([p.ch])) return;
+      out.push({ tok: p.ch, keys: [p.ch], label: p.ch, time: p.time, ref: p.ref, refs: [] });
+    }
+
+    // シフトのキー sh と p を合わせて打った。押しているシフトのキー全部の行があれば、そちらを使う
+    function combo(p, sh, out) {
+      remove(p);
+      const all = presses.filter(function (x) { return x.shift; }).concat([p]);
+      const parts = all.length > 2 && hasRow(all.map(function (x) { return x.ch; })) ? all : [sh, p];
+      const keys = parts.map(function (x) { return x.ch; }).sort();
+      const shifts = parts.filter(function (x) { return x !== p; });
+      const refs = shifts.filter(function (x) { return !x.used; }).map(function (x) { return x.ref; });
+      shifts.forEach(function (x) { x.used = true; x.active = true; });
+      out.push({ tok: tokenOf(keys), keys: keys, label: keys.join("+"), time: p.time, ref: p.ref, refs: refs });
+    }
+
+    // 押しているシフトのキー全部と p の行（3キー以上）があるか
+    function allRow(p) {
+      const keys = presses.filter(function (x) { return x.shift; }).map(function (x) { return x.ch; }).concat([p.ch]);
+      return keys.length > 2 && hasRow(keys);
+    }
+
+    // sh をシフトと決める。それより前の、まだ決まっていないシフトのキーは順に打ったものとする
+    // （待っているキーと合わせて3キー以上の行になるときは、それらもシフトとする）
+    function activate(sh, out) {
+      const together = presses.some(function (x) { return !x.shift && allRow(x); });
+      presses.slice(0, presses.indexOf(sh)).forEach(function (x) {
+        if (!x.shift || x.active) return;
+        if (together) x.active = true;
+        else tap(x, out);
+      });
+      sh.active = true;
+      bind(out);
+    }
+
+    // 待っているキーのうち、すぐ前のシフトのキーがシフトと決まったものを打つ。すぐ前にシフトのキーがなければ、そのキーだけを打つ
+    function bind(out) {
+      presses.slice().forEach(function (p) {
+        if (p.shift) return;
+        const sh = latestShift(presses.indexOf(p));
+        if (!sh) tap(p, out);
+        else if (sh.active) hit(p, sh, out);
+      });
+    }
+
+    // シフトと決まった sh を押している間に p を押した。行がなければ、p だけを打ったものとする
+    function hit(p, sh, out) {
+      if (hasRow([sh.ch, p.ch]) || allRow(p)) combo(p, sh, out);
+      else tap(p, out);
+    }
+
+    function advance(time, out) {
+      presses.slice().forEach(function (p) {
+        if (p.shift && !p.active && presses.indexOf(p) !== -1 && time - p.time > term) activate(p, out);
+      });
+    }
+
+    // シフトのキーでないキー p を押した
+    function place(p, out) {
+      const sh = latestShift();
+      if (!sh) {
+        presses.push(p);
+        tap(p, out);
+      } else if (sh.active) {
+        presses.push(p);
+        hit(p, sh, out);
+      } else if (hasRow([sh.ch, p.ch]) || allRow(p)) {
+        presses.push(p); // シフトかどうかを待つ
+      } else {
+        // 組の行がないので、シフトではない。sh と、それより前のまだ決まっていないシフトのキーは順に打ったものとする
+        presses.slice(0, presses.indexOf(sh) + 1).forEach(function (x) { if (x.shift && !x.active) tap(x, out); });
+        bind(out);
+        place(p, out);
+      }
+    }
+
+    return {
+      down: function (ch, time, ref, id) {
+        const out = [];
+        advance(time, out);
+        const p = { ch: ch, id: id, time: time, ref: ref, shift: holdKeys.indexOf(ch) !== -1, active: false, used: false };
+        if (p.shift) presses.push(p);
+        else place(p, out);
+        return out;
+      },
+      up: function (id, time) {
+        const out = [];
+        advance(time, out);
+        const p = presses.filter(function (x) { return x.id === id; })[0];
+        if (!p) return out;
+        if (!p.shift) {
+          // 待っているキーを先に離した：すぐ前のシフトのキーはシフト
+          activate(latestShift(presses.indexOf(p)), out);
+          return out;
+        }
+        if (p.used) {
+          remove(p);
+          bind(out);
+          return out;
+        }
+        // シフトとして使わずに離した：前に押しているシフトのキーとの組か、そのキーだけを打った
+        const at = presses.indexOf(p);
+        const before = latestShift(at);
+        if (before && hasRow([before.ch, p.ch])) {
+          if (!before.active) activate(before, out);
+          combo(p, before, out);
+        } else {
+          if (before && !before.active) tap(before, out);
+          tap(p, out);
+        }
+        bind(out);
+        return out;
+      },
+      tick: function (time) {
+        const out = [];
+        advance(time, out);
+        return out;
+      },
+      flush: function (time) {
+        const out = [];
+        advance(time, out);
+        presses.slice().forEach(function (p) { if (!p.active) tap(p, out); });
+        return out;
+      },
+      nextAt: function () {
+        const list = presses.filter(function (p) { return p.shift && !p.active; });
+        return list.length ? list[0].time + term : null;
+      },
+      waiting: function () {
+        return presses.filter(function (p) { return !p.active; }).map(function (p) { return p.ch; });
+      }
+    };
+  }
+
   // 同時押しのまとまりを、押す順のすべての並べ方にする（[["j","k"],["l"]] → "jkl"・"kjl"）
   //   返り値 [{ seq: キーの並び（+ なし）, chords: [[始まり, 終わり（含まない）], …]（同時押しの位置。なければ空） }]
-  function orders(groups) {
+  //   tokenOf(まとまり)：長押しシフトのまとまりなら判定に渡す1文字を返す（押す順は見分け（holdFinder）が決めるので、並べ方は1つ）
+  function orders(groups, tokenOf) {
     let res = [{ seq: "", chords: [] }];
     groups.forEach(function (g) {
+      const tok = tokenOf ? tokenOf(g) : null;
+      if (tok) {
+        res = res.map(function (r) { return { seq: r.seq + tok, chords: r.chords }; });
+        return;
+      }
       const perms = permutations(g);
       const next = [];
       res.forEach(function (r) {
@@ -208,8 +383,29 @@ const KanaLayout = (function () {
   }
 
   // 読み込んだ表から、変換と配列図に使う形を作る
-  function create(entries) {
+  function create(allEntries) {
+    // 長押しシフトのキー（「shift d k」の行）を取り出す
+    const holdRow = allEntries.filter(function (e) { return e[0] === HOLD_ROW; })[0];
+    const holdKeys = holdRow ? holdRow[1].split(" ") : [];
+    const entries = holdRow ? allEntries.filter(function (e) { return e !== holdRow; }) : allEntries;
     const table = new Map(entries);
+    // 長押しシフトの組を1文字で表す（判定では1打として扱うため。私用領域の文字を使う）
+    const holdTokens = new Map(); // "d+j" → 文字
+    const holdNames = new Map();  // 文字 → "d+j"
+    const holdToken = function (keys) {
+      const name = keys.slice().sort().join("+");
+      if (!holdTokens.has(name)) {
+        const c = String.fromCharCode(0xE000 + holdTokens.size);
+        holdTokens.set(name, c);
+        holdNames.set(c, name);
+      }
+      return holdTokens.get(name);
+    };
+    const isHold = function (g) {
+      return g.length > 1 && g.some(function (k) { return holdKeys.indexOf(k) !== -1; });
+    };
+    const groupToken = function (g) { return isHold(g) ? holdToken(g) : null; };
+    const hasRow = function (keys) { return table.has(keys.slice().sort().join("+")); };
     // キーの並びを、続けて押すまとまり（1キーか、同時押しの "j+k"）に分ける。英語の配列の "+" は1キー
     const tokensOf = function (keys) {
       return keys.length > 1 && keys.indexOf("+") !== -1
@@ -240,12 +436,13 @@ const KanaLayout = (function () {
     byKana.forEach(function (list) { list.sort(function (a, b) { return keyCount(a) - keyCount(b); }); });
 
     // 同時押しの組（2キー以上のまとまり）の一覧 [["j","k"], …]。js/typer.js で、順に押す並びと見分けるのに使う
+    // 長押しシフトのキーを含む組は入れない（長押しシフトの見分けで決める）
     const chords = [];
     const chordSeen = new Set();
     entries.forEach(function (e) {
       if (e[0].indexOf("+") === -1 || e[0].length === 1) return;
       groupsOf(e[0]).groups.forEach(function (g) {
-        if (g.length < 2 || chordSeen.has(g.join("+"))) return;
+        if (g.length < 2 || isHold(g) || chordSeen.has(g.join("+"))) return;
         chordSeen.add(g.join("+"));
         chords.push(g);
       });
@@ -255,7 +452,7 @@ const KanaLayout = (function () {
     const orderCache = new Map();
     function ordersOf(keys) {
       if (!orderCache.has(keys)) {
-        orderCache.set(keys, keys.length > 1 && keys.indexOf("+") !== -1 ? orders(groupsOf(keys).groups) : [{ seq: keys, chords: [] }]);
+        orderCache.set(keys, keys.length > 1 && keys.indexOf("+") !== -1 ? orders(groupsOf(keys).groups, groupToken) : [{ seq: keys, chords: [] }]);
       }
       return orderCache.get(keys);
     }
@@ -277,6 +474,9 @@ const KanaLayout = (function () {
     }
     // 判定（js/typer.js）が、順に押す並びと同時押しを見分けるのに使う
     options.chords = chords;
+    // 長押しシフトのある配列の、見分けを作る関数（term は判定時間）。なければ null
+    const makeHold = function (term) { return holdFinder(holdKeys, hasRow, holdToken, term); };
+    options.holdFinder = holdKeys.length ? makeHold : null;
 
     // s で始まり、s より長い並びがあるか
     function hasLonger(s) {
@@ -300,8 +500,8 @@ const KanaLayout = (function () {
       return { prefix: pick(first), postfix: pick(second) };
     }
 
-    // 同時押しシフトの一覧 [{ keys: ["d","k"], kana(ch) }]（docs/layouts.md の「配列図」）
-    // 2キーの同時押しに minCount 回以上出てくるキーをシフトのキーとし、組む相手とかなが同じキーを1つにまとめる。
+    // 同時押しシフト・長押しシフトの一覧 [{ keys: ["d","k"], hold: 長押しシフトか, kana(ch) }]（docs/layouts.md の「配列図」）
+    // 2キーの同時押しに minCount 回以上出てくるキーと、長押しシフトのキーをシフトのキーとし、組む相手とかなが同じキーを1つにまとめる。
     // kana(ch)：シフトのキーと ch を同時に押したときのかな（なければ null）。並びは割り当ての多い順（同じならキーの文字の順）
     function chordShifts(minCount) {
       const partners = new Map(); // キー → (組む相手 → かな)
@@ -326,7 +526,7 @@ const KanaLayout = (function () {
       };
       const groups = [];
       Array.from(partners.keys())
-        .filter(function (k) { return partners.get(k).size >= minCount; })
+        .filter(function (k) { return partners.get(k).size >= minCount || holdKeys.indexOf(k) !== -1; })
         .sort(function (a, b) { return partners.get(b).size - partners.get(a).size || (a < b ? -1 : 1); })
         .forEach(function (k) {
           const g = groups.find(function (x) { return same(x.keys[0], k); });
@@ -335,6 +535,7 @@ const KanaLayout = (function () {
         });
       groups.forEach(function (g) {
         g.keys.sort();
+        g.hold = g.keys.some(function (k) { return holdKeys.indexOf(k) !== -1; });
         g.kana = function (ch) {
           for (let i = 0; i < g.keys.length; i++) {
             const kana = partners.get(g.keys[i]).get(ch);
@@ -351,11 +552,13 @@ const KanaLayout = (function () {
     // 同時押し（docs/layouts.md の「同時押し」）：同時押しの組に入るキーを押したら、判定時間 term(ms) のあいだ待つ。
     //   その間に組のキーが全部押されれば同時押し（j+k）として並びに足す。時間が過ぎる・組のキーを離す・組に入らないキーを押す、
     //   のどれかで、待っていたキーを順に押したものとして足す。待っている間の時間切れは tick(time) で知らせる
-    function converter(term) {
+    // 長押しシフト：holdTerm(ms) を判定時間にして、見分け（holdFinder）が決めた打鍵を足す
+    function converter(term, holdTerm) {
       let pending = "";
       let out = "";
       let wait = [];      // 同時押しかどうか待っているキー（押した順）
       let waitStart = 0;  // 待ち始めたキーを押した時刻
+      let hold = options.holdFinder ? options.holdFinder(holdTerm) : null;
 
       function flush() {
         if (!pending) return;
@@ -395,7 +598,24 @@ const KanaLayout = (function () {
         else keys.forEach(feed);
       }
 
+      // 長押しシフトの見分けが決めた打鍵を足す
+      function strokes(list) {
+        list.forEach(function (s) {
+          if (s.keys.length > 1) {
+            settle();
+            feed(s.label);
+          } else {
+            pressKey(s.label, s.time);
+          }
+        });
+      }
+
       function press(ch, time) {
+        if (hold) strokes(hold.down(ch, time, null, ch));
+        else pressKey(ch, time);
+      }
+
+      function pressKey(ch, time) {
         if (wait.length && time - waitStart > term) settle();
         if (wait.length) {
           const next = wait.concat([ch]);
@@ -416,18 +636,22 @@ const KanaLayout = (function () {
       }
 
       // キーを離した。待っているキーなら、そこで決める
-      function release(ch) {
+      function release(ch, time) {
+        if (hold) strokes(hold.up(ch, time));
         if (wait.indexOf(ch) !== -1) settle();
       }
 
       // 待っている間に判定時間が過ぎたら決める。決めたら true
       function tick(time) {
-        if (!wait.length || time - waitStart < term) return false;
+        const list = hold ? hold.tick(time) : [];
+        strokes(list);
+        if (!wait.length || time - waitStart < term) return list.length > 0;
         settle();
         return true;
       }
 
       function backspace() {
+        if (hold) strokes(hold.flush(performance.now()));
         settle();
         if (pending) pending = pending.replace(/(.\+)*.$/, "");
         else out = Array.from(out).slice(0, -1).join("");
@@ -439,15 +663,25 @@ const KanaLayout = (function () {
         tick: tick,
         backspace: backspace,
         // 打ちかけの並びをそこで確定する（試し打ちの Enter）
-        confirm: function () { settle(); flush(); },
-        clear: function () { pending = ""; out = ""; wait = []; },
+        confirm: function () {
+          if (hold) strokes(hold.flush(performance.now()));
+          settle();
+          flush();
+        },
+        clear: function () {
+          pending = "";
+          out = "";
+          wait = [];
+          if (hold) hold = options.holdFinder(holdTerm);
+        },
         // 確定した文字と、打ちかけの並び（とそれだけで確定したときのかな）。同時押しを待っているキーは打ちかけの後ろに出す
         state: function () {
+          const held = hold ? hold.waiting() : [];
           return {
             out: out,
-            pending: pending + wait.join(""),
-            tentative: !wait.length && table.has(pending) ? table.get(pending) : "",
-            waiting: wait.length > 0
+            pending: pending + wait.join("") + held.join(""),
+            tentative: !wait.length && !held.length && table.has(pending) ? table.get(pending) : "",
+            waiting: wait.length > 0 || held.length > 0
           };
         }
       };
@@ -455,7 +689,11 @@ const KanaLayout = (function () {
 
     return {
       entries: entries,
-      get: function (keys) { return table.has(keys) ? table.get(keys) : null; },
+      get: function (keys) {
+        // 判定の打ち方に入っている長押しシフトの文字は、割り当て表の書き方に直して引く
+        const name = keys.replace(/[-]/g, function (c) { return holdNames.get(c) || c; });
+        return table.has(name) ? table.get(name) : null;
+      },
       options: options,
       shiftKeys: shiftKeys,
       chordShifts: chordShifts,

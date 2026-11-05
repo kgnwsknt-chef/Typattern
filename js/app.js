@@ -134,6 +134,9 @@
   const loggedKeys = new Set(); // "k" の行を残して、まだ離していないキーの e.code（離したら "u" の行を残す）
   let typer = null;    // 日本語のときの入力の状態（js/typer.js）。英語では null
   let chordTerm = null; // 同時押しのあるかな配列で打つときの判定時間(ms)。生データにも残す。同時押しがなければ null
+  let holdTerm = null;  // 長押しシフトのあるかな配列で打つときの判定時間(ms)。生データにも残す。なければ null
+  let hold = null;      // 長押しシフトの見分け（KanaLayout の holdFinder）。なければ null
+  let holdTimer = 0;    // シフトかどうかを待っている間の時間切れのタイマー
   let showRomajiGuide = false; // ローマ字の手引きを出すか（日本語のローマ字入力で、設定の「手引き」が ON のときだけ。かな配列では出さない）
   let romajiLine = false;      // 日本語のお題の2行目をローマ字で出すか（ローマ字入力で、設定の「日本語のお題の2行目」がローマ字のとき）
   const statsEl = document.querySelector(".stats"); // 打っている間の数字の行（設定の「数字の行」で隠せる）
@@ -286,7 +289,7 @@
     const en = lang === "en" && (id === "qwerty" ? [] : engEntries[id]);
     if (!en && (lang !== "ja" || !kanaLayouts[id])) return Promise.reject(new Error("NO_LEARN"));
     // 同時押しのあるかな配列は、まだキー配列習得に使えない（docs/layout-learning.md）
-    if (!en && kanaLayouts[id].options.chords.length) return Promise.reject(new Error("NO_LEARN_CHORD"));
+    if (!en && KanaLayout.hasChord(kanaLayouts[id].entries)) return Promise.reject(new Error("NO_LEARN_CHORD"));
     return Promise.all([LayoutLearning.loadLists(fetchText, lang), Store.getAllSessions()]).then(function (v) {
       return [{
         name: LEARN,
@@ -610,6 +613,9 @@
     const jp = lang === "ja" && mode !== IKI;
     const kana = kanaLayouts[keyLayoutEl.value];
     chordTerm = jp && kana && kana.options.chords.length ? Settings.get("chordTerm") : null;
+    holdTerm = jp && kana && kana.options.holdFinder ? Settings.get("holdTerm") : null;
+    hold = holdTerm ? kana.options.holdFinder(holdTerm) : null;
+    clearTimeout(holdTimer);
     typer = !jp ? null : Typer.create(target, kana ? kana.options : Romaji.options, chordTerm);
     const romajiInput = jp && !kana;
     // 手引きとお題の2行目のローマ字は、ローマ字で打つときだけ。どちらも設定で選ぶ（docs/settings.md）
@@ -1208,7 +1214,8 @@
   function showFasterResult() {
     // 今回の IKI は、この回の打鍵から IKI のページと同じ決まりで求める（js/ngram.js）。お題のどこに出てきても数える
     const kana = kanaLayouts[keyLayoutEl.value];
-    const grams = NGram.accumulate(new Map(), 2, events, null, null, chordTerm ? { groups: kana.options.chords, term: chordTerm } : null);
+    const grams = NGram.accumulate(new Map(), 2, events, null, null, chordTerm || holdTerm
+      ? { groups: kana.options.chords, term: chordTerm, holdFinder: kana.options.holdFinder, holdTerm: holdTerm } : null);
     const values = intervals.filter(function (v) { return v !== null; });
     const base = values.length ? values.reduce(function (a, b) { return a + b; }, 0) / values.length : 0;
     const groupName = function (g) { return LANG_NAME[g.lang] + "・" + (g.layout === "qwerty" ? "QWERTY配列" : g.layout); };
@@ -1519,6 +1526,7 @@
     };
     // 同時押しのある配列：記録を判定にもう一度通すときに、打ったときの判定時間を使う（docs/storage.md）
     if (chordTerm) raw.chordTerm = chordTerm;
+    if (holdTerm) raw.holdTerm = holdTerm;
 
     saveStatusEl.textContent = "記録を保存中…";
     if (practice) {
@@ -1664,11 +1672,17 @@
 
     if (Keys.isShift(e.code)) {
       pushKey(e.code, number, now, typer.pos, null);
+      if (hold && startTime) applyStrokes(hold.tick(now));
       return;
     }
 
     if (e.code === "Backspace") {
       if (!startTime) return; // まだ何も打っていない
+      if (hold) {
+        // シフトかどうかを待っているキーは、順に打ったものとして決めてから消す
+        applyStrokes(hold.flush(now));
+        if (finished) return;
+      }
       const pos = typer.pos;
       const removed = typer.backspace(now);
       pushKey(e.code, number, now, pos, null);
@@ -1686,7 +1700,7 @@
     }
 
     // 同時押しのある配列では、押し続けたときの連打を受け付けない（同時押しの組の最初のキーを押したまま待つと、連打でミスになるため）
-    if (e.repeat && chordTerm) return;
+    if (e.repeat && (chordTerm || hold)) return;
 
     if (!startTime) {
       startTime = now;
@@ -1702,8 +1716,40 @@
     if (eng && ch !== null) ch = eng.toChar(ch);
     // 押したままのキー（同時押しを見分けるのに使う）
     const held = new Set(Array.from(loggedKeys).map(Keys.number));
+    if (hold) {
+      // 長押しシフト：押した時点では決まらないことがあるので、"k" の行を先に残し、位置と判定は打鍵が決まったときに入れる
+      pushKey(e.code, number, now, null, null);
+      applyStrokes(hold.down(ch || "\u0000", now, events[events.length - 1], number));
+      return;
+    }
     const r = typer.press(ch || "\u0000", now, held);
     pushKey(e.code, number, now, r.pos, r.judge);
+    afterPress(r, now);
+  }
+
+  // 長押しシフトの見分けが決めた打鍵を判定にかける。シフトかどうかを待っているキーがあれば、時間切れを待つ
+  function applyStrokes(list) {
+    list.forEach(function (s) {
+      if (finished) return;
+      const held = new Set(Array.from(loggedKeys).map(Keys.number));
+      const r = typer.press(s.tok, s.time, held, s.label);
+      // シフトのキーの "k" の行には、それで初めて打った打鍵の位置と判定を入れる
+      [s.ref].concat(s.refs).forEach(function (row) {
+        row[3] = r.pos;
+        row[4] = r.judge;
+      });
+      afterPress(r, s.time);
+    });
+    clearTimeout(holdTimer);
+    const at = hold.nextAt();
+    if (at === null || finished) return;
+    holdTimer = setTimeout(function () {
+      if (!finished) applyStrokes(hold.tick(performance.now()));
+    }, Math.max(0, at - performance.now()) + 1);
+  }
+
+  // 判定の結果を記録と画面に入れる
+  function afterPress(r, now) {
     // ミスは間違えたキーの数（1つのかなで2回間違えれば2）。そのかなに「ミスあり」の印を付ける
     if (r.judge === 0 && r.pos < target.length) {
       misses++;
@@ -1846,7 +1892,9 @@
     if (!loggedKeys.has(e.code)) return;
     loggedKeys.delete(e.code);
     if (startTime && !finished) {
-      events.push([round1(performance.now() - startTime), "u", Keys.number(e.code), typer ? typer.pos : input.value.length, null]);
+      const now = performance.now();
+      events.push([round1(now - startTime), "u", Keys.number(e.code), typer ? typer.pos : input.value.length, null]);
+      if (hold) applyStrokes(hold.up(Keys.number(e.code), now));
     }
   });
   ["paste", "drop", "cut"].forEach(function (type) {

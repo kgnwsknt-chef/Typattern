@@ -12,6 +12,7 @@ const Settings = (function () {
     rankMinAccuracy: { type: "number", def: 95, min: 50, max: 100, step: 1, unit: "%" },   // ランキングに載せる正確率の下限(%)
     idleStopSec: { type: "number", def: 60, min: 30, max: 600, step: 10, unit: "秒" },    // タイピング中、入力がないまま止めるまでの秒数
     chordTerm: { type: "number", def: 50, min: 20, max: 1000, step: 5, unit: "ms" },      // 同時押しの判定時間（組の最初のキーから全部押すまで）
+    holdTerm: { type: "number", def: 200, min: 50, max: 1000, step: 5, unit: "ms" },      // 長押しシフトの判定時間（シフトのキーをこれより長く押したらシフト）
     weakRecentRuns: { type: "number", def: 30, min: 10, max: 200, step: 10, unit: "回" }, // 苦手な単語を数える、直近の単語モードの記録の回数
     indicator: { type: "boolean", def: true },                                  // タイピング中のインジケーター（目標のレベルとの差）を出すか
     showStats: { type: "boolean", def: true },                                  // タイピング中、数字の行（平均 IKI・正確率・秒・ミス）を出すか

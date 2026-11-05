@@ -86,7 +86,7 @@
         NGram.accumulate(trigrams, 3, raw.events, tags.get(raw.id), skip, chords);
         if (chords) {
           NGram.accumulateSpreads(spreads, raw.events, skip, chords);
-          maxTerm = Math.max(maxTerm, chords.term);
+          maxTerm = Math.max(maxTerm, chords.term || 0);
         }
         raw.events.forEach(function (e) { if (e[1] === "k") strokes++; });
       }).then(function () {
