@@ -325,7 +325,10 @@ const WeakWords = (function () {
             const s = line.trim();
             if (!s || s[0] === "#") return;
             const cols = s.split("\t"); // 「表示する語<タブ>読み」。かなだけの語は1列
-            addWord(cols[0].trim(), (cols[1] || cols[0]).trim());
+            const display = cols[0].trim(), reading = (cols[1] || cols[0]).trim();
+            addWord(display, reading);
+            // 語に「、」を付ける前の記録は「、」のない読みで残っているので、その読みでも引けるようにする
+            if (reading.endsWith("、")) addWord(display.slice(0, -1), reading.slice(0, -1));
           });
         });
       }));
