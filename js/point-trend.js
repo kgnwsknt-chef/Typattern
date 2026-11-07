@@ -115,10 +115,6 @@ const PointTrend = (function () {
       svg.appendChild(svgText(L + pw, H - 2, "日付", "end"));
     }
 
-    // 移動平均の線
-    if (points.length > 1) {
-      svg.appendChild(svgEl("polyline", { points: points.map(function (p) { return x(p.x) + "," + y(p.ma); }).join(" "), class: "ngram-trend-ma" }));
-    }
     // 点
     points.forEach(function (p) {
       const c = svgEl("circle", { cx: x(p.x), cy: y(p.value), r: 3, class: "ngram-trend-point" });
@@ -130,6 +126,10 @@ const PointTrend = (function () {
       c.appendChild(tip);
       svg.appendChild(c);
     });
+    // 移動平均の線（点より前に描く）
+    if (points.length > 1) {
+      svg.appendChild(svgEl("polyline", { points: points.map(function (p) { return x(p.x) + "," + y(p.ma); }).join(" "), class: "ngram-trend-ma" }));
+    }
     el.appendChild(svg);
   }
 
