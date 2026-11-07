@@ -87,7 +87,6 @@ beyond
 big
 bill
 bird
-birth
 birthday
 bit
 bite
@@ -242,6 +241,7 @@ direct
 dirty
 dish
 doctor
+does
 dog
 dollar
 door
@@ -491,7 +491,6 @@ light
 like
 limit
 line
-lion
 lip
 list
 listen
@@ -507,6 +506,7 @@ lose
 loud
 love
 low
+loyal
 luck
 lunch
 mad
@@ -626,6 +626,7 @@ pen
 people
 perfect
 perhaps
+period
 person
 pet
 phone
@@ -650,7 +651,6 @@ play
 please
 plenty
 pocket
-poem
 point
 police
 poor
@@ -663,6 +663,7 @@ price
 pride
 print
 prize
+problem
 project
 proud
 prove
@@ -990,7 +991,6 @@ worth
 would
 write
 wrong
-yard
 year
 yellow
 yes
