@@ -1358,6 +1358,13 @@ a.text-btn {
   color: var(--accent);
 }
 
+/* ノーミス連続タイプの文字数の単位（「文字」） */
+.level-unit {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--sub);
+}
+
 .level-sub,
 .level-none {
   font-size: 12px;
@@ -1368,6 +1375,7 @@ a.text-btn {
   margin-top: 2px;
   font-size: 12px;
   color: var(--text);
+  white-space: nowrap; /* 「次の目標 SC まで」と「あと 0.13 文字/秒」を、それぞれ途中で折り返さない */
 }
 
 .small-btn {

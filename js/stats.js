@@ -82,12 +82,19 @@
           td.appendChild(line("level-none", "まだ記録がありません"));
         } else {
           td.appendChild(line("level-name", sum.level ? sum.level.name : "なし"));
-          if (sum.level) td.appendChild(line("level-sub", "達成 " + Filters.localDate(sum.achievedAt).replace(/-/g, "/")));
+          // 一番速い文字/秒と、その回の配列（達成した日は推移のグラフで分かるので出さない）
           td.appendChild(line("level-sub", sum.bestRate === null
             ? "正確率 " + Levels.MIN_ACCURACY + "% 以上の回がありません"
-            : "最高 " + sum.bestRate.toFixed(2) + " 文字/秒"));
-          td.appendChild(line("level-target", !sum.target ? "一番上のレベルです"
-            : "次の目標 " + sum.target.name + (sum.gap !== null && sum.gap >= 0 ? " まで あと " + Math.max(sum.gap, 0.01).toFixed(2) + " 文字/秒" : "")));
+            : sum.bestRate.toFixed(2) + " 文字/秒"));
+          if (sum.bestLayout) td.appendChild(line("level-sub", layoutName(sum.bestLayout)));
+          // 次の目標は「次の目標 SC まで」と「あと 0.13 文字/秒」の2行に分ける（列を広げないため）
+          const target = line("level-target", !sum.target ? "一番上のレベルです"
+            : "次の目標 " + sum.target.name + (sum.gap !== null && sum.gap >= 0 ? " まで" : ""));
+          if (sum.target && sum.gap !== null && sum.gap >= 0) {
+            target.appendChild(document.createElement("br"));
+            target.appendChild(document.createTextNode("あと " + Math.max(sum.gap, 0.01).toFixed(2) + " 文字/秒"));
+          }
+          td.appendChild(target);
         }
         tr.appendChild(td);
       });
@@ -107,10 +114,16 @@
     const r = b.result;
     const keys = lang === "ja" ? r.correctKeys : b.textLength;
     const speed = lang === "ja" ? Math.round(r.kanaPerMin) + " かな/分" : Math.round(r.wpm) + " WPM";
-    td.appendChild(line("level-name", b.textLength + " 文字"));
+    // 文字数は大きく、単位の「文字」は小さく（style.css の .level-unit）
+    const count = line("level-name", b.textLength);
+    const unit = document.createElement("span");
+    unit.className = "level-unit";
+    unit.textContent = " 文字";
+    count.appendChild(unit);
+    td.appendChild(count);
     td.appendChild(line("level-sub", "打鍵 " + keys + " ／ " + r.timeSec.toFixed(1) + " 秒"));
     td.appendChild(line("level-sub", "平均 IKI " + (r.avgIki === null ? "-" : r.avgIki.toFixed(1)) + " ms（" + speed + "）"));
-    td.appendChild(line("level-sub", Filters.localDate(b.finishedAt).replace(/-/g, "/") + " ／ " + (b.keyLayout === "qwerty" ? "QWERTY配列" : b.keyLayout)));
+    td.appendChild(line("level-sub", Filters.localDate(b.finishedAt).replace(/-/g, "/") + " ／ " + layoutName(b.keyLayout)));
     return td;
   }
 
@@ -118,6 +131,11 @@
     const el = document.createElement(tag);
     el.textContent = text;
     return el;
+  }
+
+  // 配列の表示名（QWERTY は「QWERTY配列」、登録した配列はその名前のまま）
+  function layoutName(keyLayout) {
+    return keyLayout === "qwerty" ? "QWERTY配列" : keyLayout;
   }
 
   function line(className, text) {

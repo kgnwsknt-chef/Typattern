@@ -78,29 +78,34 @@ const Levels = (function () {
   }
 
   // 言語・モードの組の達成度（記録ページの表に使う）。sessions は古い順
-  //   { count: その組の記録の数, level: 達成レベル, achievedAt: そのレベルに初めて届いた日時,
-  //     bestRate: 正確率95%以上の回の一番速い文字/秒, target: 次の目標, gap: 目標まであと何文字/秒 }
+  //   { count: その組の記録の数, level: 達成レベル, bestRate: 正確率95%以上の回の一番速い文字/秒,
+  //     bestLayout: その回の配列, target: 次の目標, gap: 目標まであと何文字/秒 }
   function summary(sessions, lang, mode) {
     const chars = charsFor(lang);
     let count = 0;
     let level = null;
-    let achievedAt = null;
     let bestRate = null;
+    let bestLayout = null;
     sessions.forEach(function (s) {
       if (s.lang !== lang || s.mode !== mode) return;
       count++;
       if (s.result.accuracy < MIN_ACCURACY) return;
       const rate = rateOfSession(s);
-      if (rate !== null && (bestRate === null || rate > bestRate)) bestRate = rate;
+      if (rate !== null && (bestRate === null || rate > bestRate)) {
+        bestRate = rate;
+        bestLayout = s.keyLayout;
+      }
       const l = fromRate(rate, chars);
       if (l && (!level || l.index > level.index)) {
         level = l;
-        achievedAt = s.finishedAt;
       }
     });
     const target = next(level);
     const gap = target && bestRate !== null ? minRate(target, chars) - bestRate : null;
-    return { count: count, level: level, achievedAt: achievedAt, bestRate: bestRate, target: target, gap: gap };
+    return {
+      count: count, level: level,
+      bestRate: bestRate, bestLayout: bestLayout, target: target, gap: gap
+    };
   }
 
   // 達成レベルが上がった回の一覧（記録の id → { lang, mode, level }）。sessions は古い順。
