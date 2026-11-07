@@ -20,7 +20,7 @@
   <meta property="og:image:alt" content="Typattern — Find your typing patterns">
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="style.css?v=130">
+  <link rel="stylesheet" href="style.css?v=131">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -128,12 +128,13 @@
       <div id="nm-result" class="nm-result" hidden></div>
       <div class="result-grid">
         <div><span id="res-iki" class="result-value"></span><span class="result-label">ms 平均 IKI（<span id="res-wpm"></span> <span class="speed-unit">WPM</span>）</span></div>
-        <div><span id="res-acc" class="result-value"></span><span class="result-label">% 正確率</span></div>
+        <div><span id="res-acc" class="result-value"></span><span class="result-label">% 正確率<span id="res-acc-raw" class="result-acc-raw"></span></span></div>
         <div><span id="res-time" class="result-value"></span><span class="result-label">秒</span></div>
         <div><span id="res-miss" class="result-value"></span><span class="result-label">ミス（未修正 <span id="res-uncorrected"></span>）</span></div>
         <div><span id="res-rank" class="result-value">-</span><span id="res-rank-label" class="result-label"></span></div>
         <div title="習熟度のレベル（文字/秒で決まる。docs/levels.md）"><span id="res-level" class="result-value">-</span><span id="res-level-label" class="result-label">レベル</span></div>
       </div>
+      <p class="result-note">正確率 = 最後に残った文字のうち、お題と合っている文字の割合（直したミスは正確率を下げません）</p>
       <!-- かな配列：割り当て表にないのでミスとして飛ばした文字（docs/measurement.md の「配列にないかな」） -->
       <p id="skipped-note" class="skipped-note" hidden></p>
       <!-- 達成レベル（言語・モードごと）と、次の目標までの差 -->
@@ -185,21 +186,21 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=130"></script>
-  <script src="js/keys.js?v=130"></script>
-  <script src="js/romaji.js?v=130"></script>
-  <script src="js/typer.js?v=130"></script>
-  <script src="js/kana-layout.js?v=130"></script>
-  <script src="js/settings.js?v=130"></script>
-  <script src="js/page-footer.js?v=130"></script>
-  <script src="js/rhythm.js?v=130"></script>
-  <script src="js/ranking.js?v=130"></script>
-  <script src="js/levels.js?v=130"></script>
-  <script src="js/ngram.js?v=130"></script>
-  <script src="js/iki-measurement.js?v=130"></script>
-  <script src="js/weak-words.js?v=130"></script>
-  <script src="js/layout-learning.js?v=130"></script>
-  <script src="js/no-mistype.js?v=130"></script>
-  <script src="js/app.js?v=130"></script>
+  <script src="js/store.js?v=131"></script>
+  <script src="js/keys.js?v=131"></script>
+  <script src="js/romaji.js?v=131"></script>
+  <script src="js/typer.js?v=131"></script>
+  <script src="js/kana-layout.js?v=131"></script>
+  <script src="js/settings.js?v=131"></script>
+  <script src="js/page-footer.js?v=131"></script>
+  <script src="js/rhythm.js?v=131"></script>
+  <script src="js/ranking.js?v=131"></script>
+  <script src="js/levels.js?v=131"></script>
+  <script src="js/ngram.js?v=131"></script>
+  <script src="js/iki-measurement.js?v=131"></script>
+  <script src="js/weak-words.js?v=131"></script>
+  <script src="js/layout-learning.js?v=131"></script>
+  <script src="js/no-mistype.js?v=131"></script>
+  <script src="js/app.js?v=131"></script>
 </body>
 </html>

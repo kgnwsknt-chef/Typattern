@@ -40,6 +40,7 @@
   const res = {
     wpm: document.getElementById("res-wpm"),
     acc: document.getElementById("res-acc"),
+    accRaw: document.getElementById("res-acc-raw"),
     time: document.getElementById("res-time"),
     miss: document.getElementById("res-miss"),
     iki: document.getElementById("res-iki"),
@@ -981,6 +982,8 @@
     res.iki.textContent = r.avgIki === null ? "-" : r.avgIki.toFixed(1);
     res.wpm.textContent = Math.round(r.wpm);
     res.acc.textContent = r.acc.toFixed(1);
+    // 修正したミスも数えた正確率（小さく添える。docs/measurement.md の「正確率」）
+    res.accRaw.textContent = keystrokes > 0 ? "（修正したミスも数えると " + ((keystrokes - misses) / keystrokes * 100).toFixed(1) + "%）" : "";
     res.time.textContent = r.sec.toFixed(1);
     res.miss.textContent = misses;
     res.uncorrected.textContent = r.uncorrected;
@@ -1023,6 +1026,7 @@
     res.iki.textContent = avgIki === null ? "-" : avgIki.toFixed(1);
     res.wpm.textContent = Math.round(wpm);
     res.acc.textContent = "100.0";
+    res.accRaw.textContent = "";
     res.time.textContent = sec.toFixed(1);
     res.miss.textContent = misses;
     res.uncorrected.textContent = 0;

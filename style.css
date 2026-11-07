@@ -452,6 +452,19 @@ body {
   color: var(--sub);
 }
 
+/* 正確率の横に添える、修正したミスも数えた値 */
+.result-acc-raw {
+  margin-left: 4px;
+  font-size: 11px;
+}
+
+/* 結果の数字の下の、正確率の説明 */
+.result-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--sub);
+}
+
 /* 達成レベルと次の目標 */
 .level-status {
   margin: 14px 0 0;

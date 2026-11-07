@@ -329,7 +329,7 @@ const Trend = (function () {
         levelUp: up ? [upLabel(up)] : [],
         tip: (i + 1) + " 回目 ／ " + fmtDateTime(s.finishedAt) + " ／ " + s.textId + "\n平均 IKI " + s.result.avgIki.toFixed(1) +
           " ms（" + (1000 / s.result.avgIki).toFixed(2) + " 打/s, " + speedText(s) + "）\n正確率 " +
-          s.result.accuracy.toFixed(1) + "%（ミスも数えると " + rawAccuracy(s).toFixed(1) + "%）／ ミス " + s.result.misses +
+          s.result.accuracy.toFixed(1) + "%（修正したミスも数えると " +rawAccuracy(s).toFixed(1) + "%）／ ミス " + s.result.misses +
           "（未修正 " + s.result.uncorrected + "）\n" + levelTip(s) + (up ? "\n" + upText(up) : "")
       };
     });
@@ -383,7 +383,7 @@ const Trend = (function () {
         eligible: ok.length > 0,
         levelUp: upList.map(upLabel),
         tip: period.fmt(day) + " ／ " + ss.length + " 回（うち正確率 " + Store.RANK_MIN_ACCURACY + "% 以上 " + ok.length + " 回）\n平均 IKI " +
-          iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%（ミスも数えると " + accRaw.toFixed(1) + "%）" +
+          iki.toFixed(1) + " ms（" + (1000 / iki).toFixed(2) + " 打/s）\n正確率の平均 " + acc.toFixed(1) + "%（修正したミスも数えると " +accRaw.toFixed(1) + "%）" +
           upList.map(function (u) { return "\n" + upText(u); }).join("")
       };
       if (ok.length) p.best = Math.min.apply(null, ok.map(function (s) { return s.result.avgIki; }));
