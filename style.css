@@ -1415,6 +1415,7 @@ a.text-btn {
   stroke: var(--trend-ma);
   stroke-width: 2.5;
   stroke-linejoin: round;
+  pointer-events: none; /* 線の下の点にマウスを乗せられるように */
 }
 
 /* IKI のページの、n-gram ごとの IKI の推移（分布の下。記録のページの推移と同じ色） */

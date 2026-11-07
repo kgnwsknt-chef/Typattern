@@ -86,10 +86,7 @@ const Trend = (function () {
     }
     svg.appendChild(text(L + PW + 7, T - 8, "打/s", "start", "trend-axis-title"));
 
-    // 上段：移動平均・日ごと（月ごと）の線
-    if (data.ma && data.ma.length > 1) {
-      svg.appendChild(svgEl("polyline", { points: data.ma.map(function (m) { return X(m.x) + "," + YI(m.v); }).join(" "), class: "trend-ma" }));
-    }
+    // 上段：日ごと（月ごと）の線
     if (period && data.points.length > 1) {
       svg.appendChild(svgEl("polyline", { points: data.points.map(function (p) { return X(p.x) + "," + YI(p.iki); }).join(" "), class: "trend-line" }));
     }
@@ -115,7 +112,15 @@ const Trend = (function () {
       const c = svgEl("circle", { cx: X(p.x), cy: YI(p.iki), r: 3.5, class: "trend-point" + (p.eligible ? "" : " out") });
       c.appendChild(title(p.tip));
       svg.appendChild(c);
-      // 達成レベルが上がった点：輪で囲み、上に「英語・単語 SB達成」と書く（日ごとで複数あるときは上へ重ねる）
+    });
+
+    // 上段：移動平均（点より前に描く）
+    if (data.ma && data.ma.length > 1) {
+      svg.appendChild(svgEl("polyline", { points: data.ma.map(function (m) { return X(m.x) + "," + YI(m.v); }).join(" "), class: "trend-ma" }));
+    }
+
+    // 達成レベルが上がった点：輪で囲み、上に「英語・単語 SB達成」と書く（日ごとで複数あるときは上へ重ねる）。移動平均の線に隠れないよう、線の後に描く
+    data.points.forEach(function (p) {
       if (p.levelUp.length) {
         svg.appendChild(svgEl("circle", { cx: X(p.x), cy: YI(p.iki), r: 7, class: "trend-levelup-ring" }));
         // 端の点では、文字が枠からはみ出さないよう寄せる
