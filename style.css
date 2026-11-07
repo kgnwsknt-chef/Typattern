@@ -484,6 +484,10 @@ body {
 .result-value.rank-1 { color: var(--rank-1); font-weight: 700; }
 .result-value.rank-2 { color: var(--rank-2); font-weight: 700; }
 .result-value.rank-3 { color: var(--rank-3); font-weight: 700; }
+/* 上位3位に入ったときの知らせ（順位の色の太字） */
+.level-status .rank-1 { color: var(--rank-1); font-weight: 700; }
+.level-status .rank-2 { color: var(--rank-2); font-weight: 700; }
+.level-status .rank-3 { color: var(--rank-3); font-weight: 700; }
 
 /* キーごとの間隔グラフ */
 /* 結果のタブ */

@@ -51,6 +51,7 @@
     levelLabel: document.getElementById("res-level-label")
   };
   const levelStatusEl = document.getElementById("level-status");
+  const rankStatusEl = document.getElementById("rank-status"); // ランキングの上位3位に入ったときの知らせ
   const skippedNoteEl = document.getElementById("skipped-note"); // かな配列で、割り当て表にないので飛ばした文字の知らせ
   const rankingEl = document.getElementById("ranking");
   const rankingTitleEl = document.getElementById("ranking-title");
@@ -634,6 +635,7 @@
     rhythmNoteEl.textContent = "修正の時間を含まないので、結果の平均 IKI より小さくなる";
     weakResultEl.hidden = true;
     skippedNoteEl.hidden = true;
+    rankStatusEl.hidden = true;
     fasterResultEl.hidden = true;
     ikiResultEl.hidden = true;
     learnResultEl.hidden = true;
@@ -1482,6 +1484,47 @@
         (session.mode !== mode ? "（文章で打つと達成になります）" : "（正確率 " + Levels.MIN_ACCURACY + "% 以上で達成になります）")));
   }
 
+  // ランキングの上位3位に入ったときの知らせ（docs/records.md の「今回の順位」）
+  // info：Store.rankOf の結果。rows：今回を含む区分の上位（平均 IKI の小さい順）
+  function renderRankStatus(session, info, rows) {
+    rankStatusEl.textContent = "";
+    rankStatusEl.hidden = true;
+    if (info.rank > 3) return;
+    const label = Ranking.categoryLabel(session);
+    const add = function (text, className) {
+      const span = document.createElement("span");
+      if (className) span.className = className;
+      span.textContent = text;
+      rankStatusEl.appendChild(span);
+    };
+    const others = rows.filter(function (s) { return s.id !== session.id; });
+    const iki = session.result.avgIki;
+    const ms = function (v) { return v.toFixed(1) + " ms"; };
+    rankStatusEl.hidden = false;
+    if (others.length === 0) {
+      add(label + "で最初の記録です");
+      return;
+    }
+    // 同じ平均 IKI・正確率の記録があれば同順位（タイ）
+    const tie = others.some(function (s) {
+      return s.result.avgIki === iki && s.result.accuracy === session.result.accuracy;
+    });
+    add(label + "で " + info.rank + " 位" + (tie ? "タイ" : "") + "！", "rank-" + info.rank);
+    if (tie && info.rank === 1) return;
+    if (info.rank === 1) {
+      // これまでの1位（今回を除いた一番上）との差
+      const prev = others[0].result.avgIki;
+      add(prev - iki >= 0.05
+        ? " これまでの 1 位（" + ms(prev) + "）より " + ms(prev - iki) + " 速くなりました"
+        : " これまでの 1 位（" + ms(prev) + "）と同じ平均 IKI で、正確率が上回りました");
+      return;
+    }
+    const first = rows[0].result.avgIki;
+    add(iki - first >= 0.05
+      ? " 1 位（" + ms(first) + "）まで あと " + ms(iki - first)
+      : " 1 位（" + ms(first) + "）と同じ平均 IKI です（正確率の高い方が上になります）");
+  }
+
   // この回を概要（sessions）と生データ（raws）の2つの記録にして保存し、順位を出す。形式は docs/storage.md
   function saveSession(r) {
     const id = crypto.randomUUID();
@@ -1572,6 +1615,7 @@
           // 1〜3位は順位ごとの色で目立たせる（style.css の --rank-1〜3）
           if (info.rank <= 3) res.rank.classList.add("rank-" + info.rank);
           res.rankLabel.textContent = "位 / " + info.total + " 回";
+          renderRankStatus(session, info, v[1]);
         } else {
           res.rank.textContent = "-";
           res.rankLabel.textContent = "ランキング対象外（正確率 " + Store.RANK_MIN_ACCURACY + "% 未満）";

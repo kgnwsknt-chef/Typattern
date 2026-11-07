@@ -20,7 +20,7 @@
   <meta property="og:image:alt" content="Typattern — Find your typing patterns">
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="style.css?v=131">
+  <link rel="stylesheet" href="style.css?v=132">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -137,6 +137,8 @@
       <p class="result-note">正確率 = 最後に残った文字のうち、お題と合っている文字の割合（直したミスは正確率を下げません）</p>
       <!-- かな配列：割り当て表にないのでミスとして飛ばした文字（docs/measurement.md の「配列にないかな」） -->
       <p id="skipped-note" class="skipped-note" hidden></p>
+      <!-- ランキングの上位3位に入ったときの知らせ（docs/records.md の「今回の順位」） -->
+      <p id="rank-status" class="level-status" aria-live="polite" hidden></p>
       <!-- 達成レベル（言語・モードごと）と、次の目標までの差 -->
       <p id="level-status" class="level-status" aria-live="polite"></p>
       <p id="save-status" class="save-status" aria-live="polite"></p>
@@ -186,21 +188,21 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=131"></script>
-  <script src="js/keys.js?v=131"></script>
-  <script src="js/romaji.js?v=131"></script>
-  <script src="js/typer.js?v=131"></script>
-  <script src="js/kana-layout.js?v=131"></script>
-  <script src="js/settings.js?v=131"></script>
-  <script src="js/page-footer.js?v=131"></script>
-  <script src="js/rhythm.js?v=131"></script>
-  <script src="js/ranking.js?v=131"></script>
-  <script src="js/levels.js?v=131"></script>
-  <script src="js/ngram.js?v=131"></script>
-  <script src="js/iki-measurement.js?v=131"></script>
-  <script src="js/weak-words.js?v=131"></script>
-  <script src="js/layout-learning.js?v=131"></script>
-  <script src="js/no-mistype.js?v=131"></script>
-  <script src="js/app.js?v=131"></script>
+  <script src="js/store.js?v=132"></script>
+  <script src="js/keys.js?v=132"></script>
+  <script src="js/romaji.js?v=132"></script>
+  <script src="js/typer.js?v=132"></script>
+  <script src="js/kana-layout.js?v=132"></script>
+  <script src="js/settings.js?v=132"></script>
+  <script src="js/page-footer.js?v=132"></script>
+  <script src="js/rhythm.js?v=132"></script>
+  <script src="js/ranking.js?v=132"></script>
+  <script src="js/levels.js?v=132"></script>
+  <script src="js/ngram.js?v=132"></script>
+  <script src="js/iki-measurement.js?v=132"></script>
+  <script src="js/weak-words.js?v=132"></script>
+  <script src="js/layout-learning.js?v=132"></script>
+  <script src="js/no-mistype.js?v=132"></script>
+  <script src="js/app.js?v=132"></script>
 </body>
 </html>
