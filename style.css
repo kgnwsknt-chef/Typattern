@@ -438,6 +438,7 @@ body {
   justify-content: center;
   flex-wrap: wrap;
   gap: 32px;
+  align-items: baseline; /* 小さくした秒数も、ほかの数字と文字の下端をそろえる */
 }
 
 .result-value {
@@ -456,6 +457,12 @@ body {
 .result-acc-raw {
   margin-left: 4px;
   font-size: 11px;
+}
+
+/* 経過秒数（お題の長さで変わるので、ほかの数字より目立たなくする） */
+.result-minor .result-value {
+  font-size: 20px;
+  color: var(--sub);
 }
 
 /* 結果の数字の下の、正確率の説明 */
