@@ -79,6 +79,7 @@
 - `docs/measurement.md` … 計測ルール（お題・正誤判定・平均 IKI・WPM・正確率・ミス・キーごとの間隔）
 - `docs/records.md` … 記録ページの決まり（レベルの達成度・データの絞り込み・推移・ランキング）
 - `docs/analysis_iki.md` … IKI のページの決まり（キーごとの IKI・bigram・trigram・分布・推移・bigram の2次元ヒストグラム・指と行(row)で分けた bigram・trigram・trigram と bigram の相関・同時押しのあるかな配列）
+- `docs/bigram_export.md` … IKI のページの bigram の IKI の書き出し（表に出ている bigram の1回ごとの IKI をすべて JSON に。ファイルの形）
 - `docs/analysis_mistype.md` … ミスタイプのページの決まり（続けて起きたミスは最初だけ数える、ストローク回数・ミス率の配列図、打つべきだったキーの求め方、ミスの種類・かな配列のシフトの扱い）
 - `docs/ToDoList.md` … これから決めること・やることの一覧（練習モード・日本語入力とキー配列の未決事項、公開前の残り）。決まったら、それぞれの文書に書いてここから消す
 - `docs/practice.md` … 練習モードの決まり（練習モードの一覧と状態、どの練習モードにも共通の決まり（`practice: true`・入れるところと入れないところ・結果画面））

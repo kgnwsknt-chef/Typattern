@@ -38,6 +38,7 @@
   const chordDistEl = document.getElementById("chord-dist");
   let biRows = [];        // bigram の表に出せる行（「回数」で絞ったもの。種類の絞り込みの前）
   let biBase = 0;         // bigram の表の色の基準
+  let lastPickedCount = 0; // 絞り込んだ記録の回数（書き出しに入れる）
   let chordRows = [];     // 同時押しの表の行
   let chordUpper = 0;     // ずれの分布の横軸の最大（選んだ記録の判定時間の最大）
   let chordSelected = null; // ずれの分布を出している組
@@ -54,6 +55,7 @@
       const kana = layout ? KeyMap.kanaOf(KanaLayout.create(layout.entries)) : null;
       const picked = filters.pick(sessions);
       summaryEl.textContent = Filters.summary(picked);
+      lastPickedCount = picked.length;
       // IKI の推移の横軸：絞り込んだ記録の古い順の通し番号（回数）と、その記録の日（このPCの日付）
       const tags = PointTrend.tagsOf(picked, Filters.localDate);
       trendInfo = PointTrend.axisOf(trendEl.value, picked, Filters.localDate);
@@ -138,6 +140,65 @@
     const rows = kind === "all" ? biRows.slice() : biRows.filter(function (r) { return r.kind === kind; });
     bigramTable.renderRows(bigramEl, rows, biBase, biRows.length ? undefined : "データなし");
   }
+
+  // 表に出ている bigram（絞り込み・「回数」・種類が表と同じ）の 1回ごとの IKI を JSON で書き出す（区間に分けず、すべての値をそのまま）。形は docs/bigram_export.md
+  // bigram の2打それぞれの物理キーの番号（"1a" など。js/keys.js）。同時押しの組は "27+28" のように + でつなぐ
+  function keyNumbers(r) {
+    const strokes = r.chord ? r.gram.split(" → ") : Array.from(r.gram);
+    return strokes.map(function (s) {
+      return s.split("+").map(function (ch) {
+        const k = Keys.ofChar(ch);
+        return k ? k.number : null;
+      }).join("+");
+    });
+  }
+
+  function exportBigrams() {
+    const msgEl = document.getElementById("bi-export-msg");
+    const kind = biKindEl.value;
+    const rows = (kind === "all" ? biRows : biRows.filter(function (r) { return r.kind === kind; })).slice()
+      .sort(function (a, b) { return a.gram < b.gram ? -1 : a.gram > b.gram ? 1 : 0; });
+    if (!rows.length) {
+      msgEl.textContent = "書き出す bigram がありません。";
+      return;
+    }
+    const val = function (id) { return document.getElementById(id).value || null; };
+    const round1 = function (v) { return Math.round(v * 10) / 10; };
+    const data = {
+      app: "Typattern",
+      version: document.getElementById("version").textContent,
+      exportedAt: new Date().toISOString(),
+      filters: {
+        lang: val("f-lang"), keyLayout: val("f-layout"), mode: val("f-mode"),
+        from: val("f-from"), to: val("f-to"),
+        minCount: Number(minEl.value), kind: biKindBoxEl.hidden ? null : kind
+      },
+      sessions: lastPickedCount,
+      bigrams: rows.map(function (r) {
+        return {
+          bigram: r.gram, keys: keyNumbers(r), chord: r.chord, count: r.count, meanMs: round1(r.avg), sdMs: r.sd === null ? null : round1(r.sd),
+          values: r.values.map(Math.round)
+        };
+      })
+    };
+    // 1 bigram を1行にする（開いたときに読みやすく、大きさはほとんど変わらない）
+    const text = "{\n" + Object.keys(data).filter(function (k) { return k !== "bigrams"; }).map(function (k) {
+      return "  " + JSON.stringify(k) + ": " + JSON.stringify(data[k]) + ",\n";
+    }).join("") + '  "bigrams": [\n' + data.bigrams.map(function (b) { return "    " + JSON.stringify(b); }).join(",\n") + "\n  ]\n}\n";
+    const blob = new Blob([text], { type: "application/json" });
+    const a = document.createElement("a");
+    const d = new Date();
+    const pad = function (n) { return String(n).padStart(2, "0"); };
+    a.href = URL.createObjectURL(blob);
+    a.download = "typattern-bigram-iki-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "-" +
+      pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    msgEl.textContent = "bigram " + rows.length + " 種類を書き出しました。";
+  }
+  document.getElementById("bi-export").addEventListener("click", exportBigrams);
 
   // 同時押しの表：組ごとの回数とずれの中央値。行をクリックすると、その組のずれの分布を出す
   function drawChords(rows, upper) {

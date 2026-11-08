@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=136">
+  <link rel="stylesheet" href="style.css?v=137">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -124,6 +124,9 @@
             <option value="cc">同時押し→同時押し</option>
           </select>
         </label>
+        <!-- 表に出ている bigram の IKI を JSON で書き出す（docs/bigram_export.md） -->
+        <button id="bi-export" type="button" class="text-btn small-btn" title="表に出ている bigram の1回ごとの IKI をすべて JSON で書き出す">bigram データのエクスポート</button>
+        <span id="bi-export-msg" class="stats-summary"></span>
       </div>
       <!-- 左に表、右にクリックで出る IKI の分布と推移（狭い画面では分布を表の上に出す） -->
       <div class="ng-block">
@@ -185,19 +188,19 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=136"></script>
-  <script src="js/keys.js?v=136"></script>
-  <script src="js/settings.js?v=136"></script>
-  <script src="js/page-footer.js?v=136"></script>
-  <script src="js/rhythm.js?v=136"></script>
-  <script src="js/keyboard-shapes.js?v=136"></script>
-  <script src="js/kana-layout.js?v=136"></script>
-  <script src="js/key-map.js?v=136"></script>
-  <script src="js/point-trend.js?v=136"></script>
-  <script src="js/ngram.js?v=136"></script>
-  <script src="js/finger-map.js?v=136"></script>
-  <script src="js/iki-measurement.js?v=136"></script>
-  <script src="js/filters.js?v=136"></script>
-  <script src="js/ngram-page.js?v=136"></script>
+  <script src="js/store.js?v=137"></script>
+  <script src="js/keys.js?v=137"></script>
+  <script src="js/settings.js?v=137"></script>
+  <script src="js/page-footer.js?v=137"></script>
+  <script src="js/rhythm.js?v=137"></script>
+  <script src="js/keyboard-shapes.js?v=137"></script>
+  <script src="js/kana-layout.js?v=137"></script>
+  <script src="js/key-map.js?v=137"></script>
+  <script src="js/point-trend.js?v=137"></script>
+  <script src="js/ngram.js?v=137"></script>
+  <script src="js/finger-map.js?v=137"></script>
+  <script src="js/iki-measurement.js?v=137"></script>
+  <script src="js/filters.js?v=137"></script>
+  <script src="js/ngram-page.js?v=137"></script>
 </body>
 </html>
