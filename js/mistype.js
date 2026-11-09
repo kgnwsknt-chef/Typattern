@@ -9,6 +9,7 @@ const Mistype = (function () {
     { id: "omit", name: "抜け" },
     { id: "extra", name: "重ね打ち・余分な1打" },
     { id: "shiftCase", name: "Shift の違い" },
+    { id: "voicing", name: "清濁の取り違え" },
     { id: "prefixForget", name: "前置シフト忘れ" },
     { id: "postfixForget", name: "後置シフト忘れ" },
     { id: "shiftExtra", name: "余計なシフト" },
@@ -43,6 +44,32 @@ const Mistype = (function () {
     const ra = a[0], ca = parseInt(a[1], 16);
     if (ra > "3" || !(ca >= 1 && ca <= 10)) return false;
     return b === ra + (11 - ca).toString(16);
+  }
+
+  // ---- 清濁の取り違え（日本語） ----
+
+  // 清音・濁音・半濁音の組（同じ組のかなどうしの取り違えを数える）
+  const VOICING = {};
+  ["かが", "きぎ", "くぐ", "けげ", "こご", "さざ", "しじ", "すず", "せぜ", "そぞ", "ただ", "ちぢ", "つづ", "てで", "とど",
+    "はばぱ", "ひびぴ", "ふぶぷ", "へべぺ", "ほぼぽ"].forEach(function (g) {
+    Array.from(g).forEach(function (c) { VOICING[c] = Array.from(g).filter(function (d) { return d !== c; }); });
+  });
+
+  // pos のかなを、清濁を変えたかなとして打とうとしたと言えるか。pending：そのかなの打ちかけ、ch：押したキーの文字
+  //   清濁を変えたかなの打ち方が「打ちかけ＋押したキー」で始まる（ローマ字の k と g、かな配列の濁点のキーを余分に押した）か、
+  //   打ちかけで清濁を変えたかなを打ち終えていて、押したキーがその次のかなの始まり（かな配列の濁点のキーを押し忘れた）
+  function voicingSwap(text, pos, pending, ch, optionsFn) {
+    const alts = VOICING[text[pos]];
+    if (!alts || ch === null) return false;
+    const typed = pending + ch;
+    return alts.some(function (alt) {
+      const t = text.slice(0, pos) + alt + text.slice(pos + 1);
+      return optionsFn(t, pos).some(function (o) {
+        if (o.seq.indexOf(typed) === 0) return true;
+        return pending !== "" && o.seq === pending &&
+          optionsFn(t, pos + o.len).some(function (n) { return n.seq[0] === ch; });
+      });
+    });
   }
 
   // ---- 1回分の記録を、押したキーの並びにする ----
@@ -89,7 +116,11 @@ const Mistype = (function () {
       // 判定が示すのはその配列で打つ文字（英語の配列なら割り当て表で逆に引いてキーにする）
       const preferred = keyChar(before.preferred);
       const exp = preferred === null ? null : Keys.ofChar(preferred);
+      // 押したキーの文字（判定にかけたのと同じく、英語の配列なら割り当て表で直す）。清濁の取り違えを見分けるのに使う
+      let ch = Keys.charOf(e[2], shiftOn);
+      if (eng && ch !== null) ch = eng.toChar(ch);
       push(e, {
+        voicing: r.judge === 0 && voicingSwap(raw.text, r.pos, before.pending, ch, optionsFn),
         number: e[2], shift: shiftOn, ok: r.judge === 1, pos: r.pos,
         expected: exp,
         keys: before.keys.map(function (c) { const k = Keys.ofChar(keyChar(c)); return k ? k.number : null; }),
@@ -135,6 +166,8 @@ const Mistype = (function () {
     const n1c = n1 ? charOf(n1) : null;
     const prev = i > 0 && !list[i - 1].bs ? list[i - 1] : null;
 
+    // 清濁の取り違え（日本語）：シフトの種類より先に調べる（かな配列の濁点のキーの押し忘れ・余分も、こちらに入れる）
+    if (s.voicing) return "voicing";
     if (ctx.shifts) {
       // かな配列の前置・後置シフト
       // シフトのキーは、ふつうのかなのキーを兼ねることが多い（月見草などの e・f・s・j）。そのため、
