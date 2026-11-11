@@ -310,33 +310,6 @@
     return el;
   }
 
-  // 相関係数（ピアソン）。2点未満か、どちらかが全部同じなら null
-  function pearsonOf(xs, ys) {
-    const n = xs.length;
-    if (n < 2) return null;
-    const mx = xs.reduce(function (a, v) { return a + v; }, 0) / n;
-    const my = ys.reduce(function (a, v) { return a + v; }, 0) / n;
-    let sxy = 0, sxx = 0, syy = 0;
-    for (let i = 0; i < n; i++) {
-      sxy += (xs[i] - mx) * (ys[i] - my);
-      sxx += (xs[i] - mx) * (xs[i] - mx);
-      syy += (ys[i] - my) * (ys[i] - my);
-    }
-    return sxx && syy ? sxy / Math.sqrt(sxx * syy) : null;
-  }
-  // 順位（同じ値は順位の平均）
-  function ranksOf(vs) {
-    const idx = vs.map(function (v, i) { return i; }).sort(function (a, b) { return vs[a] - vs[b]; });
-    const r = new Array(vs.length);
-    for (let i = 0; i < idx.length;) {
-      let j = i;
-      while (j + 1 < idx.length && vs[idx[j + 1]] === vs[idx[i]]) j++;
-      for (let k = i; k <= j; k++) r[idx[k]] = (i + j) / 2 + 1;
-      i = j + 1;
-    }
-    return r;
-  }
-
   function drawKeyFreq() {
     keyFreqEl.textContent = "";
     const total = Object.keys(keyFreqData).reduce(function (a, k) { return a + keyFreqData[k].count; }, 0);
@@ -351,16 +324,13 @@
       return g ? { name: g[1], color: g[2] } : { name: KF_NONE[0], color: KF_NONE[1] };
     };
 
-    // 図の上：キーの数・r・ρ と、色の凡例（題は HTML の見出し）
+    // 図の上：キーの数と、色の凡例（題は HTML の見出し）
     const head = document.createElement("div");
     head.className = "dist-head";
     const info = document.createElement("span");
     info.className = "dist-info";
-    const lx = pts.map(function (p) { return Math.log(p.share); });
     const ys = pts.map(function (p) { return p.iki; });
-    const r = pearsonOf(lx, ys);
-    const rho = pearsonOf(ranksOf(lx), ranksOf(ys));
-    info.textContent = "キー " + pts.length + " 個 ／ r = " + (r === null ? "-" : r.toFixed(2)) + " ／ ρ = " + (rho === null ? "-" : rho.toFixed(2));
+    info.textContent = "キー " + pts.length + " 個";
     head.append(info);
     keyFreqEl.appendChild(head);
     if (pts.length === 0) {
