@@ -2475,3 +2475,42 @@ a.text-btn {
 .ll-result-table td {
   white-space: nowrap;
 }
+
+/* IKI のページ：キーごとの IKI と頻度の散布図（js/ngram-page.js の drawKeyFreq） */
+.kf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 2px 0 4px;
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.kf-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+
+.kf-svg {
+  max-width: 800px;
+}
+
+.kf-point circle {
+  opacity: 0.85;
+}
+
+.kf-point:hover circle {
+  opacity: 1;
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+.kf-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  fill: var(--text);
+}
