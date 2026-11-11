@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=141">
+  <link rel="stylesheet" href="style.css?v=142">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -84,6 +84,19 @@
       <div class="kb-scroll"><div id="kb-miss" class="kb km"></div></div>
       <!-- 選んだキーのミス率の推移（キーをクリックで切り替え。横軸は日付だけ） -->
       <div id="miss-trend" class="mt-trend"></div>
+      <!-- キーごとのミス率と頻度の散布図（docs/analysis_mistype.md の「キーごとのミス率と頻度」） -->
+      <h3 class="hm-title">キーごとのミス率と頻度</h3>
+      <p class="rhythm-legend">点は1キー（QWERTY の文字。スペースは除く）。縦軸 = 上の配列図と同じキーごとのミス率、横軸 = そのキーが打つべきキーだった回数の、全体に対する割合（対数の目盛り）／ 色は、設定の「指の割り当て」で分けた指・行(row)・手 ／ 打つべきキーだった回数が 20 回未満のキーは白抜き ／ 点にマウスを乗せると値を表示</p>
+      <div class="filters">
+        <label class="filter">色分け
+          <select id="f-kf-color" class="layout-select">
+            <option value="finger">指</option>
+            <option value="row">行(row)</option>
+            <option value="hand">手</option>
+          </select>
+        </label>
+      </div>
+      <div id="key-freq" class="corr"></div>
     </section>
 
     <section class="stats-section">
@@ -130,21 +143,23 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=141"></script>
-  <script src="js/keys.js?v=141"></script>
-  <script src="js/settings.js?v=141"></script>
-  <script src="js/page-footer.js?v=141"></script>
-  <script src="js/keyboard-shapes.js?v=141"></script>
-  <script src="js/key-map.js?v=141"></script>
-  <script src="js/romaji.js?v=141"></script>
-  <script src="js/typer.js?v=141"></script>
-  <script src="js/kana-layout.js?v=141"></script>
-  <script src="js/session-view.js?v=141"></script>
-  <script src="js/rhythm.js?v=141"></script>
-  <script src="js/point-trend.js?v=141"></script>
-  <script src="js/ngram.js?v=141"></script>
-  <script src="js/filters.js?v=141"></script>
-  <script src="js/mistype.js?v=141"></script>
-  <script src="js/mistype-page.js?v=141"></script>
+  <script src="js/store.js?v=142"></script>
+  <script src="js/keys.js?v=142"></script>
+  <script src="js/settings.js?v=142"></script>
+  <script src="js/page-footer.js?v=142"></script>
+  <script src="js/keyboard-shapes.js?v=142"></script>
+  <script src="js/key-map.js?v=142"></script>
+  <script src="js/romaji.js?v=142"></script>
+  <script src="js/typer.js?v=142"></script>
+  <script src="js/kana-layout.js?v=142"></script>
+  <script src="js/session-view.js?v=142"></script>
+  <script src="js/rhythm.js?v=142"></script>
+  <script src="js/point-trend.js?v=142"></script>
+  <script src="js/ngram.js?v=142"></script>
+  <script src="js/filters.js?v=142"></script>
+  <script src="js/mistype.js?v=142"></script>
+  <script src="js/finger-map.js?v=142"></script>
+  <script src="js/key-scatter.js?v=142"></script>
+  <script src="js/mistype-page.js?v=142"></script>
 </body>
 </html>

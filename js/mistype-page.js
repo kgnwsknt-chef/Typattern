@@ -173,7 +173,30 @@
       }
     });
     drawMissTrend(acc);
+    missFreqAcc = acc;
+    drawMissFreq();
   }
+
+  // キーごとのミス率と頻度の散布図（js/key-scatter.js。決まりは docs/analysis_mistype.md の「キーごとのミス率と頻度」）。
+  // 頻度は打つべきキーだった回数。スペースと文字のないキーは除く。打つべきキーだった回数が MIN_ATTEMPTS 未満のキーは白抜き
+  const missFreqEl = document.getElementById("key-freq");
+  const kfColorEl = document.getElementById("f-kf-color"); // 色分け：指・行・手
+  let missFreqAcc = null;
+  function drawMissFreq() {
+    if (!missFreqAcc) return;
+    const keys = missFreqAcc.keys;
+    const pts = [];
+    Object.keys(keys).forEach(function (n) {
+      const st = keys[n];
+      const label = Keys.label(n);
+      if (!st.attempts || label === null || n === Keys.SPACE) return;
+      const rate = st.misses / st.attempts * 100;
+      pts.push({ key: label, count: st.attempts, value: rate, weak: st.attempts < MIN_ATTEMPTS,
+        tip: "ミス率 " + rate.toFixed(1) + "%（押し間違い " + st.misses + " ／ 打つべきキーだった回数 " + st.attempts.toLocaleString() + "）" });
+    });
+    KeyScatter.draw(missFreqEl, pts, { colorBy: kfColorEl.value, unit: "%", fromZero: true, ariaLabel: "キーごとのミス率と頻度の散布図" });
+  }
+  kfColorEl.addEventListener("change", drawMissFreq);
 
   // 選んだキーのミス率の推移（js/point-trend.js。IKI のページの n-gram の推移と同じ形）。
   // 横軸は日付だけ（1回ごとだと打つ回数が少なく、0% の点ばかりになるため）。1日の押し間違い ÷ 打つべきキーだった回数を1点にする

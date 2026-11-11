@@ -2476,7 +2476,7 @@ a.text-btn {
   white-space: nowrap;
 }
 
-/* IKI のページ：キーごとの IKI と頻度の散布図（js/ngram-page.js の drawKeyFreq） */
+/* キーごとの値と頻度の散布図（js/key-scatter.js。IKI のページ・ミスタイプのページ） */
 .kf-legend {
   display: flex;
   flex-wrap: wrap;

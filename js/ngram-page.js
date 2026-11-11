@@ -294,109 +294,12 @@
   const keyFreqEl = document.getElementById("key-freq");
   const kfColorEl = document.getElementById("f-kf-color"); // 色分け：指・行・手
   let keyFreqData = {}; // QWERTY の文字 → { sum, count }（キーごとの IKI と同じもの）
-  const SVG_NS = "http://www.w3.org/2000/svg";
-  // 色分けごとの組 [値, 名前, 色]。keyOf の値で引く。割り当てのないキーは灰色
-  const KF_GROUPS = {
-    finger: { of: function (k) { return k.finger; }, list: [[1, "人差し指", "var(--cmp-fast)"], [2, "中指", "var(--cmp-3)"], [3, "薬指", "var(--cmp-4)"], [4, "小指", "var(--cmp-5)"]] },
-    row: { of: function (k) { return k.row; }, list: [[0, "数字の行", "var(--cmp-slow)"], [1, "上の行", "var(--cmp-4)"], [2, "ホーム行", "var(--cmp-3)"], [3, "下の行", "var(--cmp-5)"]] },
-    hand: { of: function (k) { return k.hand; }, list: [["L", "左手", "var(--cmp-fast)"], ["R", "右手", "var(--cmp-4)"]] }
-  };
-  const KF_NONE = ["割り当てなし", "var(--sub)"];
-
-  function svgNode(name, attrs, text) {
-    const el = document.createElementNS(SVG_NS, name);
-    Object.keys(attrs).forEach(function (k) { el.setAttribute(k, attrs[k]); });
-    if (text !== undefined) el.textContent = text;
-    return el;
-  }
-
   function drawKeyFreq() {
-    keyFreqEl.textContent = "";
-    const total = Object.keys(keyFreqData).reduce(function (a, k) { return a + keyFreqData[k].count; }, 0);
-    const pts = Object.keys(keyFreqData).filter(function (k) { return keyFreqData[k].count > 0; }).map(function (k) {
+    KeyScatter.draw(keyFreqEl, Object.keys(keyFreqData).map(function (k) {
       const e = keyFreqData[k];
-      return { key: k, count: e.count, share: e.count / total * 100, iki: e.sum / e.count };
-    });
-    const group = KF_GROUPS[kfColorEl.value] || KF_GROUPS.finger;
-    const colorOf = function (key) {
-      const k = FingerMap.keyOf(key);
-      const g = k ? group.list.find(function (x) { return x[0] === group.of(k); }) : null;
-      return g ? { name: g[1], color: g[2] } : { name: KF_NONE[0], color: KF_NONE[1] };
-    };
-
-    // 図の上：キーの数と、色の凡例（題は HTML の見出し）
-    const head = document.createElement("div");
-    head.className = "dist-head";
-    const info = document.createElement("span");
-    info.className = "dist-info";
-    const ys = pts.map(function (p) { return p.iki; });
-    info.textContent = "キー " + pts.length + " 個";
-    head.append(info);
-    keyFreqEl.appendChild(head);
-    if (pts.length === 0) {
-      const p = document.createElement("p");
-      p.className = "hm-empty";
-      p.textContent = "対象になるキーがありません。";
-      keyFreqEl.appendChild(p);
-      return;
-    }
-    const legend = document.createElement("div");
-    legend.className = "kf-legend";
-    const used = new Set(pts.map(function (p) { return colorOf(p.key).name; }));
-    group.list.map(function (g) { return [g[1], g[2]]; }).concat([KF_NONE]).forEach(function (g) {
-      if (!used.has(g[0])) return;
-      const item = document.createElement("span");
-      const sw = document.createElement("span");
-      sw.className = "kf-swatch";
-      sw.style.background = g[1];
-      item.append(sw, g[0]);
-      legend.appendChild(item);
-    });
-    keyFreqEl.appendChild(legend);
-
-    // 横軸：割合の対数（切りのよい 1・2・5 の目盛り）。縦軸：IKI（キーの値の範囲に少し余白）
-    const W = 560, H = 300, L = 44, R = 16, T = 12, B = 34;
-    const pw = W - L - R, ph = H - T - B;
-    let x0 = Math.log10(Math.min.apply(null, pts.map(function (p) { return p.share; })));
-    let x1 = Math.log10(Math.max.apply(null, pts.map(function (p) { return p.share; })));
-    if (x1 - x0 < 0.5) { x0 -= 0.25; x1 += 0.25; }
-    const xpad = (x1 - x0) * 0.05;
-    x0 -= xpad; x1 += xpad;
-    let y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
-    const ypad = Math.max(10, (y1 - y0) * 0.08);
-    y0 = Math.max(0, y0 - ypad); y1 += ypad;
-    const X = function (share) { return L + (Math.log10(share) - x0) / (x1 - x0) * pw; };
-    const Y = function (v) { return T + ph - (v - y0) / (y1 - y0) * ph; };
-    const svg = svgNode("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg kf-svg", role: "img", "aria-label": "キーごとの IKI と頻度の散布図" });
-    svg.appendChild(svgNode("line", { x1: L, y1: T + ph, x2: L + pw, y2: T + ph, class: "dist-axis" }));
-    svg.appendChild(svgNode("line", { x1: L, y1: T, x2: L, y2: T + ph, class: "dist-axis" }));
-    for (let d = Math.floor(x0); d <= Math.ceil(x1); d++) {
-      [1, 2, 5].forEach(function (m) {
-        const v = m * Math.pow(10, d), lv = Math.log10(v);
-        if (lv < x0 || lv > x1) return;
-        svg.appendChild(svgNode("line", { x1: X(v), y1: T, x2: X(v), y2: T + ph, class: "trend-grid" }));
-        svg.appendChild(svgNode("text", { x: X(v), y: T + ph + 13, "text-anchor": "middle", class: "dist-label" }, String(Number(v.toPrecision(2)))));
-      });
-    }
-    svg.appendChild(svgNode("text", { x: L + pw, y: H - 4, "text-anchor": "end", class: "dist-label" }, "頻度（全体に対する割合 %、対数）→"));
-    const yStep = [5, 10, 20, 25, 50, 100, 200].find(function (s) { return (y1 - y0) / s <= 6; }) || 500;
-    for (let v = Math.ceil(y0 / yStep) * yStep; v <= y1; v += yStep) {
-      svg.appendChild(svgNode("line", { x1: L, y1: Y(v), x2: L + pw, y2: Y(v), class: "trend-grid" }));
-      svg.appendChild(svgNode("text", { x: L - 5, y: Y(v) + 3, "text-anchor": "end", class: "dist-label" }, String(v)));
-    }
-    svg.appendChild(svgNode("text", { x: L - 5, y: T - 2, "text-anchor": "end", class: "dist-label" }, "ms"));
-
-    // 点と文字
-    pts.forEach(function (p) {
-      const c = colorOf(p.key);
-      const g = svgNode("g", { class: "kf-point" });
-      g.appendChild(svgNode("circle", { cx: X(p.share), cy: Y(p.iki), r: 4, fill: c.color }));
-      g.appendChild(svgNode("text", { x: X(p.share) + 6, y: Y(p.iki) + 4, class: "kf-label" }, p.key));
-      g.appendChild(svgNode("title", {}, p.key + "（" + (Keys.ofChar(p.key) ? Keys.ofChar(p.key).number : "-") + "・" + c.name + "）：平均 " +
-        Math.round(p.iki) + " ms ／ " + p.count.toLocaleString() + " 回（" + p.share.toFixed(2) + "%）"));
-      svg.appendChild(g);
-    });
-    keyFreqEl.appendChild(svg);
+      const avg = e.count ? e.sum / e.count : 0;
+      return { key: k, count: e.count, value: avg, tip: "平均 " + Math.round(avg) + " ms ／ " + e.count.toLocaleString() + " 回" };
+    }), { colorBy: kfColorEl.value, unit: "ms", ariaLabel: "キーごとの IKI と頻度の散布図" });
   }
   kfColorEl.addEventListener("change", drawKeyFreq);
 
