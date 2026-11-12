@@ -2509,6 +2509,17 @@ a.text-btn {
   stroke-width: 1;
 }
 
+.kf-clickable {
+  cursor: pointer;
+}
+
+/* クリックで選んだ点（bigram の IKI と頻度） */
+.kf-selected circle {
+  opacity: 1;
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
 .kf-label {
   font-size: 11px;
   font-family: var(--mono);

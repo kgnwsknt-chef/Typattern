@@ -13,8 +13,11 @@
   const HM_SIDE_MAX = 32; // 軸のキーと組の数がこれ以下なら2枚を横に、超えたら上下に並べる
   let hmRows = [];        // 2次元ヒストグラムに描いている bigram
   let hmBase = 0;         // 色の基準
-  // bigram の表で分布を出す行が変わったら、2次元ヒストグラムのそのマスを枠で囲み直す
-  const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"), redrawHeatmaps);
+  // bigram の表で分布を出す行が変わったら、2次元ヒストグラムのそのマスを枠で囲み直し、散布図のその点を強調し直す
+  const bigramTable = NGram.create(2, "bigram", document.getElementById("bigram-dist"), function () {
+    redrawHeatmaps();
+    drawBigramFreq();
+  });
   // trigram の表で分布を出す行が変わったら、相関の図のその点を囲み直す
   const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"), redrawCorr);
   const corrPairEl = document.getElementById("corr-pair");   // trigram の中の2つの間隔
@@ -38,6 +41,7 @@
   const chordDistEl = document.getElementById("chord-dist");
   let biRows = [];        // bigram の表に出せる行（「回数」で絞ったもの。種類の絞り込みの前）
   let biBase = 0;         // bigram の表の色の基準
+  let biTotal = 0;        // 全部の bigram（「回数」で絞る前）の回数の合計。散布図の頻度の分母
   let lastPickedCount = 0; // 絞り込んだ記録の回数（書き出しに入れる）
   let chordRows = [];     // 同時押しの表の行
   let chordUpper = 0;     // ずれの分布の横軸の最大（選んだ記録の判定時間の最大）
@@ -110,6 +114,7 @@
         const single = function (r) { return !r.chord; };
         const singleBi = allBi.filter(single);
         drawClasses(allBi, allTri, base); // 指と行(row)で分けた分類は「回数」で絞らない
+        biTotal = allBi.reduce(function (a, r) { return a + r.count; }, 0);
         drawBigrams(bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
         drawKeyIki(singleBi, base, kana);
@@ -139,7 +144,66 @@
     const kind = biKindEl.value;
     const rows = kind === "all" ? biRows.slice() : biRows.filter(function (r) { return r.kind === kind; });
     bigramTable.renderRows(bigramEl, rows, biBase, biRows.length ? undefined : "データなし");
+    drawBigramFreq();
   }
+
+  // ---- bigram の IKI と頻度の散布図（決まりは docs/analysis_iki.md の「bigram の IKI と頻度」） ----
+  const bigramFreqEl = document.getElementById("bigram-freq");
+  const bfColorEl = document.getElementById("f-bf-color"); // 色分け：分類・SFB の行の差・手の組
+  const BF_WEAK = 20; // これより少ない回数の点は白抜き
+  const OTHER = "var(--sub)";
+  // 色分けごとの [名前, 色] と、bigram → 名前
+  const BF_COLORINGS = {
+    class: {
+      legend: [["alternation（左右交互）", "var(--cmp-fast)"], ["roll（内向き）", "var(--cmp-3)"], ["roll（外向き）", "var(--cmp-4)"],
+        ["SFB（同指異鍵）", "var(--cmp-slow)"], ["repeat（連打）", "var(--cmp-5)"], ["分類なし", OTHER]],
+      nameOf: function (g) {
+        const c = FingerMap.bigramBase(g);
+        return { alternation: "alternation（左右交互）", "roll-in": "roll（内向き）", "roll-out": "roll（外向き）", repeat: "repeat（連打）",
+          "sfb-0": "SFB（同指異鍵）", "sfb-1": "SFB（同指異鍵）", "sfb-2": "SFB（同指異鍵）" }[c] || "分類なし";
+      }
+    },
+    sfb: {
+      legend: [["SFB・同じ行", "var(--cmp-fast)"], ["SFB・1行", "var(--cmp-4)"], ["SFB・2行以上", "var(--cmp-slow)"], ["SFB 以外", OTHER]],
+      nameOf: function (g) {
+        return { "sfb-0": "SFB・同じ行", "sfb-1": "SFB・1行", "sfb-2": "SFB・2行以上" }[FingerMap.bigramBase(g)] || "SFB 以外";
+      }
+    },
+    hand: {
+      legend: [["左 → 左", "var(--cmp-fast)"], ["左 → 右", "var(--cmp-3)"], ["右 → 左", "var(--cmp-4)"], ["右 → 右", "var(--cmp-5)"], ["割り当てなし", OTHER]],
+      nameOf: function (g) {
+        const a = FingerMap.keyOf(g[0]), b = FingerMap.keyOf(g[1]);
+        if (!a || !b) return "割り当てなし";
+        const h = { L: "左", R: "右" };
+        return h[a.hand] + " → " + h[b.hand];
+      }
+    }
+  };
+  function drawBigramFreq() {
+    const def = BF_COLORINGS[bfColorEl.value] || BF_COLORINGS.class;
+    const colorOf = {};
+    def.legend.forEach(function (g) { colorOf[g[0]] = g[1]; });
+    const kind = biKindEl.value;
+    const rows = biRows.filter(function (r) { return !r.chord && (kind === "all" || r.kind === kind); });
+    KeyScatter.draw(bigramFreqEl, rows.map(function (r) {
+      return { key: r.gram, count: r.count, value: r.avg, weak: r.count < BF_WEAK,
+        tip: "平均 " + Math.round(r.avg) + " ms ／ " + r.count.toLocaleString() + " 回" };
+    }), {
+      coloring: {
+        legend: def.legend,
+        colorOf: function (p) {
+          const name = def.nameOf(p.key);
+          return { name: name, color: colorOf[name], back: colorOf[name] === OTHER };
+        }
+      },
+      unit: "ms", labels: false, total: biTotal, noun: "bigram",
+      selected: bigramTable.selected(),
+      onSelect: function (gram) { bigramTable.show(gram); },
+      ariaLabel: "bigram の IKI と頻度の散布図",
+      emptyText: biRows.length ? "同時押しの組を含まない bigram がありません。" : "データなし"
+    });
+  }
+  bfColorEl.addEventListener("change", drawBigramFreq);
 
   // 表に出ている bigram（絞り込み・「回数」・種類が表と同じ）の 1回ごとの IKI を JSON で書き出す（区間に分けず、すべての値をそのまま）。形は docs/bigram_export.md
   // bigram の2打それぞれの物理キーの番号（"1a" など。js/keys.js）。同時押しの組は "27+28" のように + でつなぐ
