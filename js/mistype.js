@@ -204,7 +204,7 @@ const Mistype = (function () {
   // 新しい集計の入れ物
   function create() {
     return {
-      keys: {},   // 物理キーの番号 → { strokes: 押した回数, attempts: 打つべきキーだった回数, misses: 最初のミスの数 }
+      keys: {},   // 物理キーの番号 → { strokes: 押した回数, attempts: 打つべきキーだった回数, misses: 最初のミスの数, runs: 回ごとの数, types: { 種類: 回数 } }
       pairs: new Map(), // "打つべきキー>押したキー" → { expected, pressed, count, types: { 種類: 回数 } }
       types: {},  // 種類 → 回数
       strokes: 0, // 押したキーの数（Shift・Backspace・ミスも含む。IKI のページの総打鍵数と同じ）
@@ -257,7 +257,7 @@ const Mistype = (function () {
   }
 
   function keyStat(acc, number) {
-    return acc.keys[number] || (acc.keys[number] = { strokes: 0, attempts: 0, misses: 0, runs: new Map() });
+    return acc.keys[number] || (acc.keys[number] = { strokes: 0, attempts: 0, misses: 0, runs: new Map(), types: {} });
   }
 
   // キーのミス率を、記録（回）ごとにも数える（ミス率の推移に使う）。runs：回 → { attempts, misses, tag }
@@ -300,6 +300,8 @@ const Mistype = (function () {
       acc.types[type] = (acc.types[type] || 0) + 1;
       if (!s.expected) return;
       countAttempt(acc, s.expected.number, true, tag);
+      const kt = keyStat(acc, s.expected.number).types; // 打つべきだったキーごとのミスの種類（ミス率と頻度の散布図の色分け）
+      kt[type] = (kt[type] || 0) + 1;
       const id = s.expected.number + (s.expected.shift ? "S" : "") + ">" + s.number + (s.shift ? "S" : "");
       const pair = acc.pairs.get(id) || { expected: s.expected, pressed: { number: s.number, shift: s.shift }, count: 0, types: {} };
       pair.count++;

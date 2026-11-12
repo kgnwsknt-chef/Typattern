@@ -182,19 +182,59 @@
   const missFreqEl = document.getElementById("key-freq");
   const kfColorEl = document.getElementById("f-kf-color"); // 色分け：指・行・手
   let missFreqAcc = null;
+  // 色分け「ミスの種類」：種類 → 色の組。よく出る種類に別の色を当て、残りはまとめる。並びは凡例の順
+  const MT_GROUPS = [
+    [["adjacent"], "var(--cmp-slow)"],
+    [["transpose"], "var(--cmp-fast)"],
+    [["omit"], "var(--cmp-3)"],
+    [["extra"], "var(--cmp-4)"],
+    [["mirror"], "var(--cmp-5)"],
+    [["shiftCase", "voicing"], "var(--mt-shift)"],
+    [["prefixForget", "postfixForget", "shiftExtra", "shiftWrong"], "var(--mt-kana-shift)"],
+    [["other"], "var(--mt-other)"]
+  ].map(function (g) {
+    return { types: g[0], color: g[1], name: g[0].map(function (t) { return Mistype.TYPE_NAME[t]; }).join("・") };
+  });
+  const MT_NONE = "ミスなし";
+  // キーで一番多かったミスの種類（同じ数なら Mistype.TYPES の順で前のもの）。ミスがなければ null
+  function topType(types) {
+    let best = null;
+    Mistype.TYPES.forEach(function (t) {
+      if (types[t.id] && (best === null || types[t.id] > types[best])) best = t.id;
+    });
+    return best;
+  }
   function drawMissFreq() {
     if (!missFreqAcc) return;
     const keys = missFreqAcc.keys;
     const pts = [];
+    const typesOf = {}; // QWERTY の文字 → 種類ごとの回数
     Object.keys(keys).forEach(function (n) {
       const st = keys[n];
       const label = Keys.label(n);
       if (!st.attempts || label === null || n === Keys.SPACE) return;
       const rate = st.misses / st.attempts * 100;
+      typesOf[label] = st.types;
+      // ミスの種類の内訳（多い順）
+      const detail = Object.keys(st.types).sort(function (a, b) { return st.types[b] - st.types[a]; })
+        .map(function (t) { return Mistype.TYPE_NAME[t] + " " + st.types[t]; }).join("・");
       pts.push({ key: label, count: st.attempts, value: rate, weak: st.attempts < MIN_ATTEMPTS,
-        tip: "ミス率 " + rate.toFixed(1) + "%（押し間違い " + st.misses + " ／ 打つべきキーだった回数 " + st.attempts.toLocaleString() + "）" });
+        tip: "ミス率 " + rate.toFixed(1) + "%（押し間違い " + st.misses + " ／ 打つべきキーだった回数 " + st.attempts.toLocaleString() + "）" +
+          (detail ? " ／ " + detail : "") });
     });
-    KeyScatter.draw(missFreqEl, pts, { colorBy: kfColorEl.value, unit: "%", fromZero: true, ariaLabel: "キーごとのミス率と頻度の散布図" });
+    const opts = { colorBy: kfColorEl.value, unit: "%", fromZero: true, ariaLabel: "キーごとのミス率と頻度の散布図" };
+    if (kfColorEl.value === "mistype") {
+      opts.keyTitle = true;
+      opts.coloring = {
+        legend: MT_GROUPS.map(function (g) { return [g.name, g.color]; }).concat([[MT_NONE, "var(--sub)"]]),
+        colorOf: function (p) {
+          const t = topType(typesOf[p.key]);
+          const g = t && MT_GROUPS.find(function (x) { return x.types.indexOf(t) >= 0; });
+          return g ? { name: g.name, color: g.color, label: Mistype.TYPE_NAME[t] } : { name: MT_NONE, color: "var(--sub)", back: true };
+        }
+      };
+    }
+    KeyScatter.draw(missFreqEl, pts, opts);
   }
   kfColorEl.addEventListener("change", drawMissFreq);
 

@@ -36,6 +36,10 @@
   --cmp-3: #2a8f3a;
   --cmp-4: #e07b00;
   --cmp-5: #8a3fd1;
+  /* ミスタイプのページのミス率と頻度の散布図で、ミスの種類の色（ほかは --cmp-*） */
+  --mt-shift: #8b5a2b;
+  --mt-kana-shift: #1aa3b8;
+  --mt-other: #444444;
   --kb-key-border: #b9b3a6;
   --kb-func: #e4dfd3;
   /* bigram の2次元ヒストグラム：データのないマス（回数 0・平均 IKI なし）の色 */

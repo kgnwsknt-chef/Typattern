@@ -34,14 +34,14 @@ const KeyScatter = (function () {
   }
 
   // el に描く。points：[{ key: 点の名前（QWERTY の文字・bigram）, count: 頻度に数える回数, value: 縦軸の値, weak: 白抜きにするか, tip: マウスを乗せたときの文（名前などの後に続ける） }]
-  //   opts：colorBy（キーの色分け。"finger"・"row"・"hand"）、coloring（キー以外の色分け。{ legend: [[名前, 色]], colorOf(点) → { name, color, back: 後ろに描くか } }）、
+  //   opts：colorBy（キーの色分け。"finger"・"row"・"hand"）、coloring（指・行・手以外の色分け。{ legend: [[名前, 色]], colorOf(点) → { name: 凡例の名前, color, back: 後ろに描くか, label: マウスを乗せたときに出す名前（省略すると name） } }）、
   //   unit（縦軸の単位。「ms」「%」）、fromZero（縦軸を 0 から始める）、labels（点の右に名前を書くか。初期値 true）、
   //   total（割合の分母。省略すると points の回数の合計）、noun（点の数の言い方。初期値「キー」）、
-  //   selected（強調する点の key）、onSelect（点をクリックしたとき。引数は key）、ariaLabel、emptyText
+  //   keyTitle（coloring を渡したキーの点でも、物理キーの番号を出す）、selected（強調する点の key）、onSelect（点をクリックしたとき。引数は key）、ariaLabel、emptyText
   function draw(el, points, opts) {
     el.textContent = "";
     const total = opts.total || points.reduce(function (a, p) { return a + p.count; }, 0);
-    const isKey = !opts.coloring;
+    const isKey = !opts.coloring || opts.keyTitle; // マウスを乗せたときに物理キーの番号を出すか
     const coloring = opts.coloring || keyColoring(opts.colorBy);
     const pts = points.filter(function (p) { return p.count > 0; }).map(function (p) {
       const c = coloring.colorOf(p);
@@ -121,10 +121,10 @@ const KeyScatter = (function () {
         ? { cx: X(p.share), cy: Y(p.value), r: 3.5, fill: "var(--bg)", stroke: p.c.color, "stroke-width": 1.5 }
         : { cx: X(p.share), cy: Y(p.value), r: 4, fill: p.c.color }));
       if (opts.labels !== false) g.appendChild(svgNode("text", { x: X(p.share) + 6, y: Y(p.value) + 4, class: "kf-label" }, p.key));
-      let head = p.key + "（" + p.c.name + "）";
+      let head = p.key + "（" + (p.c.label || p.c.name) + "）";
       if (isKey) {
         const num = Keys.ofChar(p.key);
-        head = p.key + "（" + (num ? num.number : "-") + "・" + p.c.name + "）";
+        head = p.key + "（" + (num ? num.number : "-") + "・" + (p.c.label || p.c.name) + "）";
       }
       g.appendChild(svgNode("title", {}, head + "：" + p.tip + "（頻度 " + p.share.toFixed(2) + "%）"));
       if (opts.onSelect) g.addEventListener("click", function () { opts.onSelect(p.key); });
