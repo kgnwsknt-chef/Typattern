@@ -107,6 +107,8 @@
     drawStrokes(acc);
     drawMisses(acc);
     drawTypes(acc);
+    charAcc = acc;
+    drawChars();
     pairRows = Array.from(acc.pairs.values());
     drawPairs();
     lastAcc = acc;
@@ -307,6 +309,62 @@
     }
     typesEl.appendChild(table);
   }
+
+  // 文字ごとのミス率の表（決まりは docs/analysis_mistype.md の「文字ごとのミス率」）。回数の下限で絞る
+  const charsEl = document.getElementById("mt-chars");
+  const charMinEl = document.getElementById("f-char-min");
+  let charAcc = null;
+  let charSort = { key: "rate", order: "desc" }; // 並べ替え："char"・"count"・"missed"・"rate"・"misses"
+  function drawChars() {
+    if (!charAcc) return;
+    charsEl.textContent = "";
+    const min = Number(charMinEl.value);
+    const rows = Array.from(charAcc.chars, function (x) {
+      return { char: x[0], count: x[1].count, missed: x[1].missed, misses: x[1].misses, rate: x[1].missed / x[1].count, types: x[1].types };
+    }).filter(function (r) { return r.count >= min; });
+    const sign = charSort.order === "asc" ? 1 : -1;
+    const k = charSort.key;
+    rows.sort(function (x, y) {
+      if (k === "char") return sign * x.char.localeCompare(y.char);
+      return sign * (x[k] - y[k]) || y.count - x.count || x.char.localeCompare(y.char);
+    });
+    const redraw = function (s) { charSort = s; drawChars(); };
+    const table = document.createElement("table");
+    table.className = "bg-table";
+    const hr = document.createElement("tr");
+    hr.appendChild(sortHeader(charSort, "char", "文字", "asc", ["文字の順", "文字の逆順"], redraw));
+    hr.appendChild(sortHeader(charSort, "count", "回数", "desc", ["少ない順", "多い順"], redraw));
+    hr.appendChild(sortHeader(charSort, "missed", "ミスした回数", "desc", ["少ない順", "多い順"], redraw));
+    hr.appendChild(sortHeader(charSort, "rate", "ミス率", "desc", ["低い順", "高い順"], redraw));
+    hr.appendChild(sortHeader(charSort, "misses", "押し間違い", "desc", ["少ない順", "多い順"], redraw));
+    hr.appendChild(th("多い種類"));
+    table.appendChild(document.createElement("thead")).appendChild(hr);
+    const body = table.appendChild(document.createElement("tbody"));
+    rows.forEach(function (r) {
+      const tr = document.createElement("tr");
+      tr.appendChild(td("bg-name", r.char));
+      tr.appendChild(td("", r.count.toLocaleString()));
+      tr.appendChild(td("", String(r.missed)));
+      tr.appendChild(td("", (r.rate * 100).toFixed(1) + "%"));
+      tr.appendChild(td("", String(r.misses)));
+      const t = topType(r.types);
+      const cell = td("mt-type", t ? Mistype.TYPE_NAME[t] : "");
+      // マウスを乗せると種類の内訳（多い順）
+      cell.title = Object.keys(r.types).sort(function (a, b) { return r.types[b] - r.types[a]; })
+        .map(function (x) { return Mistype.TYPE_NAME[x] + " " + r.types[x]; }).join("・");
+      tr.appendChild(cell);
+      body.appendChild(tr);
+    });
+    if (!rows.length) {
+      const tr = document.createElement("tr");
+      const c = td("", "データなし");
+      c.colSpan = 6;
+      tr.appendChild(c);
+      body.appendChild(tr);
+    }
+    charsEl.appendChild(table);
+  }
+  charMinEl.addEventListener("change", drawChars);
 
   // 並べ替えのボタンを入れた見出し（n-gram の表と同じ形）
   //   state：{ key, order } の今の並べ替え。押すと state を変えて redraw を呼ぶ

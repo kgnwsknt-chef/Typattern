@@ -211,6 +211,7 @@ const Mistype = (function () {
       misses: 0,  // ミスの打鍵の数（続けて起きたものも全部）
       firsts: 0,  // 最初のミスの数（押し間違いとして数えたもの）
       skipped: 0, // 判定を再現できず、数えなかった記録の数（かな配列を削除したなど）
+      chars: new Map(), // お題の文字 → { count: お題に出た回数, missed: 押し間違いが1回以上あった回数, misses: 押し間違いの数, types: { 種類: 回数 } }
       bigrams: new Map(), // "直前に正しく押したキー＋打つべきキー"（QWERTY の文字2つ）→ { count: 打とうとした回数, misses: 押し間違い }
       intervals: { miss: [], normal: [] } // 押し間違いの直前の間隔・正しい打鍵の間隔(ms)
     };
@@ -285,6 +286,7 @@ const Mistype = (function () {
     if (!list) { acc.skipped++; return; }
     markFirst(list);
     const ctx = { lang: lang, text: raw.text, shifts: shifts };
+    const posTypes = new Map(); // お題の位置 → その位置の押し間違いの種類の一覧（文字ごとのミス率に使う）
     list.forEach(function (s, i) {
       if (s.bs) return;
       if (s.ok) {
@@ -299,6 +301,8 @@ const Mistype = (function () {
       const type = classify(list, i, ctx);
       acc.types[type] = (acc.types[type] || 0) + 1;
       if (!s.expected) return;
+      if (!posTypes.has(s.pos)) posTypes.set(s.pos, []);
+      posTypes.get(s.pos).push(type);
       countAttempt(acc, s.expected.number, true, tag);
       const kt = keyStat(acc, s.expected.number).types; // 打つべきだったキーごとのミスの種類（ミス率と頻度の散布図の色分け）
       kt[type] = (kt[type] || 0) + 1;
@@ -308,6 +312,25 @@ const Mistype = (function () {
       pair.types[type] = (pair.types[type] || 0) + 1;
       acc.pairs.set(id, pair);
     });
+    addChars(acc, raw.text, lang === "ja" ? optionsFn : null, posTypes);
+  }
+
+  // 文字ごとのミス率：お題の文字を1文字ずつ数え、その位置の押し間違いを足す（docs/analysis_mistype.md の「文字ごとのミス率」）
+  //   スペースと、打ち方のないかな（かな配列の割り当て表にないので飛ばしたかな）は除く
+  function addChars(acc, text, optionsFn, posTypes) {
+    for (let p = 0; p < text.length; p++) {
+      const c = text[p];
+      if (c === " " || (optionsFn && !optionsFn(text, p).length)) continue;
+      const e = acc.chars.get(c) || { count: 0, missed: 0, misses: 0, types: {} };
+      e.count++;
+      const t = posTypes.get(p);
+      if (t) {
+        e.missed++;
+        e.misses += t.length;
+        t.forEach(function (x) { e.types[x] = (e.types[x] || 0) + 1; });
+      }
+      acc.chars.set(c, e);
+    }
   }
 
   // キーの表示名（QWERTY の文字。Shift ありは Shift で出る文字）

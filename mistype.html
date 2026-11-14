@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=146">
+  <link rel="stylesheet" href="style.css?v=147">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -66,7 +66,7 @@
     </div>
     <p id="stats-summary" class="stats-summary">読み込み中…</p>
 
-    <!-- 並び：絞り込み → 集計の要約 → キーごとのストローク回数とミス率（配列図）→ 種類 → 打ち間違いの組 → ミスが起きやすい並び → 直前の間隔。決まりは docs/analysis_mistype.md -->
+    <!-- 並び：絞り込み → 集計の要約 → キーごとのストローク回数とミス率（配列図）→ 文字ごとのミス率 → 種類 → 打ち間違いの組 → ミスが起きやすい並び → 直前の間隔。決まりは docs/analysis_mistype.md -->
     <section class="stats-section">
       <p id="mt-summary" class="stats-summary"></p>
       <p class="rhythm-legend">押し間違い = 続けて起きたミスのまとまりの最初のミス（2つ目以降は、最初の押し間違いの続きなので数えない）。結果画面の「ミス」の数とは数え方が違う ／ キーは QWERTY の文字で表示（日本語も押したキー）。打つべきキーは、日本語では手引きが示す打ち方のキー</p>
@@ -98,6 +98,22 @@
         </label>
       </div>
       <div id="key-freq" class="corr"></div>
+    </section>
+
+    <section class="stats-section">
+      <h2 class="stats-title">文字ごとのミス率</h2>
+      <p class="rhythm-legend">お題の文字ごと（英語は大文字・小文字・記号を分ける。日本語はかな）。回数 = お題にその文字が出た回数、ミスした回数 = その文字の所で押し間違いが1回以上あった回数、ミス率 = ミスした回数 ÷ 回数、押し間違い = その文字の所の押し間違いの数（打ち直してまた間違えると増える）／ スペースと、かな配列の割り当て表にないので飛ばしたかなは除く ／ 日本語で2文字まとめて打つかな（「しゃ」など）は、打っている間のミスを、そのとき打っていたかなに数える ／ 列の見出しをクリックで並べ替え</p>
+      <div class="filters">
+        <label class="filter">回数
+          <select id="f-char-min" class="layout-select">
+            <option value="5">5 回以上</option>
+            <option value="10">10 回以上</option>
+            <option value="20" selected>20 回以上</option>
+            <option value="50">50 回以上</option>
+          </select>
+        </label>
+      </div>
+      <div id="mt-chars" class="ngram-scroll"></div>
     </section>
 
     <section class="stats-section">
@@ -144,23 +160,23 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=146"></script>
-  <script src="js/keys.js?v=146"></script>
-  <script src="js/settings.js?v=146"></script>
-  <script src="js/page-footer.js?v=146"></script>
-  <script src="js/keyboard-shapes.js?v=146"></script>
-  <script src="js/key-map.js?v=146"></script>
-  <script src="js/romaji.js?v=146"></script>
-  <script src="js/typer.js?v=146"></script>
-  <script src="js/kana-layout.js?v=146"></script>
-  <script src="js/session-view.js?v=146"></script>
-  <script src="js/rhythm.js?v=146"></script>
-  <script src="js/point-trend.js?v=146"></script>
-  <script src="js/ngram.js?v=146"></script>
-  <script src="js/filters.js?v=146"></script>
-  <script src="js/mistype.js?v=146"></script>
-  <script src="js/finger-map.js?v=146"></script>
-  <script src="js/key-scatter.js?v=146"></script>
-  <script src="js/mistype-page.js?v=146"></script>
+  <script src="js/store.js?v=147"></script>
+  <script src="js/keys.js?v=147"></script>
+  <script src="js/settings.js?v=147"></script>
+  <script src="js/page-footer.js?v=147"></script>
+  <script src="js/keyboard-shapes.js?v=147"></script>
+  <script src="js/key-map.js?v=147"></script>
+  <script src="js/romaji.js?v=147"></script>
+  <script src="js/typer.js?v=147"></script>
+  <script src="js/kana-layout.js?v=147"></script>
+  <script src="js/session-view.js?v=147"></script>
+  <script src="js/rhythm.js?v=147"></script>
+  <script src="js/point-trend.js?v=147"></script>
+  <script src="js/ngram.js?v=147"></script>
+  <script src="js/filters.js?v=147"></script>
+  <script src="js/mistype.js?v=147"></script>
+  <script src="js/finger-map.js?v=147"></script>
+  <script src="js/key-scatter.js?v=147"></script>
+  <script src="js/mistype-page.js?v=147"></script>
 </body>
 </html>
