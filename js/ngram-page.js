@@ -41,6 +41,7 @@
   const chordDistEl = document.getElementById("chord-dist");
   let biRows = [];        // bigram の表に出せる行（「回数」で絞ったもの。種類の絞り込みの前）
   let biBase = 0;         // bigram の表の色の基準
+  let bfKana = new Map(); // 日本語の回の bigram → かなの中・境目の IKI（散布図の色分け「かなの中・境目」と、点の値の表示）
   let biTotal = 0;        // 全部の bigram（「回数」で絞る前）の回数の合計。散布図の頻度の分母
   let lastPickedCount = 0; // 絞り込んだ記録の回数（書き出しに入れる）
   let chordRows = [];     // 同時押しの表の行
@@ -117,6 +118,7 @@
         const single = function (r) { return !r.chord; };
         const singleBi = allBi.filter(single);
         drawClasses(allBi, allTri, base); // 指と行(row)で分けた分類は「回数」で絞らない
+        bfKana = kanaBigrams;
         biTotal = allBi.reduce(function (a, r) { return a + r.count; }, 0);
         drawBigrams(bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
@@ -173,6 +175,18 @@
         return { "sfb-0": "SFB・同じ行", "sfb-1": "SFB・1行", "sfb-2": "SFB・2行以上" }[FingerMap.bigramBase(g)] || "SFB 以外";
       }
     },
+    // かなの中・境目：日本語の回のうち、境目だった割合で分ける（分け方は docs/analysis_iki.md の「かなの中と境目」）
+    kana: {
+      legend: [["かなの中（境目 2 割未満）", "var(--cmp-fast)"], ["両方", "var(--cmp-5)"], ["かなの境目（8 割以上）", "var(--cmp-slow)"],
+        ["日本語の回なし", OTHER]],
+      nameOf: function (g) {
+        const e = bfKana.get(g);
+        const n = e ? e.inside.length + e.boundary.length : 0;
+        if (!n) return "日本語の回なし";
+        const share = e.boundary.length / n;
+        return share < 0.2 ? "かなの中（境目 2 割未満）" : share >= 0.8 ? "かなの境目（8 割以上）" : "両方";
+      }
+    },
     hand: {
       legend: [["左 → 左", "var(--cmp-fast)"], ["左 → 右", "var(--cmp-3)"], ["右 → 左", "var(--cmp-4)"], ["右 → 右", "var(--cmp-5)"], ["割り当てなし", OTHER]],
       nameOf: function (g) {
@@ -183,6 +197,11 @@
       }
     }
   };
+  // 点の値に添える、かなの中・境目の回数（日本語の回があるときだけ）
+  function kanaTip(g) {
+    const e = bfKana.get(g);
+    return e && e.inside.length + e.boundary.length ? " ／ かなの中 " + e.inside.length + " 回・境目 " + e.boundary.length + " 回" : "";
+  }
   function drawBigramFreq() {
     const def = BF_COLORINGS[bfColorEl.value] || BF_COLORINGS.class;
     const colorOf = {};
@@ -191,7 +210,7 @@
     const rows = biRows.filter(function (r) { return !r.chord && (kind === "all" || r.kind === kind); });
     KeyScatter.draw(bigramFreqEl, rows.map(function (r) {
       return { key: r.gram, count: r.count, value: r.avg, weak: r.count < BF_WEAK,
-        tip: "平均 " + Math.round(r.avg) + " ms ／ " + r.count.toLocaleString() + " 回" };
+        tip: "平均 " + Math.round(r.avg) + " ms ／ " + r.count.toLocaleString() + " 回" + kanaTip(r.gram) };
     }), {
       coloring: {
         legend: def.legend,
