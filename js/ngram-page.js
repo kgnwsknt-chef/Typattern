@@ -624,7 +624,6 @@
   const kbDistEl = document.getElementById("kb-dist");
   const kbPairsEl = document.getElementById("kb-pairs");
   let kbRows = [];          // まとめの表の行（かなの中・かなの境目）
-  let kbSelected = 0;       // 分布を出している行
   let kbBase = 0;           // 色の基準
 
   // IKI の並びから、平均と SD（標本標準偏差。1回だけなら null）
@@ -726,26 +725,94 @@
       const avg = cell("bg-avg", r.avg === null ? "-" : Math.round(r.avg));
       if (r.avg !== null && kbBase) avg.style.color = Rhythm.color(r.avg, kbBase);
       cell("bg-sd", r.sd === null ? "-" : Math.round(r.sd));
-      if (r.count) {
-        tr.className = "bg-row" + (kbSelected === index ? " bg-selected" : "");
-        tr.tabIndex = 0;
-        tr.title = "クリックで IKI の分布を表示";
-        const pick = function () {
-          kbSelected = index;
-          drawKanaSum();
-          kbDistEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
-        };
-        tr.addEventListener("click", pick);
-        tr.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
-        });
-      }
+      const sw = document.createElement("span"); // 下の分布の色
+      sw.className = "cmp-swatch kb-swatch";
+      sw.style.background = KB_COLORS[index];
+      tr.firstChild.prepend(sw);
       body.appendChild(tr);
     });
     kbSumEl.appendChild(table);
-    const r = kbRows[kbSelected];
-    if (r && r.count) NGram.drawDistribution(kbDistEl, r, "bigram の区分", kbBase);
-    else kbDistEl.textContent = "";
+    drawKanaDist();
+  }
+
+  // かなの中と境目の IKI の分布を重ねて描く。回数が違うので、縦軸はそれぞれの回数に対する割合(%)。
+  // 横軸は bigram・trigram の分布と同じく 0〜設定の最大（最大以上は一番右の区間）。平均はそれぞれの色の点線
+  const KB_COLORS = ["var(--cmp-fast)", "var(--cmp-slow)"]; // かなの中・かなの境目
+  const KB_BINS = 50;
+  function drawKanaDist() {
+    kbDistEl.textContent = "";
+    const groups = kbRows.filter(function (r) { return r.count; });
+    if (!groups.length) return;
+    const svgEl = function (name, attrs, text) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+      Object.keys(attrs).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+      if (text !== undefined) el.textContent = text;
+      return el;
+    };
+    const upper = Settings.get("ngramMaxMs");
+    const bw = upper / KB_BINS;
+    groups.forEach(function (g) {
+      g.bins = new Array(KB_BINS).fill(0);
+      g.values.forEach(function (v) { g.bins[Math.min(KB_BINS - 1, Math.floor(v / bw))] += 100 / g.count; });
+    });
+    const maxShare = Math.max.apply(null, groups.map(function (g) { return Math.max.apply(null, g.bins); }));
+
+    const head = document.createElement("div");
+    head.className = "dist-head";
+    const title = document.createElement("span");
+    title.className = "dist-title";
+    title.textContent = "かなの中と境目の bigram の IKI の分布";
+    head.appendChild(title);
+    kbDistEl.appendChild(head);
+    const legend = document.createElement("div");
+    legend.className = "cmp-legend";
+    groups.forEach(function (g) {
+      const item = document.createElement("span");
+      item.className = "cmp-item";
+      const sw = document.createElement("span");
+      sw.className = "cmp-swatch";
+      sw.style.background = KB_COLORS[kbRows.indexOf(g)];
+      item.append(sw, g.gram + " " + g.count.toLocaleString() + " 回 ／ 平均 " + Math.round(g.avg) + " ms ／ SD " +
+        (g.sd === null ? "-" : Math.round(g.sd) + " ms"));
+      legend.appendChild(item);
+    });
+    kbDistEl.appendChild(legend);
+
+    const W = 560, H = 200, L = 48, R = 18, T = 12, B = 34;
+    const pw = W - L - R, ph = H - T - B;
+    const x = function (v) { return L + (Math.min(v, upper) / upper) * pw; };
+    const y = function (s) { return T + ph - (s / maxShare) * ph; };
+    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg", role: "img", "aria-label": "かなの中と境目の bigram の IKI の分布を重ねた図" });
+    // 棒（半透明で重ねる）
+    groups.forEach(function (g) {
+      const color = KB_COLORS[kbRows.indexOf(g)];
+      g.bins.forEach(function (s, i) {
+        if (s === 0) return;
+        const bar = svgEl("rect", { x: x(i * bw), y: y(s), width: x((i + 1) * bw) - x(i * bw), height: T + ph - y(s), fill: color, class: "cmp-bar" });
+        bar.appendChild(svgEl("title", {}, g.gram + "：" + (i === KB_BINS - 1 ? Math.round(i * bw) + " ms 以上" : Math.round(i * bw) + "〜" + Math.round((i + 1) * bw) + " ms") +
+          " " + s.toFixed(1) + "%"));
+        svg.appendChild(bar);
+      });
+    });
+    // 軸と目盛り
+    svg.appendChild(svgEl("line", { x1: L, y1: T + ph, x2: L + pw, y2: T + ph, class: "dist-axis" }));
+    svg.appendChild(svgEl("line", { x1: L, y1: T, x2: L, y2: T + ph, class: "dist-axis" }));
+    const tick = [10, 20, 25, 50, 100, 200, 250, 500, 1000].find(function (s) { return upper / s <= 6; }) || 2000;
+    for (let v = 0; v <= upper; v += tick) {
+      svg.appendChild(svgEl("line", { x1: x(v), y1: T + ph, x2: x(v), y2: T + ph + 3, class: "dist-axis" }));
+      svg.appendChild(svgEl("text", { x: x(v), y: T + ph + 16, "text-anchor": "middle", class: "dist-label" }, String(v)));
+    }
+    svg.appendChild(svgEl("text", { x: L + pw, y: H - 1, "text-anchor": "end", class: "dist-label" }, "IKI (ms)"));
+    [0, maxShare / 2, maxShare].forEach(function (s) {
+      svg.appendChild(svgEl("text", { x: L - 4, y: y(s) + 3, "text-anchor": "end", class: "dist-label" }, String(Math.round(s))));
+    });
+    const yName = svgEl("text", { x: 12, y: T + ph / 2, "text-anchor": "middle", class: "dist-label", transform: "rotate(-90 12 " + (T + ph / 2) + ")" }, "頻度 (%)");
+    svg.appendChild(yName);
+    // 平均（それぞれの色の点線）
+    groups.forEach(function (g) {
+      svg.appendChild(svgEl("line", { x1: x(g.avg), y1: T, x2: x(g.avg), y2: T + ph, class: "cmp-mean", stroke: KB_COLORS[kbRows.indexOf(g)] }));
+    });
+    kbDistEl.appendChild(svg);
   }
 
   minEl.addEventListener("change", update);
