@@ -73,6 +73,7 @@
         drawClasses([], [], 0);
         drawCorr([], []);
         drawChords([], 0);
+        drawKana(new Map(), 0, 1);
         return;
       }
 
@@ -82,6 +83,7 @@
       let strokes = 0; // 総打鍵数：選んだ記録の、押したキー（events の "k" の行）の数。Shift・Backspace・間違えたキーも数える
       const trigrams = new Map();
       const spreads = new Map(); // 同時押しの組 → ずれ
+      const kanaBigrams = new Map(); // 日本語の回の bigram → かなの中・境目の IKI
       let maxTerm = 0;           // 選んだ記録の判定時間の最大
       ngramSummaryEl.textContent = "集計中…";
       return Store.eachRaw(ids, function (raw) {
@@ -94,6 +96,7 @@
           NGram.accumulateSpreads(spreads, raw.events, skip, chords);
           maxTerm = Math.max(maxTerm, chords.term || 0);
         }
+        if (byId.get(raw.id).lang === "ja") NGram.accumulateKana(kanaBigrams, raw.events, skip, chords);
         raw.events.forEach(function (e) { if (e[1] === "k") strokes++; });
       }).then(function () {
         if (myId !== loadId) return;
@@ -121,6 +124,7 @@
         drawHeatmaps(bi, base);
         drawCorr(tri.filter(single), singleBi);
         drawChords(NGram.toRows(spreads).filter(keep), maxTerm);
+        drawKana(kanaBigrams, base, min);
         ngramSummaryEl.textContent = "総打鍵数 " + strokes.toLocaleString() + " ／ bigram " + bi.length + " 種類・trigram " + tri.length + " 種類 ／ 打鍵間隔の平均 " + Math.round(base) + " ms";
       });
     }).catch(function (err) {
@@ -613,6 +617,135 @@
     const r = side.rows && side.selected ? side.rows[side.selected.table][side.selected.index] : null;
     if (r && r.count) NGram.drawDistribution(side.distEl, r, side.label, classBase);
     else side.distEl.textContent = "";
+  }
+
+  // ---- かなの中と境目（決まりは docs/analysis_iki.md の「かなの中と境目」） ----
+  const kbSumEl = document.getElementById("kb-sum");
+  const kbDistEl = document.getElementById("kb-dist");
+  const kbPairsEl = document.getElementById("kb-pairs");
+  let kbRows = [];          // まとめの表の行（かなの中・かなの境目）
+  let kbSelected = 0;       // 分布を出している行
+  let kbBase = 0;           // 色の基準
+
+  // IKI の並びから、平均と SD（標本標準偏差。1回だけなら null）
+  function meanSd(values) {
+    const n = values.length;
+    if (!n) return { avg: null, sd: null };
+    const avg = values.reduce(function (a, b) { return a + b; }, 0) / n;
+    const sd = n > 1 ? Math.sqrt(values.reduce(function (a, v) { return a + (v - avg) * (v - avg); }, 0) / (n - 1)) : null;
+    return { avg: avg, sd: sd };
+  }
+
+  // map：bigram → { inside, boundary }（NGram.accumulateKana の結果）。min：同じ bigram の比べに出す回数の下限
+  function drawKana(map, base, min) {
+    kbBase = base;
+    const inside = [], boundary = [];
+    map.forEach(function (e) {
+      e.inside.forEach(function (v) { inside.push(v); });
+      e.boundary.forEach(function (v) { boundary.push(v); });
+    });
+    const total = inside.length + boundary.length;
+    kbRows = [["かなの中", inside], ["かなの境目", boundary]].map(function (x) {
+      const s = meanSd(x[1]);
+      return { gram: x[0], values: x[1], count: x[1].length, share: total ? x[1].length / total : 0, avg: s.avg, sd: s.sd };
+    });
+    drawKanaSum();
+
+    // 同じ bigram の比べ
+    kbPairsEl.textContent = "";
+    const pairs = [];
+    map.forEach(function (e, gram) {
+      if (e.inside.length < min || e.boundary.length < min) return;
+      const a = meanSd(e.inside), b = meanSd(e.boundary);
+      pairs.push({ gram: gram, inside: a.avg, inCount: e.inside.length, boundary: b.avg, outCount: e.boundary.length, diff: b.avg - a.avg });
+    });
+    pairs.sort(function (x, y) { return y.diff - x.diff || (x.gram < y.gram ? -1 : 1); });
+    const table = document.createElement("table");
+    table.className = "bg-table";
+    const hr = document.createElement("tr");
+    ["bigram", "中の IKI(ms)", "回数", "境目の IKI(ms)", "回数", "差(ms)"].forEach(function (t) {
+      const th = document.createElement("th");
+      th.textContent = t;
+      hr.appendChild(th);
+    });
+    table.appendChild(document.createElement("thead")).appendChild(hr);
+    const body = table.appendChild(document.createElement("tbody"));
+    pairs.forEach(function (p) {
+      const tr = document.createElement("tr");
+      const cell = function (className, text, color) {
+        const td = document.createElement("td");
+        td.className = className;
+        td.textContent = text;
+        if (color) td.style.color = color;
+        tr.appendChild(td);
+      };
+      cell("bg-name", p.gram);
+      cell("bg-avg", Math.round(p.inside), Rhythm.color(p.inside, base));
+      cell("bg-count", p.inCount.toLocaleString());
+      cell("bg-avg", Math.round(p.boundary), Rhythm.color(p.boundary, base));
+      cell("bg-count", p.outCount.toLocaleString());
+      cell("bg-count", (p.diff > 0 ? "+" : "") + Math.round(p.diff));
+      body.appendChild(tr);
+    });
+    if (!pairs.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.className = "bg-empty-cell";
+      td.textContent = total ? "かなの中にも境目にも「回数」以上出てくる bigram がありません" : "データなし（日本語の記録がありません）";
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+    kbPairsEl.appendChild(table);
+  }
+
+  function drawKanaSum() {
+    kbSumEl.textContent = "";
+    const table = document.createElement("table");
+    table.className = "bg-table";
+    const hr = document.createElement("tr");
+    ["区分", "回数", "割合", "IKI(ms/打)", "SD(ms)"].forEach(function (t) {
+      const th = document.createElement("th");
+      th.textContent = t;
+      hr.appendChild(th);
+    });
+    table.appendChild(document.createElement("thead")).appendChild(hr);
+    const body = table.appendChild(document.createElement("tbody"));
+    kbRows.forEach(function (r, index) {
+      const tr = document.createElement("tr");
+      const cell = function (className, text) {
+        const td = document.createElement("td");
+        if (className) td.className = className;
+        td.textContent = text;
+        tr.appendChild(td);
+        return td;
+      };
+      cell("fc-name", r.gram);
+      cell("bg-count", r.count.toLocaleString());
+      cell("bg-count", (r.share * 100).toFixed(1) + "%");
+      const avg = cell("bg-avg", r.avg === null ? "-" : Math.round(r.avg));
+      if (r.avg !== null && kbBase) avg.style.color = Rhythm.color(r.avg, kbBase);
+      cell("bg-sd", r.sd === null ? "-" : Math.round(r.sd));
+      if (r.count) {
+        tr.className = "bg-row" + (kbSelected === index ? " bg-selected" : "");
+        tr.tabIndex = 0;
+        tr.title = "クリックで IKI の分布を表示";
+        const pick = function () {
+          kbSelected = index;
+          drawKanaSum();
+          kbDistEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        };
+        tr.addEventListener("click", pick);
+        tr.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
+        });
+      }
+      body.appendChild(tr);
+    });
+    kbSumEl.appendChild(table);
+    const r = kbRows[kbSelected];
+    if (r && r.count) NGram.drawDistribution(kbDistEl, r, "bigram の区分", kbBase);
+    else kbDistEl.textContent = "";
   }
 
   minEl.addEventListener("change", update);

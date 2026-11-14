@@ -2529,3 +2529,8 @@ a.text-btn {
   font-family: var(--mono);
   fill: var(--text);
 }
+
+/* IKI のページの「かなの中と境目」の同じ bigram の比べ（表の幅に合わせる） */
+.kb-pairs {
+  max-width: 560px;
+}

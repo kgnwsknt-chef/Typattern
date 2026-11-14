@@ -627,7 +627,8 @@ const NGram = (function () {
     return t;
   }
 
-  // 生データの events から、押したキーの並び [{ t, label, ok }] を作る（Shift は並びに入れない）
+  // 生データの events から、押したキーの並び [{ t, label, ok, pos }] を作る（Shift は並びに入れない）
+  //   pos：そのキーを当てたかな（英語は文字）の位置（events の "k" の行の4番目。同時押しの組は最後のキーの位置）
   //   ok：n-gram に使えるキーか。間違えたキー・Backspace・スペース・文字のないキー・Shift と同時に押したキーは false
   //   skip：数えない位置の集まり（IKI 測定モードの1回目。js/iki-measurement.js）。その位置を打ったキーも false
   //   chords：同時押しのあるかな配列の回の { groups, term }（chordsOf の結果）。同時押しの組は1打にまとめ、
@@ -644,7 +645,7 @@ const NGram = (function () {
     // 1キーを並びに足す。before は今のキーを押す前に押されていたキー（同時押しの組を見分けるのに使う）
     function addKey(e, before) {
       const label = Keys.label(e[2]);
-      seq.push({ t: e[0], first: e[0], label: label, keys: [label], ok: isOk(e, label), chord: false });
+      seq.push({ t: e[0], first: e[0], label: label, keys: [label], ok: isOk(e, label), chord: false, pos: e[3] });
       if (finder) {
         if (e[2] === Keys.BACKSPACE) finder.reset();
         else {
@@ -661,7 +662,7 @@ const NGram = (function () {
     function strokes(list) {
       list.forEach(function (s) {
         if (s.keys.length === 1) addKey(s.ref, new Set(held));
-        else seq.push({ t: s.ref[0], first: s.ref[0], label: s.label, keys: s.keys, ok: isOk(s.ref, s.label), chord: true, hold: true });
+        else seq.push({ t: s.ref[0], first: s.ref[0], label: s.label, keys: s.keys, ok: isOk(s.ref, s.label), chord: true, hold: true, pos: s.ref[3] });
       });
     }
 
@@ -708,6 +709,7 @@ const NGram = (function () {
       label: keys.join("+"),
       keys: keys,
       ok: parts.every(function (s) { return s.ok; }),
+      pos: parts[parts.length - 1].pos,
       chord: true
     });
   }
@@ -756,6 +758,22 @@ const NGram = (function () {
     return map;
   }
 
+  // 生データの events（日本語の回）から、bigram の IKI を、かなの中（2つのキーを当てたかなが同じ）と
+  // かなの境目（別のかな）に分けて map に足し込む。map：bigram の名前 → { inside: [IKI], boundary: [IKI] }。
+  // 除くものと名前の付け方は accumulate と同じ。決まりは docs/analysis_iki.md の「かなの中と境目」
+  function accumulateKana(map, events, skip, chords) {
+    const seq = keySequence(events, skip, chords);
+    for (let i = 1; i < seq.length; i++) {
+      const a = seq[i - 1], b = seq[i];
+      if (!a.ok || !b.ok) continue;
+      const key = a.label + (a.chord || b.chord ? ARROW : "") + b.label;
+      const e = map.get(key) || { inside: [], boundary: [] };
+      (a.pos === b.pos ? e.inside : e.boundary).push(b.t - a.t);
+      map.set(key, e);
+    }
+    return map;
+  }
+
   // 生データの events から、同時押しの組ごとのずれ（組の最初のキーから最後のキーまでの時間）を map に足し込む。
   // 結果は accumulate と同じ形で、toRows で行にできる。間違えたキーを含む組は数えない
   function accumulateSpreads(map, events, skip, chords) {
@@ -798,5 +816,5 @@ const NGram = (function () {
     return el;
   }
 
-  return { create: create, accumulate: accumulate, accumulateSpreads: accumulateSpreads, chordsOf: chordsOf, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution, drawScatter: drawScatter };
+  return { create: create, accumulate: accumulate, accumulateKana: accumulateKana, accumulateSpreads: accumulateSpreads, chordsOf: chordsOf, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution, drawScatter: drawScatter };
 })();
