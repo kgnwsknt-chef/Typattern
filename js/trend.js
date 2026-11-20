@@ -14,7 +14,7 @@ const Trend = (function () {
   const T2 = T + PH1 + GAP; // 下段の上端
 
   // sessions：絞り込んだ概要の記録（古い順）。group："run"（1回ごと）・"day"（日ごと）・"month"（月ごと）
-  // opts.levelUps：達成レベルが上がった回（Levels.levelUps の結果）。その点に「英語・単語 SB達成」のように書く
+  // opts.levelUps：達成レベルが上がった回（Levels.levelUps の結果）。その点に「英語・単語・QWERTY配列 SB達成」のように書く
   // opts.selectedId：記録のページのランキングで選んだ回の id。1回ごとのときだけ、上段と下段のその回の位置に緑の縦線を引く（日ごと・月ごとでは引かない）
   function render(container, legendEl, sessions, group, opts) {
     const ups = (opts && opts.levelUps) || new Map();
@@ -120,7 +120,7 @@ const Trend = (function () {
       svg.appendChild(svgEl("polyline", { points: data.ma.map(function (m) { return X(m.x) + "," + YI(m.v); }).join(" "), class: "trend-ma" }));
     }
 
-    // 達成レベルが上がった回：その回の平均 IKI の高さを輪で囲み、上に「英語・単語 SB達成」と書く。移動平均の線に隠れないよう、線の後に描く
+    // 達成レベルが上がった回：その回の平均 IKI の高さを輪で囲み、上に「英語・単語・QWERTY配列 SB達成」と書く。移動平均の線に隠れないよう、線の後に描く
     //   日ごと・月ごとでは、平均の点ではなく、達成した回それぞれの高さに赤い点を描く（文字が重なるときは上へずらす）
     data.points.forEach(function (p) {
       if (!p.marks.length) return;
@@ -379,11 +379,11 @@ const Trend = (function () {
       const iki = mean(use, function (s) { return s.result.avgIki; });
       const acc = mean(ss, function (s) { return s.result.accuracy; });
       const accRaw = mean(ss, rawAccuracy);
-      // その日（その月）に達成レベルが上がった回（言語・モードごとに、その日の最後に届いたレベル）
+      // その日（その月）に達成レベルが上がった回（言語・モード・配列ごとに、その日の最後に届いたレベル）
       const dayUps = new Map();
       ss.forEach(function (s) {
         const up = ups.get(s.id);
-        if (up) dayUps.set(up.lang + "/" + up.mode, { up: up, s: s });
+        if (up) dayUps.set(up.lang + "/" + up.mode + "/" + up.layout, { up: up, s: s });
       });
       const upList = Array.from(dayUps.values()).map(function (u) { return u.up; });
       // 印は、達成したその回の平均 IKI の高さに、赤い点で描く（輪では囲まない）
@@ -422,14 +422,14 @@ const Trend = (function () {
     return "レベル " + (level ? level.name : "なし") + (rate !== null ? "（" + rate.toFixed(2) + " 文字/秒）" : "");
   }
 
-  // グラフの点の上に書く文字（例「英語・単語 SB達成」）
+  // グラフの点の上に書く文字（例「英語・単語・QWERTY配列 SB達成」）
   function upLabel(up) {
-    return LANG_NAME[up.lang] + "・" + MODE_NAME[up.mode] + " " + up.level.name + "達成";
+    return LANG_NAME[up.lang] + "・" + MODE_NAME[up.mode] + "・" + Levels.layoutName(up.layout) + " " + up.level.name + "達成";
   }
 
   // 達成レベルが上がったことの説明（例「日本語・文章で SB を達成」）
   function upText(up) {
-    return LANG_NAME[up.lang] + "・" + MODE_NAME[up.mode] + "で " + up.level.name + " を達成";
+    return LANG_NAME[up.lang] + "・" + MODE_NAME[up.mode] + "・" + Levels.layoutName(up.layout) + "で " + up.level.name + " を達成";
   }
 
   // 速さの表示。英語は WPM、日本語はかな/分（日本語の記録は wpm が null。docs/storage.md）

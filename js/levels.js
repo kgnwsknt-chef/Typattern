@@ -59,12 +59,22 @@ const Levels = (function () {
     return fromRate(rateOfSession(s), charsFor(s.lang));
   }
 
-  // 達成レベル：その言語・モードの記録のうち、一番よいレベル（なければ null）。COUNTED_MODES 以外は数えない
-  function achieved(sessions, lang, mode) {
+  // 記録の配列（keyLayout がない古い記録は QWERTY）
+  function layoutOf(s) {
+    return s.keyLayout || "qwerty";
+  }
+
+  // 配列の表示名（QWERTY は「QWERTY配列」、登録した配列はその名前のまま）
+  function layoutName(keyLayout) {
+    return keyLayout === "qwerty" ? "QWERTY配列" : keyLayout;
+  }
+
+  // 達成レベル：その言語・モード・配列の記録のうち、一番よいレベル（なければ null）。COUNTED_MODES 以外は数えない
+  function achieved(sessions, lang, mode, layout) {
     if (COUNTED_MODES.indexOf(mode) === -1) return null;
     let best = null;
     sessions.forEach(function (s) {
-      if (s.lang !== lang || s.mode !== mode) return;
+      if (s.lang !== lang || s.mode !== mode || layoutOf(s) !== layout) return;
       const l = ofSession(s);
       if (l && (!best || l.index > best.index)) best = l;
     });
@@ -77,24 +87,20 @@ const Levels = (function () {
     return TABLE[level.index + 1] || null;
   }
 
-  // 言語・モードの組の達成度（記録ページの表に使う）。sessions は古い順
+  // 言語・モード・配列の組の達成度（記録ページの表に使う）。sessions は古い順
   //   { count: その組の記録の数, level: 達成レベル, bestRate: 正確率95%以上の回の一番速い文字/秒,
-  //     bestLayout: その回の配列, target: 次の目標, gap: 目標まであと何文字/秒 }
-  function summary(sessions, lang, mode) {
+  //     target: 次の目標, gap: 目標まであと何文字/秒 }
+  function summary(sessions, lang, mode, layout) {
     const chars = charsFor(lang);
     let count = 0;
     let level = null;
     let bestRate = null;
-    let bestLayout = null;
     sessions.forEach(function (s) {
-      if (s.lang !== lang || s.mode !== mode) return;
+      if (s.lang !== lang || s.mode !== mode || layoutOf(s) !== layout) return;
       count++;
       if (s.result.accuracy < MIN_ACCURACY) return;
       const rate = rateOfSession(s);
-      if (rate !== null && (bestRate === null || rate > bestRate)) {
-        bestRate = rate;
-        bestLayout = s.keyLayout;
-      }
+      if (rate !== null && (bestRate === null || rate > bestRate)) bestRate = rate;
       const l = fromRate(rate, chars);
       if (l && (!level || l.index > level.index)) {
         level = l;
@@ -104,12 +110,23 @@ const Levels = (function () {
     const gap = target && bestRate !== null ? minRate(target, chars) - bestRate : null;
     return {
       count: count, level: level,
-      bestRate: bestRate, bestLayout: bestLayout, target: target, gap: gap
+      bestRate: bestRate, target: target, gap: gap
     };
   }
 
-  // 達成レベルが上がった回の一覧（記録の id → { lang, mode, level }）。sessions は古い順。
-  // 言語・モードの組ごとに、それまでの達成レベルを初めて超えた回。COUNTED_MODES 以外は数えない
+  // 達成レベルの表に出す配列（その言語の、達成に数えるモードの記録がある配列）。QWERTY を先に、ほかは配列名の順
+  function layoutsOf(sessions, lang) {
+    const set = new Set();
+    sessions.forEach(function (s) {
+      if (s.lang === lang && COUNTED_MODES.indexOf(s.mode) !== -1) set.add(layoutOf(s));
+    });
+    return Array.from(set).sort(function (a, b) {
+      return (a === "qwerty" ? 0 : 1) - (b === "qwerty" ? 0 : 1) || a.localeCompare(b);
+    });
+  }
+
+  // 達成レベルが上がった回の一覧（記録の id → { lang, mode, layout, level }）。sessions は古い順。
+  // 言語・モード・配列の組ごとに、それまでの達成レベルを初めて超えた回。COUNTED_MODES 以外は数えない
   function levelUps(sessions) {
     const best = {};
     const ups = new Map();
@@ -117,10 +134,10 @@ const Levels = (function () {
       if (COUNTED_MODES.indexOf(s.mode) === -1) return;
       const l = ofSession(s);
       if (!l) return;
-      const key = s.lang + "/" + s.mode;
+      const key = s.lang + "/" + s.mode + "/" + layoutOf(s);
       if (!best[key] || l.index > best[key].index) {
         best[key] = l;
-        ups.set(s.id, { lang: s.lang, mode: s.mode, level: l });
+        ups.set(s.id, { lang: s.lang, mode: s.mode, layout: layoutOf(s), level: l });
       }
     });
     return ups;
@@ -161,7 +178,7 @@ const Levels = (function () {
     fromRate: fromRate,
     rateOfSession: rateOfSession,
     ofSession: ofSession,
-    achieved: achieved,
+    achieved: achieved, layoutOf: layoutOf, layoutName: layoutName, layoutsOf: layoutsOf,
     next: next,
     summary: summary,
     levelUps: levelUps,

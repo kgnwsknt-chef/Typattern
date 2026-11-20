@@ -59,7 +59,8 @@
     }
     Trend.render(trendEl, trendLegendEl, trendData.picked, groupEl.value, { levelUps: trendData.levelUps, selectedId: selectedId });
   }
-  // レベルの達成度の表（行：言語、列：モード（文章・単語）と、ノーミス連続タイプの自己ベスト）。決まりは docs/levels.md
+  // レベルの達成度の表（行：言語 × 配列、列：モード（文章・単語）と、ノーミス連続タイプの自己ベスト）。決まりは docs/levels.md
+  //   ノーミス連続タイプは言語ごとなので、その言語の行をまとめた1マスにする
   const LANGS = [["en", "英語"], ["ja", "日本語"]];
   const MODES = [["normal", "文章"], ["words", "単語"]];
 
@@ -73,34 +74,56 @@
     head.appendChild(cell("th", "ノーミス連続タイプ"));
     const body = table.createTBody();
     LANGS.forEach(function (lang) {
-      const tr = body.insertRow();
-      tr.appendChild(cell("th", lang[1]));
-      MODES.forEach(function (mode) {
-        const td = document.createElement("td");
-        const sum = Levels.summary(sessions, lang[0], mode[0]);
-        if (sum.count === 0) {
+      const layouts = Levels.layoutsOf(sessions, lang[0]);
+      if (!layouts.length) {
+        // その言語の文章・単語の記録がない
+        const tr = body.insertRow();
+        tr.appendChild(cell("th", lang[1]));
+        MODES.forEach(function () {
+          const td = document.createElement("td");
           td.appendChild(line("level-none", "まだ記録がありません"));
-        } else {
-          td.appendChild(line("level-name", sum.level ? sum.level.name : "なし"));
-          // 一番速い文字/秒と、その回の配列（達成した日は推移のグラフで分かるので出さない）
-          td.appendChild(line("level-sub", sum.bestRate === null
-            ? "正確率 " + Levels.MIN_ACCURACY + "% 以上の回がありません"
-            : sum.bestRate.toFixed(2) + " 文字/秒"));
-          if (sum.bestLayout) td.appendChild(line("level-sub", layoutName(sum.bestLayout)));
-          // 次の目標は「次の目標 SC まで」と「あと 0.13 文字/秒」の2行に分ける（列を広げないため）
-          const target = line("level-target", !sum.target ? "一番上のレベルです"
-            : "次の目標 " + sum.target.name + (sum.gap !== null && sum.gap >= 0 ? " まで" : ""));
-          if (sum.target && sum.gap !== null && sum.gap >= 0) {
-            target.appendChild(document.createElement("br"));
-            target.appendChild(document.createTextNode("あと " + Math.max(sum.gap, 0.01).toFixed(2) + " 文字/秒"));
-          }
-          td.appendChild(target);
+          tr.appendChild(td);
+        });
+        tr.appendChild(streakCell(sessions, lang[0]));
+        return;
+      }
+      layouts.forEach(function (layout, i) {
+        const tr = body.insertRow();
+        const th = cell("th", lang[1]);
+        th.appendChild(line("level-sub", Levels.layoutName(layout)));
+        tr.appendChild(th);
+        MODES.forEach(function (mode) { tr.appendChild(levelCell(Levels.summary(sessions, lang[0], mode[0], layout))); });
+        if (i === 0) {
+          const st = streakCell(sessions, lang[0]);
+          st.rowSpan = layouts.length;
+          tr.appendChild(st);
         }
-        tr.appendChild(td);
       });
-      tr.appendChild(streakCell(sessions, lang[0]));
     });
     levelsEl.appendChild(table);
+  }
+
+  // 言語・モード・配列の組の達成度のマス
+  function levelCell(sum) {
+    const td = document.createElement("td");
+    if (sum.count === 0) {
+      td.appendChild(line("level-none", "まだ記録がありません"));
+      return td;
+    }
+    td.appendChild(line("level-name", sum.level ? sum.level.name : "なし"));
+    // 一番速い文字/秒（達成した日は推移のグラフで分かるので出さない。配列は行の見出しにある）
+    td.appendChild(line("level-sub", sum.bestRate === null
+      ? "正確率 " + Levels.MIN_ACCURACY + "% 以上の回がありません"
+      : sum.bestRate.toFixed(2) + " 文字/秒"));
+    // 次の目標は「次の目標 SC まで」と「あと 0.13 文字/秒」の2行に分ける（列を広げないため）
+    const target = line("level-target", !sum.target ? "一番上のレベルです"
+      : "次の目標 " + sum.target.name + (sum.gap !== null && sum.gap >= 0 ? " まで" : ""));
+    if (sum.target && sum.gap !== null && sum.gap >= 0) {
+      target.appendChild(document.createElement("br"));
+      target.appendChild(document.createTextNode("あと " + Math.max(sum.gap, 0.01).toFixed(2) + " 文字/秒"));
+    }
+    td.appendChild(target);
+    return td;
   }
 
   // ノーミス連続タイプの自己ベスト（言語ごと。docs/no-mistype.md）：文字数・打鍵数・時間・速さ・日付・配列
@@ -123,7 +146,7 @@
     td.appendChild(count);
     td.appendChild(line("level-sub", "打鍵 " + keys + " ／ " + r.timeSec.toFixed(1) + " 秒"));
     td.appendChild(line("level-sub", "平均 IKI " + (r.avgIki === null ? "-" : r.avgIki.toFixed(1)) + " ms（" + speed + "）"));
-    td.appendChild(line("level-sub", Filters.localDate(b.finishedAt).replace(/-/g, "/") + " ／ " + layoutName(b.keyLayout)));
+    td.appendChild(line("level-sub", Filters.localDate(b.finishedAt).replace(/-/g, "/") + " ／ " + Levels.layoutName(b.keyLayout)));
     return td;
   }
 
@@ -131,11 +154,6 @@
     const el = document.createElement(tag);
     el.textContent = text;
     return el;
-  }
-
-  // 配列の表示名（QWERTY は「QWERTY配列」、登録した配列はその名前のまま）
-  function layoutName(keyLayout) {
-    return keyLayout === "qwerty" ? "QWERTY配列" : keyLayout;
   }
 
   function line(className, text) {

@@ -909,11 +909,16 @@
 
   // ---- インジケーター（決まりは docs/levels.md の「打っている間のインジケーター」） ----
 
-  // 目標：この言語・モードの達成レベルの次（その他・練習モードは文章の目標）。一番上を達成していれば null
+  // 目標：この言語・モード・配列の達成レベルの次（その他・練習モードは文章の目標）。一番上を達成していれば null
   // 設定で消しているとき・記録をまだ読み込んでいないときも null（出さない）
+  // 目標を決める配列：今選んでいる配列（IKI 測定は QWERTY で記録するので QWERTY）
+  function goalLayout() {
+    return mode === IKI ? "qwerty" : keyLayoutEl.value;
+  }
+
   function setGoal() {
     goal = allSessions && Settings.get("indicator") && mode !== NO_MISTYPE // ノーミス連続タイプは速さを問わないので出さない
-      ? Levels.next(Levels.achieved(allSessions, lang, Levels.targetMode(mode)))
+      ? Levels.next(Levels.achieved(allSessions, lang, Levels.targetMode(mode), goalLayout()))
       : null;
   }
 
@@ -1448,12 +1453,13 @@
       (!level && session.result.accuracy < Levels.MIN_ACCURACY ? "・正確率 " + Levels.MIN_ACCURACY + "% 未満" : "");
   }
 
-  // 達成レベル（この言語・モード）と、次の目標までの差。sessions は今回を含む全記録
+  // 達成レベル（この言語・モード・配列）と、次の目標までの差。sessions は今回を含む全記録
   function renderLevelStatus(session, sessions) {
     const mode = Levels.targetMode(session.mode);
     const others = sessions.filter(function (s) { return s.id !== session.id; });
-    const before = Levels.achieved(others, session.lang, mode);
-    const now = Levels.achieved(sessions, session.lang, mode);
+    const layout = Levels.layoutOf(session);
+    const before = Levels.achieved(others, session.lang, mode, layout);
+    const now = Levels.achieved(sessions, session.lang, mode, layout);
     const chars = Levels.charsFor(session.lang);
     const target = Levels.next(now);
     levelStatusEl.textContent = "";
@@ -1463,7 +1469,7 @@
       span.textContent = text;
       levelStatusEl.appendChild(span);
     };
-    const label = LANG_NAME[session.lang] + "・" + MODE_NAME[mode];
+    const label = LANG_NAME[session.lang] + "・" + MODE_NAME[mode] + "・" + Levels.layoutName(layout);
     if (now && (!before || now.index > before.index) && session.mode === mode) {
       // 今回で達成レベルが上がった：「日本語・文章レベル D を達成！」を目立たせる
       add(label + "レベル " + now.name + " を達成！", "level-up");
