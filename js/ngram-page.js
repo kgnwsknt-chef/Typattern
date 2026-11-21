@@ -42,7 +42,6 @@
   let biRows = [];        // bigram の表に出せる行（「回数」で絞ったもの。種類の絞り込みの前）
   let biBase = 0;         // bigram の表の色の基準
   let bfKana = new Map(); // 日本語の回の bigram → かなの中・境目の IKI（散布図の色分け「かなの中・境目」と、点の値の表示）
-  let biTotal = 0;        // 全部の bigram（「回数」で絞る前）の回数の合計。散布図の頻度の分母
   let lastPickedCount = 0; // 絞り込んだ記録の回数（書き出しに入れる）
   let chordRows = [];     // 同時押しの表の行
   let chordUpper = 0;     // ずれの分布の横軸の最大（選んだ記録の判定時間の最大）
@@ -119,7 +118,6 @@
         const singleBi = allBi.filter(single);
         drawClasses(allBi, allTri, base); // 指と行(row)で分けた分類は「回数」で絞らない
         bfKana = kanaBigrams;
-        biTotal = allBi.reduce(function (a, r) { return a + r.count; }, 0);
         drawBigrams(bi, base);
         trigramTable.renderRows(trigramEl, tri, base);
         drawKeyIki(singleBi, base, kana);
@@ -219,7 +217,7 @@
           return { name: name, color: colorOf[name], back: colorOf[name] === OTHER };
         }
       },
-      unit: "ms", labels: false, total: biTotal, noun: "bigram",
+      unit: "ms", labels: false, byCount: true, noun: "bigram",
       selected: bigramTable.selected(),
       onSelect: function (gram) { bigramTable.show(gram); },
       ariaLabel: "bigram の IKI と頻度の散布図",
@@ -386,7 +384,7 @@
       const e = keyFreqData[k];
       const avg = e.count ? e.sum / e.count : 0;
       return { key: k, count: e.count, value: avg, tip: "平均 " + Math.round(avg) + " ms ／ " + e.count.toLocaleString() + " 回" };
-    }), { colorBy: kfColorEl.value, unit: "ms", ariaLabel: "キーごとの IKI と頻度の散布図" });
+    }), { colorBy: kfColorEl.value, unit: "ms", byCount: true, ariaLabel: "キーごとの IKI と頻度の散布図" });
   }
   kfColorEl.addEventListener("change", drawKeyFreq);
 

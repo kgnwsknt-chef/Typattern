@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=149">
+  <link rel="stylesheet" href="style.css?v=150">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -88,7 +88,7 @@
       <div class="kb-scroll"><div id="key-iki" class="kb km"></div></div>
       <!-- キーごとの IKI と頻度の散布図（docs/analysis_iki.md の「キーごとの IKI と頻度」） -->
       <h3 class="hm-title">キーごとの IKI と頻度</h3>
-      <p class="rhythm-legend">点は1キー（QWERTY の文字）。縦軸 = 上の配列図と同じキーごとの IKI、横軸 = そのキーを押すまでの間隔の数の、全体に対する割合（対数の目盛り）／ 色は、設定の「指の割り当て」で分けた指・行(row)・手 ／ 点にマウスを乗せると値を表示</p>
+      <p class="rhythm-legend">点は1キー（QWERTY の文字）。縦軸 = 上の配列図と同じキーごとの IKI、横軸 = そのキーを押すまでの間隔の数（対数の目盛り）／ 色は、設定の「指の割り当て」で分けた指・行(row)・手 ／ 点にマウスを乗せると値を表示</p>
       <div class="filters">
         <label class="filter">色分け
           <select id="f-kf-color" class="layout-select">
@@ -148,7 +148,7 @@
       </div>
       <!-- bigram の IKI と頻度の散布図（docs/analysis_iki.md の「bigram の IKI と頻度」） -->
       <h3 class="hm-title">bigram の IKI と頻度</h3>
-      <p class="rhythm-legend">点は1つの bigram。上の表と同じ bigram（絞り込み・「回数」・種類も同じ。同時押しの組を含むものは除く）／ 縦軸 = 平均 IKI、横軸 = その bigram の回数の、全部の bigram の回数に対する割合（対数の目盛り）／ 白抜きの点は 20 回未満（平均がぶれやすい）／ 色は、設定の「指の割り当て」で分けた分類・SFB の行の差・手の組か、日本語の回のうちかなの境目だった割合（下の「かなの中と境目」と同じ分け方）／ 点にマウスを乗せると値を表示（日本語の回があれば、かなの中・境目の回数も）／ 点をクリックで、表の横に分布を表示</p>
+      <p class="rhythm-legend">点は1つの bigram。上の表と同じ bigram（絞り込み・「回数」・種類も同じ。同時押しの組を含むものは除く）／ 縦軸 = 平均 IKI、横軸 = その bigram の回数（対数の目盛り）／ 白抜きの点は 20 回未満（平均がぶれやすい）／ 色は、設定の「指の割り当て」で分けた分類・SFB の行の差・手の組か、日本語の回のうちかなの境目だった割合（下の「かなの中と境目」と同じ分け方）／ 点にマウスを乗せると値を表示（日本語の回があれば、かなの中・境目の回数も）／ 点をクリックで、表の横に分布を表示</p>
       <div class="filters">
         <label class="filter">色分け
           <select id="f-bf-color" class="layout-select">
@@ -230,20 +230,20 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=149"></script>
-  <script src="js/keys.js?v=149"></script>
-  <script src="js/settings.js?v=149"></script>
-  <script src="js/page-footer.js?v=149"></script>
-  <script src="js/rhythm.js?v=149"></script>
-  <script src="js/keyboard-shapes.js?v=149"></script>
-  <script src="js/kana-layout.js?v=149"></script>
-  <script src="js/key-map.js?v=149"></script>
-  <script src="js/point-trend.js?v=149"></script>
-  <script src="js/ngram.js?v=149"></script>
-  <script src="js/finger-map.js?v=149"></script>
-  <script src="js/key-scatter.js?v=149"></script>
-  <script src="js/iki-measurement.js?v=149"></script>
-  <script src="js/filters.js?v=149"></script>
-  <script src="js/ngram-page.js?v=149"></script>
+  <script src="js/store.js?v=150"></script>
+  <script src="js/keys.js?v=150"></script>
+  <script src="js/settings.js?v=150"></script>
+  <script src="js/page-footer.js?v=150"></script>
+  <script src="js/rhythm.js?v=150"></script>
+  <script src="js/keyboard-shapes.js?v=150"></script>
+  <script src="js/kana-layout.js?v=150"></script>
+  <script src="js/key-map.js?v=150"></script>
+  <script src="js/point-trend.js?v=150"></script>
+  <script src="js/ngram.js?v=150"></script>
+  <script src="js/finger-map.js?v=150"></script>
+  <script src="js/key-scatter.js?v=150"></script>
+  <script src="js/iki-measurement.js?v=150"></script>
+  <script src="js/filters.js?v=150"></script>
+  <script src="js/ngram-page.js?v=150"></script>
 </body>
 </html>
