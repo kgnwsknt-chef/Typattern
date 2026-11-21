@@ -217,7 +217,7 @@
           return { name: name, color: colorOf[name], back: colorOf[name] === OTHER };
         }
       },
-      unit: "ms", labels: false, byCount: true, noun: "bigram",
+      unit: "ms", labels: false, noun: "bigram",
       selected: bigramTable.selected(),
       onSelect: function (gram) { bigramTable.show(gram); },
       ariaLabel: "bigram の IKI と頻度の散布図",
@@ -384,7 +384,7 @@
       const e = keyFreqData[k];
       const avg = e.count ? e.sum / e.count : 0;
       return { key: k, count: e.count, value: avg, tip: "平均 " + Math.round(avg) + " ms ／ " + e.count.toLocaleString() + " 回" };
-    }), { colorBy: kfColorEl.value, unit: "ms", byCount: true, ariaLabel: "キーごとの IKI と頻度の散布図" });
+    }), { colorBy: kfColorEl.value, unit: "ms", ariaLabel: "キーごとの IKI と頻度の散布図" });
   }
   kfColorEl.addEventListener("change", drawKeyFreq);
 

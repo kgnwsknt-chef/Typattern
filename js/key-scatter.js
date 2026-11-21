@@ -1,5 +1,5 @@
 // キー・bigram ごとの値と頻度の散布図（IKI のページのキーごとの IKI と頻度・bigram の IKI と頻度、ミスタイプのページのキーごとのミス率と頻度で使う）。
-// 点は1キー（1つの bigram）。横軸は頻度（全体に対する割合 %。byCount なら回数。どちらも対数の目盛り）、縦軸は値。キーの点の色は指・行(row)・手（js/finger-map.js）。
+// 点は1キー（1つの bigram）。横軸は頻度（回数、対数の目盛り）、縦軸は値。キーの点の色は指・行(row)・手（js/finger-map.js）。
 // 決まりは docs/analysis_iki.md の「キーごとの IKI と頻度」「bigram の IKI と頻度」
 const KeyScatter = (function () {
   "use strict";
@@ -36,17 +36,15 @@ const KeyScatter = (function () {
   // el に描く。points：[{ key: 点の名前（QWERTY の文字・bigram）, count: 頻度に数える回数, value: 縦軸の値, weak: 白抜きにするか, tip: マウスを乗せたときの文（名前などの後に続ける） }]
   //   opts：colorBy（キーの色分け。"finger"・"row"・"hand"）、coloring（指・行・手以外の色分け。{ legend: [[名前, 色]], colorOf(点) → { name: 凡例の名前, color, back: 後ろに描くか, label: マウスを乗せたときに出す名前（省略すると name） } }）、
   //   unit（縦軸の単位。「ms」「%」）、fromZero（縦軸を 0 から始める）、labels（点の右に名前を書くか。初期値 true）、
-  //   total（割合の分母。省略すると points の回数の合計）、byCount（横軸を割合ではなく回数にする）、noun（点の数の言い方。初期値「キー」）、
+  //   noun（点の数の言い方。初期値「キー」）、
   //   keyTitle（coloring を渡したキーの点でも、物理キーの番号を出す）、selected（強調する点の key）、onSelect（点をクリックしたとき。引数は key）、ariaLabel、emptyText
   function draw(el, points, opts) {
     el.textContent = "";
-    const total = opts.total || points.reduce(function (a, p) { return a + p.count; }, 0);
     const isKey = !opts.coloring || opts.keyTitle; // マウスを乗せたときに物理キーの番号を出すか
     const coloring = opts.coloring || keyColoring(opts.colorBy);
     const pts = points.filter(function (p) { return p.count > 0; }).map(function (p) {
       const c = coloring.colorOf(p);
-      // share：横軸の値（割合 % か、byCount なら回数）
-      return { key: p.key, count: p.count, share: opts.byCount ? p.count : p.count / total * 100, value: p.value, weak: !!p.weak, tip: p.tip, c: c };
+      return { key: p.key, count: p.count, value: p.value, weak: !!p.weak, tip: p.tip, c: c };
     });
 
     // 図の上：点の数と、色の凡例（題は HTML の見出し）
@@ -78,11 +76,11 @@ const KeyScatter = (function () {
     });
     el.appendChild(legend);
 
-    // 横軸：割合（回数）の対数（切りのよい 1・2・5 の目盛り）。縦軸：値の範囲に少し余白（fromZero なら 0 から）
+    // 横軸：回数の対数（切りのよい 1・2・5 の目盛り）。縦軸：値の範囲に少し余白（fromZero なら 0 から）
     const W = 560, H = 300, L = 44, R = 16, T = 12, B = 34;
     const pw = W - L - R, ph = H - T - B;
-    let x0 = Math.log10(Math.min.apply(null, pts.map(function (p) { return p.share; })));
-    let x1 = Math.log10(Math.max.apply(null, pts.map(function (p) { return p.share; })));
+    let x0 = Math.log10(Math.min.apply(null, pts.map(function (p) { return p.count; })));
+    let x1 = Math.log10(Math.max.apply(null, pts.map(function (p) { return p.count; })));
     if (x1 - x0 < 0.5) { x0 -= 0.25; x1 += 0.25; }
     const xpad = (x1 - x0) * 0.05;
     x0 -= xpad; x1 += xpad;
@@ -91,7 +89,7 @@ const KeyScatter = (function () {
     const ypad = Math.max(opts.unit === "%" ? 0.5 : 10, (y1 - y0) * 0.08);
     y0 = opts.fromZero ? 0 : Math.max(0, y0 - ypad);
     y1 += ypad;
-    const X = function (share) { return L + (Math.log10(share) - x0) / (x1 - x0) * pw; };
+    const X = function (n) { return L + (Math.log10(n) - x0) / (x1 - x0) * pw; };
     const Y = function (v) { return T + ph - (v - y0) / (y1 - y0) * ph; };
     const svg = svgNode("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg kf-svg", role: "img", "aria-label": opts.ariaLabel });
     svg.appendChild(svgNode("line", { x1: L, y1: T + ph, x2: L + pw, y2: T + ph, class: "dist-axis" }));
@@ -104,7 +102,7 @@ const KeyScatter = (function () {
         svg.appendChild(svgNode("text", { x: X(v), y: T + ph + 13, "text-anchor": "middle", class: "dist-label" }, String(Number(v.toPrecision(2)))));
       });
     }
-    svg.appendChild(svgNode("text", { x: L + pw, y: H - 4, "text-anchor": "end", class: "dist-label" }, opts.byCount ? "回数（対数）→" : "頻度（全体に対する割合 %、対数）→"));
+    svg.appendChild(svgNode("text", { x: L + pw, y: H - 4, "text-anchor": "end", class: "dist-label" }, "回数（対数）→"));
     const yStep = [0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200].find(function (s) { return (y1 - y0) / s <= 6; }) || 500;
     for (let v = Math.ceil(y0 / yStep) * yStep; v <= y1; v += yStep) {
       svg.appendChild(svgNode("line", { x1: L, y1: Y(v), x2: L + pw, y2: Y(v), class: "trend-grid" }));
@@ -119,15 +117,15 @@ const KeyScatter = (function () {
     order.forEach(function (p) {
       const g = svgNode("g", { class: "kf-point" + (p.weak ? " kf-weak" : "") + (opts.onSelect ? " kf-clickable" : "") + (p.key === opts.selected ? " kf-selected" : "") });
       g.appendChild(svgNode("circle", p.weak
-        ? { cx: X(p.share), cy: Y(p.value), r: 3.5, fill: "var(--bg)", stroke: p.c.color, "stroke-width": 1.5 }
-        : { cx: X(p.share), cy: Y(p.value), r: 4, fill: p.c.color }));
-      if (opts.labels !== false) g.appendChild(svgNode("text", { x: X(p.share) + 6, y: Y(p.value) + 4, class: "kf-label" }, p.key));
+        ? { cx: X(p.count), cy: Y(p.value), r: 3.5, fill: "var(--bg)", stroke: p.c.color, "stroke-width": 1.5 }
+        : { cx: X(p.count), cy: Y(p.value), r: 4, fill: p.c.color }));
+      if (opts.labels !== false) g.appendChild(svgNode("text", { x: X(p.count) + 6, y: Y(p.value) + 4, class: "kf-label" }, p.key));
       let head = p.key + "（" + (p.c.label || p.c.name) + "）";
       if (isKey) {
         const num = Keys.ofChar(p.key);
         head = p.key + "（" + (num ? num.number : "-") + "・" + (p.c.label || p.c.name) + "）";
       }
-      g.appendChild(svgNode("title", {}, head + "：" + p.tip + (opts.byCount ? "" : "（頻度 " + p.share.toFixed(2) + "%）")));
+      g.appendChild(svgNode("title", {}, head + "：" + p.tip));
       if (opts.onSelect) g.addEventListener("click", function () { opts.onSelect(p.key); });
       svg.appendChild(g);
     });
