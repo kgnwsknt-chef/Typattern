@@ -159,11 +159,11 @@
   // 色分けごとの [名前, 色] と、bigram → 名前
   const BF_COLORINGS = {
     class: {
-      legend: [["alternation（左右交互）", "var(--cmp-fast)"], ["roll（内向き）", "var(--cmp-3)"], ["roll（外向き）", "var(--cmp-4)"],
+      legend: [["alternation（異手）", "var(--cmp-fast)"], ["roll（内向き）", "var(--cmp-3)"], ["roll（外向き）", "var(--cmp-4)"],
         ["SFB（同指異鍵）", "var(--cmp-slow)"], ["repeat（連打）", "var(--cmp-5)"], ["分類なし", OTHER]],
       nameOf: function (g) {
         const c = FingerMap.bigramBase(g);
-        return { alternation: "alternation（左右交互）", "roll-in": "roll（内向き）", "roll-out": "roll（外向き）", repeat: "repeat（連打）",
+        return { alternation: "alternation（異手）", "roll-in": "roll（内向き）", "roll-out": "roll（外向き）", repeat: "repeat（連打）",
           "sfb-0": "SFB（同指異鍵）", "sfb-1": "SFB（同指異鍵）", "sfb-2": "SFB（同指異鍵）" }[c] || "分類なし";
       }
     },
@@ -464,7 +464,7 @@
       el: document.getElementById("bc-base"),
       idsOf: function (g) { return [FingerMap.bigramBase(g)]; },
       nodes: [
-        node("alternation（左右交互）", ["alternation"], 0, "左右の手が違う"),
+        node("alternation（異手）", ["alternation"], 0, "左右の手が違う"),
         node("repeat（連打）", ["repeat"], 0, "同じキーを続けて打つ"),
         node("SFB（同指異鍵）", ["sfb-0", "sfb-1", "sfb-2"], 0, "same-finger bigram。同じ指で、別のキーを続けて打つ"),
         node("同じ行", ["sfb-0"], 1, "同じ行のキーへ横に動く（例 fg）"),
@@ -498,7 +498,7 @@
       el: document.getElementById("tc-base"),
       idsOf: function (g) { return [FingerMap.trigramBase(g)]; },
       nodes: [
-        node("alternate（交互）", ["alternate", "alternate-sf", "alternate-sk"], 0, "左右左・右左右（例 ake・pen）"),
+        node("alternate（左右交互）", ["alternate", "alternate-sf", "alternate-sk"], 0, "左右左・右左右（例 ake・pen）"),
         node("1・3キー目が同じ指", ["alternate-sf"], 1, "1キー目と3キー目が同じ指の別のキー（例 dke）"),
         node("1・3キー目が同じキー", ["alternate-sk"], 1, "1キー目と3キー目が同じキー（例 dkd）"),
         node("roll（ロール）", ["roll-in", "roll-out"], 0, "同じ手の別の指で2キー＋もう片方の手で1キー。向きは同じ手の2キーで決める（例 sdk・kds）"),

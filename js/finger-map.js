@@ -50,7 +50,7 @@ const FingerMap = (function () {
     return a.finger === hi ? a : b;
   }
 
-  // bigram の分類（どれか1つ）："none" 分類しない／"alternation" 左右交互／"repeat" 同じキーの連打／
+  // bigram の分類（どれか1つ）："none" 分類しない／"alternation" 異手（左右の手が違う）／"repeat" 同じキーの連打／
   // "sfb-0"・"sfb-1"・"sfb-2" SFB（行の差。2 は2行以上）／"roll-in"・"roll-out" ロール（同じ手・別の指。小指 → 人差し指の向きが内向き）
   function bigramBase(g) {
     const a = keyOf(g[0]), b = keyOf(g[1]);
@@ -87,7 +87,7 @@ const FingerMap = (function () {
     return out;
   }
 
-  // trigram の分類（どれか1つ）："none" 分類しない／"alternate"・"alternate-sf"・"alternate-sk" 交互（1・3キー目が同じ指・同じキー）／
+  // trigram の分類（どれか1つ）："none" 分類しない／"alternate"・"alternate-sf"・"alternate-sk" 左右交互（1・3キー目が同じ指・同じキー）／
   // "roll-in"・"roll-out" ロール（同じ手の別の指の2キー ＋ もう片方の手の1キー）／"onehand-in"・"onehand-out" 一方向／
   // "redirect"・"redirect-noindex" 向きが変わる（人差し指を含まない）／"other" その他
   function trigramBase(g) {
