@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=153">
+  <link rel="stylesheet" href="style.css?v=154">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -56,18 +56,32 @@
       <p class="rhythm-legend">選んだ面で、各キーが出すかな（英語の配列は文字）。覚えた割り当てのキーに色を付ける ／ シフト面では、そのシフトのキーと一緒に押したときのかな（前置シフトのキーはオレンジ、後置シフトのキーは紫の枠）／ キーにマウスを乗せると、直近の正確率と回数を出す</p>
       <div class="kb-scroll"><div id="ll-keymap" class="kb km"></div></div>
     </section>
+
+    <!-- 覚えた割り当ての引き継ぎ（配列のマイナーチェンジ用。決まりは docs/layout-learning.md の「引き継ぎ」）。QWERTY では出さない -->
+    <section id="ll-carry" class="stats-section">
+      <h2 class="stats-title">覚えた割り当ての引き継ぎ</h2>
+      <p class="rhythm-legend">割り当てを少し変えた配列を新しく登録したときに、元の配列で覚えた割り当てを引き継ぐ。割り当て（打つキー）が同じ割り当て文字だけ、元の配列のキー配列習得の記録の数え分を写す</p>
+      <div class="filters">
+        <label class="filter">引き継ぐ元の配列
+          <select id="ll-carry-from" class="layout-select" title="同じ種類（かな配列・英語の配列）の配列"></select>
+        </label>
+        <button id="ll-carry-btn" class="text-btn" type="button">覚えた割り当てを引き継ぐ</button>
+        <button id="ll-carry-clear" class="text-btn" type="button" hidden>引き継ぎを取り消す</button>
+      </div>
+      <p id="ll-carry-msg" class="rhythm-legend"></p>
+    </section>
   </main>
 
-  <script src="js/store.js?v=153"></script>
-  <script src="js/keys.js?v=153"></script>
-  <script src="js/settings.js?v=153"></script>
-  <script src="js/page-footer.js?v=153"></script>
-  <script src="js/keyboard-shapes.js?v=153"></script>
-  <script src="js/key-map.js?v=153"></script>
-  <script src="js/romaji.js?v=153"></script>
-  <script src="js/kana-layout.js?v=153"></script>
-  <script src="js/kana-mandala.js?v=153"></script>
-  <script src="js/layout-learning.js?v=153"></script>
-  <script src="js/layout-learning-page.js?v=153"></script>
+  <script src="js/store.js?v=154"></script>
+  <script src="js/keys.js?v=154"></script>
+  <script src="js/settings.js?v=154"></script>
+  <script src="js/page-footer.js?v=154"></script>
+  <script src="js/keyboard-shapes.js?v=154"></script>
+  <script src="js/key-map.js?v=154"></script>
+  <script src="js/romaji.js?v=154"></script>
+  <script src="js/kana-layout.js?v=154"></script>
+  <script src="js/kana-mandala.js?v=154"></script>
+  <script src="js/layout-learning.js?v=154"></script>
+  <script src="js/layout-learning-page.js?v=154"></script>
 </body>
 </html>

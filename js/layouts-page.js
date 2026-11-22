@@ -341,7 +341,7 @@
     for (let i = layouts.length - 1; i >= 0; i--) {
       if (layouts[i].id === record.id || layouts[i].id === UNSAVED + record.id) layouts.splice(i, 1);
     }
-    layouts.push({ id: record.id, name: record.name, type: record.type || "kana", entries: record.entries, source: record.source, kana: KanaLayout.create(record.entries) });
+    layouts.push({ id: record.id, name: record.name, type: record.type || "kana", entries: record.entries, source: record.source, carry: record.carry, kana: KanaLayout.create(record.entries) });
   }
 
   // 上書き保存と削除は2回押しで確かめる（確認のダイアログ confirm は、出さないブラウザでは押せなくなるので使わない）。
@@ -415,6 +415,9 @@
       disarm();
       // source は読み込んだ割り当て表の文字列（ローマ字で書いたままの形）。フォームに出し直すのに使う
       const record = { id: name, name: name, type: layout.type, entries: layout.entries, source: layout.source, savedAt: new Date().toISOString() };
+      // 上書きするときは、キー配列習得で引き継いだ割り当て（carry）を残す（使うのは、割り当てが同じままの単位だけ。docs/layout-learning.md の「引き継ぎ」）
+      const old = layouts.find(function (l) { return l.id === name; });
+      if (old && old.carry) record.carry = old.carry;
       return Store.saveLayout(record).then(function () {
         addSaved(record);
         buildLayoutOptions();

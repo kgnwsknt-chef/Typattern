@@ -68,13 +68,18 @@ const LayoutLearning = (function () {
   //   first・basic：その配列にある頻出8字・頻出30字（英語は頻出20字。planEng）、basicName：その名前
   function plan(entries) {
     const keyOf = new Map();
+    const seqs = new Map(); // 単位 → それを打つキーの並びの全部（割り当てが同じかどうかを比べる。引き継ぎ）
     entries.forEach(function (e) {
       const kana = e[1];
       const ok = (kana.length === 1 && isKana(kana)) || PAIRS.indexOf(kana) !== -1;
       if (!ok || EXCLUDED.indexOf(kana) !== -1) return;
       if (!keyOf.has(kana) || e[0].length < keyOf.get(kana).length) keyOf.set(kana, e[0]);
+      if (!seqs.has(kana)) seqs.set(kana, []);
+      seqs.get(kana).push(e[0]);
     });
     const units = Array.from(keyOf.keys());
+    const sig = new Map();
+    seqs.forEach(function (list, u) { sig.set(u, list.slice().sort().join(" ")); });
     const unitSet = new Set(units);
     const shifts = KanaLayout.create(entries).shiftKeys(SHIFT_MIN);
     const shiftKeys = shifts.prefix.concat(shifts.postfix.filter(function (k) { return shifts.prefix.indexOf(k) === -1; }));
@@ -97,7 +102,7 @@ const LayoutLearning = (function () {
 
     const made = areasOf(units.map(function (u) { return Object.assign({ unit: u }, place(u)); }));
     return {
-      units: units, unitSet: unitSet, keyOf: keyOf, areas: made.areas, faces: made.faces,
+      units: units, unitSet: unitSet, keyOf: keyOf, sig: sig, areas: made.areas, faces: made.faces,
       first: FIRST8.filter(function (c) { return unitSet.has(c); }),
       basic: BASIC30.filter(function (c) { return unitSet.has(c); }), basicName: "頻出30字"
     };
@@ -119,7 +124,7 @@ const LayoutLearning = (function () {
       return { unit: u, shift: k && k.shift ? "Shift" : "", row: k ? Number(k.number[0]) : 9 };
     }));
     return {
-      units: units, unitSet: unitSet, keyOf: keyOf, areas: made.areas, faces: made.faces,
+      units: units, unitSet: unitSet, keyOf: keyOf, sig: keyOf, areas: made.areas, faces: made.faces,
       first: EN_FIRST8.filter(function (c) { return unitSet.has(c); }),
       basic: EN_BASIC20.filter(function (c) { return unitSet.has(c); }), basicName: "頻出20字"
     };
@@ -235,6 +240,59 @@ const LayoutLearning = (function () {
     const s = new Set();
     st.forEach(function (v, u) { if (v.everLearned) s.add(u); });
     return s;
+  }
+
+  // ---- 覚えた割り当ての引き継ぎ ----
+  // 配列のマイナーチェンジで、割り当てが同じ単位の数え分を、元の配列から写す（docs/layout-learning.md の「引き継ぎ」）
+  // 引き継ぎは配列の登録データ（layouts）の carry に { from, at, keys: { 単位: 割り当て }, rows: [{ finishedAt, units }] } で持つ
+
+  // 引き継いだ数え分を、記録と同じ形 { finishedAt, learning: { units } } の並びにする。今の割り当てが同じ単位だけを使う
+  function carryRows(p, carry) {
+    if (!carry || !carry.rows) return [];
+    const keys = carry.keys || {};
+    const out = [];
+    carry.rows.forEach(function (r) {
+      const units = {};
+      let any = false;
+      Object.keys(r.units).forEach(function (u) {
+        if (p.sig.has(u) && p.sig.get(u) === keys[u]) { units[u] = r.units[u]; any = true; }
+      });
+      if (any) out.push({ finishedAt: r.finishedAt, learning: { units: units }, carried: true });
+    });
+    return out;
+  }
+
+  // 記録と引き継いだ数え分を合わせる（覚えたかどうか・段階・達成項目は、これで求める）
+  function withCarry(p, sessions, carry) {
+    return sessions.concat(carryRows(p, carry));
+  }
+
+  // 元の配列（plan pFrom、そのキー配列習得の記録 fromSessions、元の配列の引き継ぎ fromCarry）から、引き継ぎを作る
+  //   返り値 { carry, same（割り当てが同じ単位）, counted（そのうち元の配列で数え分のある単位）, learned（そのうち元の配列で覚えている単位）, differ（割り当てが違う・元の配列にない単位）}
+  function makeCarry(pTo, pFrom, fromName, fromSessions, fromCarry) {
+    const same = pTo.units.filter(function (u) { return pFrom.sig.has(u) && pFrom.sig.get(u) === pTo.sig.get(u); });
+    const sameSet = new Set(same);
+    const differ = pTo.units.filter(function (u) { return !sameSet.has(u); });
+    const keys = {};
+    same.forEach(function (u) { keys[u] = pTo.sig.get(u); });
+    const rows = [];
+    withCarry(pFrom, fromSessions, fromCarry).forEach(function (s) {
+      if (!s.learning || !s.learning.units) return;
+      const units = {};
+      let any = false;
+      Object.keys(s.learning.units).forEach(function (u) {
+        if (sameSet.has(u)) { units[u] = s.learning.units[u].slice(); any = true; }
+      });
+      if (any) rows.push({ finishedAt: s.finishedAt, units: units });
+    });
+    rows.sort(function (a, b) { return a.finishedAt < b.finishedAt ? -1 : a.finishedAt > b.finishedAt ? 1 : 0; });
+    const counted = same.filter(function (u) { return rows.some(function (r) { return r.units[u]; }); });
+    const st = status(withCarry(pFrom, fromSessions, fromCarry));
+    const learned = same.filter(function (u) { return st.has(u) && st.get(u).learned; });
+    return {
+      carry: { from: fromName, at: new Date().toISOString(), keys: keys, rows: rows },
+      same: same, counted: counted, learned: learned, differ: differ
+    };
   }
 
   // ---- 次に覚える単位 ----
@@ -480,6 +538,7 @@ const LayoutLearning = (function () {
   return {
     MODE: MODE, STUCK_NOTE: STUCK_NOTE, MIN_RECENT: MIN_RECENT, LEARNED_ACC: LEARNED_ACC, FORGET_ACC: FORGET_ACC, NEW_WORDS: NEW_WORDS,
     loadLists: loadLists, plan: plan, planEng: planEng, segment: segment, tally: tally, status: status, learnedSet: learnedSet, everSet: everSet,
+    carryRows: carryRows, withCarry: withCarry, makeCarry: makeCarry,
     state: state, chooseWords: chooseWords, milestones: milestones, achieved: achieved, mandalaOpts: mandalaOpts
   };
 })();

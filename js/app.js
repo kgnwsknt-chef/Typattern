@@ -145,6 +145,7 @@
   const kanaLayouts = {}; // 登録したかな配列（配列名 → KanaLayout.create の結果）
   const engLayouts = {};  // 登録した英語の配列（配列名 → KanaLayout.engMap の結果 { toChar, toKey }）。英語と、日本語のローマ字で使う
   const engEntries = {};  // 登録した英語の配列の割り当て表（配列名 → entries）。キー配列習得で使う
+  const layoutCarry = {}; // キー配列習得で引き継いだ割り当て（配列名 → layouts の carry）
   let imeOn = false;   // IME がオンのまま打たれたか（日本語のとき、注意を出す）
   let timerId = 0;
   let finished = false;
@@ -293,11 +294,13 @@
     // 同時押しのあるかな配列は、まだキー配列習得に使えない（docs/layout-learning.md）
     if (!en && KanaLayout.hasChord(kanaLayouts[id].entries)) return Promise.reject(new Error("NO_LEARN_CHORD"));
     return Promise.all([LayoutLearning.loadLists(fetchText, lang), Store.getAllSessions()]).then(function (v) {
+      const plan = en ? LayoutLearning.planEng(en) : LayoutLearning.plan(kanaLayouts[id].entries);
+      // 引き継いだ割り当ての数え分も合わせる（docs/layout-learning.md の「引き継ぎ」）
       return [{
         name: LEARN,
         lists: v[0],
-        plan: en ? LayoutLearning.planEng(en) : LayoutLearning.plan(kanaLayouts[id].entries),
-        sessions: v[1].filter(function (s) { return s.mode === LEARN && s.keyLayout === id; })
+        plan: plan,
+        sessions: LayoutLearning.withCarry(plan, v[1].filter(function (s) { return s.mode === LEARN && s.keyLayout === id; }), layoutCarry[id])
       }];
     });
   }
@@ -1993,6 +1996,7 @@
   function addKanaLayouts(records) {
     records.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
     records.forEach(function (r) {
+      if (r.carry) layoutCarry[r.id] = r.carry; // キー配列習得で引き継いだ割り当て
       if (r.type === "eng") { engLayouts[r.id] = KanaLayout.engMap(r.entries); engEntries[r.id] = r.entries; }
       else kanaLayouts[r.id] = KanaLayout.create(r.entries);
       const o = document.createElement("option");
