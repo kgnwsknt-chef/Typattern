@@ -1349,7 +1349,7 @@
     const guide = lang === "ja" ? GUIDE_LEARN : GUIDE_LEARN_EN;
     if (!s) return guide;
     const stage = s.stage === "1-1" ? "1-1. 頻出8字"
-      : s.stage === "1-2" ? "1-2. 2つずつ足す（" + s.plan.basicName + "）"
+      : s.stage === "1-2" ? "1-2. 3つずつ足す（" + s.plan.basicName + "）"
       : s.stage === "2" && s.areaIndex !== -1 ? "2. 学習区画「" + s.plan.areas[s.areaIndex].name + "」"
       : s.stage === "2" ? "2. 配列ごとの学習区画" : "習得完了";
     const units = s.newUnits.length ? "新しく覚える割り当て：" + s.newUnits.map(function (u) { return "「" + u + "」"; }).join("") + (s.stuck ? LayoutLearning.STUCK_NOTE : "") + "。" : "";
