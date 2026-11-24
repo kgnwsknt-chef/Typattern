@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=156">
+  <link rel="stylesheet" href="style.css?v=157">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -44,6 +44,12 @@
           <option value="qwerty">QWERTY配列</option>
         </select>
       </label>
+      <label class="filter">配列のバージョン
+        <select id="f-versions" class="layout-select" title="「配列」で選んだ配列の、マイナーバージョン違い（「○○v0.2」「○○v0.10」など）の記録もまとめるか">
+          <option value="merge">まとめる</option>
+          <option value="split">分ける</option>
+        </select>
+      </label>
       <label class="filter">モード
         <select id="f-mode" class="layout-select">
           <option value="">すべて</option>
@@ -65,6 +71,7 @@
       </span>
     </div>
     <p id="stats-summary" class="stats-summary">読み込み中…</p>
+    <p id="versions-note" class="stats-summary" hidden></p>
 
     <!-- 並び：絞り込み → 回数・集計・説明 → キーごとの IKI（配列図と、頻度との散布図）→ bigram の2次元ヒストグラム → bigram（表と分布）→ 指と行(row)で分けた bigram・trigram → trigram（表と分布）→ trigram と bigram の相関 -->
     <section class="stats-section">
@@ -230,20 +237,20 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=156"></script>
-  <script src="js/keys.js?v=156"></script>
-  <script src="js/settings.js?v=156"></script>
-  <script src="js/page-footer.js?v=156"></script>
-  <script src="js/rhythm.js?v=156"></script>
-  <script src="js/keyboard-shapes.js?v=156"></script>
-  <script src="js/kana-layout.js?v=156"></script>
-  <script src="js/key-map.js?v=156"></script>
-  <script src="js/point-trend.js?v=156"></script>
-  <script src="js/ngram.js?v=156"></script>
-  <script src="js/finger-map.js?v=156"></script>
-  <script src="js/key-scatter.js?v=156"></script>
-  <script src="js/iki-measurement.js?v=156"></script>
-  <script src="js/filters.js?v=156"></script>
-  <script src="js/ngram-page.js?v=156"></script>
+  <script src="js/store.js?v=157"></script>
+  <script src="js/keys.js?v=157"></script>
+  <script src="js/settings.js?v=157"></script>
+  <script src="js/page-footer.js?v=157"></script>
+  <script src="js/rhythm.js?v=157"></script>
+  <script src="js/keyboard-shapes.js?v=157"></script>
+  <script src="js/kana-layout.js?v=157"></script>
+  <script src="js/key-map.js?v=157"></script>
+  <script src="js/point-trend.js?v=157"></script>
+  <script src="js/ngram.js?v=157"></script>
+  <script src="js/finger-map.js?v=157"></script>
+  <script src="js/key-scatter.js?v=157"></script>
+  <script src="js/iki-measurement.js?v=157"></script>
+  <script src="js/filters.js?v=157"></script>
+  <script src="js/ngram-page.js?v=157"></script>
 </body>
 </html>

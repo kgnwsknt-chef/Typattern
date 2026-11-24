@@ -210,6 +210,15 @@ const Store = (function () {
     return a.localeCompare(b, "ja", { numeric: true });
   }
 
+  const VERSION_RE = /^(.+v\d+)(?:\.\d+)+$/;
+
+  // バージョン違い（「○○v数字.数字」で、名前とメジャーバージョンが同じもの）の配列に共通の名前（例「○○v0.x」）。形が違う配列はその名前のまま
+  //   決まりは docs/records.md の「レベルの達成度」
+  function versionName(layout) {
+    const m = VERSION_RE.exec(layout);
+    return m ? m[1] + ".x" : layout;
+  }
+
   function getAllLayouts() {
     return tx("layouts", "readonly", function (t) { return t.objectStore("layouts").getAll(); });
   }
@@ -403,6 +412,7 @@ const Store = (function () {
     getAllRaws: getAllRaws,
     eachRaw: eachRaw,
     compareLayoutNames: compareLayoutNames,
+    versionName: versionName,
     getAllLayouts: getAllLayouts,
     saveLayout: saveLayout,
     deleteLayout: deleteLayout,

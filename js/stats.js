@@ -49,7 +49,7 @@
       renderLevels(sessions);
       // 推移は、配列のバージョン違いをまとめるなら、選んだ配列の全部のバージョンの回を描く（docs/records.md の「推移」）
       const merge = trendVersionsEl.value === "merge";
-      const trendPicked = !merge ? picked : filters.pick(sessions, function (a, b) { return Levels.versionName(a) === Levels.versionName(b); }).filter(shown);
+      const trendPicked = !merge ? picked : filters.pick(sessions, true).filter(shown);
       trendData = { picked: trendPicked, levelUps: Levels.levelUps(sessions, merge) };
       renderTrendNote(trendPicked);
       updateRanking(picked);
@@ -63,12 +63,9 @@
 
   // 推移に、選んだ配列とは違うバージョンの回が入っているとき、何をまとめて描いているかを出す
   function renderTrendNote(rows) {
-    const selected = layoutFilterEl.value;
-    const others = selected !== "" && rows.some(function (s) { return s.keyLayout !== selected; });
-    trendNoteEl.hidden = !others;
-    if (!others) return;
-    const names = Array.from(new Set(rows.map(function (s) { return s.keyLayout; }))).sort(Store.compareLayoutNames);
-    trendNoteEl.textContent = Levels.versionName(selected) + "（" + names.join("・") + "）をまとめて表示、" + rows.length + " 回";
+    const name = Filters.mergedName(rows, layoutFilterEl.value);
+    trendNoteEl.hidden = name === null;
+    if (name !== null) trendNoteEl.textContent = name + "をまとめて表示、" + rows.length + " 回";
   }
 
   // 推移のグラフ。ランキングで選んだ回（selectedId）の位置に緑の縦線を引く（1回ごとのときだけ）

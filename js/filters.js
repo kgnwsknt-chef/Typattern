@@ -7,6 +7,7 @@ const Filters = (function () {
   const KEY_LAYOUT_STORAGE = "typing-test.keyLayout";
   // ページを移っても同じ条件で見られるよう、このタブの間だけ覚えておく
   const FILTER_STORAGE = "typing-test.filters";
+  const VERSIONS_STORAGE = "typing-test.filterVersions"; // 配列のバージョン違いをまとめるか（"split" なら分ける）
   const IDS = { lang: "f-lang", layout: "f-layout", mode: "f-mode", from: "f-from", to: "f-to" };
 
   // 配列の選択肢に、登録した配列（かな配列・英語の配列）と、記録の中にある配列（配列を消した後の記録も）を足す
@@ -55,6 +56,18 @@ const Filters = (function () {
       .catch(function (err) { console.error(err); })
       .then(restore);
 
+    // 配列のバージョン違いをまとめるか（IKI のページだけにある欄。docs/records.md の「データの絞り込み」）
+    const versionsEl = document.getElementById("f-versions");
+    if (versionsEl) {
+      try {
+        if (localStorage.getItem(VERSIONS_STORAGE) === "split") versionsEl.value = "split";
+      } catch (e) { /* 初期値（まとめる）を使う */ }
+      versionsEl.addEventListener("change", function () {
+        try { localStorage.setItem(VERSIONS_STORAGE, versionsEl.value); } catch (e) { /* 覚えられなくても使える */ }
+        onChange();
+      });
+    }
+
     function changed() {
       let values = {};
       try { values = JSON.parse(sessionStorage.getItem(FILTER_STORAGE) || "{}") || {}; } catch (e) { /* 使わない */ }
@@ -72,8 +85,9 @@ const Filters = (function () {
     // 概要の記録（古い順）を条件で絞り込む。空の値（「すべて」・期間の指定なし）はその条件で絞り込まない
     //   モードの「練習モード以外」（値 "regular"。IKI・ミスタイプのページ）は、練習モード（practice: true）でない回をまとめて選ぶ。
     //   「IKI 測定以外」（値 "not-iki-measurement"。IKI・ミスタイプのページ）は、IKI 測定でない回（ほかの練習モードも入る）を選ぶ
-    //   sameLayout：配列が条件に合うかを決める関数（記録の配列, 選んだ配列）。省略すると、同じ配列だけ
-    function pick(sessions, sameLayout) {
+    //   merge：選んだ配列のバージョン違いの回も入れる。省略すると、ページの「配列のバージョン」の欄に従う（欄がなければ同じ配列だけ）
+    function pick(sessions, merge) {
+      const merged = merge === undefined ? !!versionsEl && versionsEl.value === "merge" : merge;
       const match = function (sel, v) { return !sel || !sel.value || sel.value === v; };
       const modeMatch = function (s) {
         if (f.mode && f.mode.value === "regular") return !s.practice;
@@ -86,12 +100,23 @@ const Filters = (function () {
         // ノーミス連続タイプの回は、記録のページでモードに「ノーミス連続タイプ」を選んだときだけ使う（docs/no-mistype.md）
         if (s.mode === "no-mistype" && !(f.mode && f.mode.value === "no-mistype")) return false;
         const day = localDate(s.finishedAt);
-        return match(f.lang, s.lang) && (sameLayout && f.layout.value ? sameLayout(s.keyLayout, f.layout.value) : match(f.layout, s.keyLayout)) && modeMatch(s) &&
+        return match(f.lang, s.lang) && (match(f.layout, s.keyLayout) || merged && Store.versionName(s.keyLayout) === Store.versionName(f.layout.value)) && modeMatch(s) &&
           (!f.from.value || day >= f.from.value) && (!f.to.value || day <= f.to.value);
       });
     }
 
     return { pick: pick, ready: ready };
+  }
+
+  // rows に、選んだ配列 selected とは違うバージョンの回が入っていれば、まとめた配列の名前「○○v0.x（○○v0.2・○○v0.10）」。なければ null
+  function mergedName(rows, selected) {
+    if (!selected || !rows.some(function (s) { return s.keyLayout !== selected; })) return null;
+    return Store.versionName(selected) + "（" + layoutNames(rows).join("・") + "）";
+  }
+
+  // 記録に出てくる配列（配列名の順）
+  function layoutNames(rows) {
+    return Array.from(new Set(rows.map(function (s) { return s.keyLayout; }))).sort(Store.compareLayoutNames);
   }
 
   // 「対象 N 回（YYYY/MM/DD 〜 YYYY/MM/DD）」
@@ -112,5 +137,5 @@ const Filters = (function () {
     return Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
   }
 
-  return { init: init, summary: summary, localDate: localDate };
+  return { init: init, summary: summary, mergedName: mergedName, layoutNames: layoutNames, localDate: localDate };
 })();

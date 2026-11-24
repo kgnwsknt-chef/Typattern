@@ -42,6 +42,9 @@
   let biRows = [];        // bigram の表に出せる行（「回数」で絞ったもの。種類の絞り込みの前）
   let biBase = 0;         // bigram の表の色の基準
   let bfKana = new Map(); // 日本語の回の bigram → かなの中・境目の IKI（散布図の色分け「かなの中・境目」と、点の値の表示）
+  const versionsNoteEl = document.getElementById("versions-note"); // まとめて集計している配列
+  let mergedName = null;    // まとめて集計している配列の名前（違うバージョンの回が入っていなければ null）
+  let pickedLayouts = [];   // 絞り込んだ記録の配列（書き出しに入れる）
   let lastPickedCount = 0; // 絞り込んだ記録の回数（書き出しに入れる）
   let chordRows = [];     // 同時押しの表の行
   let chordUpper = 0;     // ずれの分布の横軸の最大（選んだ記録の判定時間の最大）
@@ -60,6 +63,10 @@
       const picked = filters.pick(sessions);
       summaryEl.textContent = Filters.summary(picked);
       lastPickedCount = picked.length;
+      pickedLayouts = Filters.layoutNames(picked);
+      mergedName = Filters.mergedName(picked, layoutFilterEl.value);
+      versionsNoteEl.hidden = mergedName === null;
+      if (mergedName !== null) versionsNoteEl.textContent = mergedName + "をまとめて集計";
       // IKI の推移の横軸：絞り込んだ記録の古い順の通し番号（回数）と、その記録の日（このPCの日付）
       const tags = PointTrend.tagsOf(picked, Filters.localDate);
       trendInfo = PointTrend.axisOf(trendEl.value, picked, Filters.localDate);
@@ -254,7 +261,7 @@
       version: document.getElementById("version").textContent,
       exportedAt: new Date().toISOString(),
       filters: {
-        lang: val("f-lang"), keyLayout: val("f-layout"), mode: val("f-mode"),
+        lang: val("f-lang"), keyLayout: val("f-layout"), layouts: pickedLayouts, mode: val("f-mode"),
         from: val("f-from"), to: val("f-to"),
         minCount: Number(minEl.value), kind: biKindBoxEl.hidden ? null : kind
       },
@@ -359,6 +366,7 @@
     const scale = document.createElement("span");
     scale.className = "rhythm-scale";
     keyIkiLegendEl.append(scale, "遅い ／ 間違えたキー・Backspace・スペース・Shift と同時に押したキーが絡む間隔は除く ／ 1回でもあれば色を付ける（回数が少ないキーは平均がぶれやすい）／ マウスを乗せると回数を表示");
+    if (kana && mergedName !== null) keyIkiLegendEl.append(" ／ かなは「配列」で選んだ " + layoutFilterEl.value + " のもの（値には、ほかのバージョンで違うかなを打った間隔も入る）");
     KeyMap.draw(keyIkiEl, function (number) {
       const label = Keys.label(number);
       const e = label === null ? null : byKey[label];

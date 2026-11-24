@@ -126,21 +126,12 @@ const Levels = (function () {
     });
   }
 
-  const VERSION_RE = /^(.+v\d+)(?:\.\d+)+$/;
-
-  // バージョン違い（「○○v数字.数字」で、名前とメジャーバージョンが同じもの）の配列に共通の名前（例「○○v0.x」）。形が違う配列はその名前のまま
-  //   決まりは docs/records.md の「レベルの達成度」
-  function versionName(layout) {
-    const m = VERSION_RE.exec(layout);
-    return m ? m[1] + ".x" : layout;
-  }
-
   // 配列の並びを、バージョン違いでまとめる
   //   返り値 [{ name: 表示名, layouts: 配列の並び }]。1つだけのものは配列名のまま
   function groupVersions(layouts) {
     const groups = new Map();
     layouts.forEach(function (layout) {
-      const key = versionName(layout);
+      const key = Store.versionName(layout);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(layout);
     });
@@ -214,7 +205,7 @@ const Levels = (function () {
     fromRate: fromRate,
     rateOfSession: rateOfSession,
     ofSession: ofSession,
-    achieved: achieved, layoutOf: layoutOf, layoutName: layoutName, layoutsOf: layoutsOf, versionName: versionName, groupVersions: groupVersions,
+    achieved: achieved, layoutOf: layoutOf, layoutName: layoutName, layoutsOf: layoutsOf, groupVersions: groupVersions,
     next: next,
     summary: summary,
     levelUps: levelUps,
