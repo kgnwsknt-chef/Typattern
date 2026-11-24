@@ -244,7 +244,7 @@
       // 同時押しのあるかな配列は、まだキー配列習得に使えないので出さない（docs/layout-learning.md）
       layouts = [{ id: "qwerty", name: "QWERTY配列", type: "eng", entries: [] }].concat(v[0]
         .filter(function (l) { return l.type === "eng" || !KanaLayout.hasChord(l.entries); })
-        .sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; }));
+        .sort(function (a, b) { return Store.compareLayoutNames(a.name, b.name); }));
       sessions = v[1];
       lists = { ja: v[2], en: v[3] };
       layouts.forEach(function (l) {

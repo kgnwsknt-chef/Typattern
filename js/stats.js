@@ -5,6 +5,10 @@
   const RANK_TOP = 30;
 
   const groupEl = document.getElementById("f-group"); // 推移のまとめ方
+  const trendVersionsEl = document.getElementById("trend-versions"); // 推移で配列のバージョン違いをまとめるか（"merge"・"split"）
+  const TREND_VERSIONS_STORAGE = "typing-test.trendVersions";
+  const trendNoteEl = document.getElementById("trend-note"); // まとめて描いている配列
+  const layoutFilterEl = document.getElementById("f-layout");
   const summaryEl = document.getElementById("stats-summary");
   const trendEl = document.getElementById("trend");
   const trendLegendEl = document.getElementById("trend-legend");
@@ -38,11 +42,16 @@
       // 古い順のまま。練習モードの回は、記録のページ（推移・ランキング）には入れない（docs/measurement.md の「練習モード」）
       // ノーミス連続タイプの回は、モードで選んだときだけ（推移を文字数で描き、ランキングは出さない。docs/no-mistype.md）
       streak = document.getElementById("f-mode").value === NoMistype.MODE;
-      const picked = filters.pick(sessions).filter(function (s) { return streak ? s.mode === NoMistype.MODE : Store.isRegular(s); });
+      const shown = function (s) { return streak ? s.mode === NoMistype.MODE : Store.isRegular(s); };
+      const picked = filters.pick(sessions).filter(shown);
       summaryEl.textContent = Filters.summary(picked);
       // レベルの達成度と、達成レベルが上がった回は、絞り込まずに全部の記録から出す
       renderLevels(sessions);
-      trendData = { picked: picked, levelUps: Levels.levelUps(sessions) };
+      // 推移は、配列のバージョン違いをまとめるなら、選んだ配列の全部のバージョンの回を描く（docs/records.md の「推移」）
+      const merge = trendVersionsEl.value === "merge";
+      const trendPicked = !merge ? picked : filters.pick(sessions, function (a, b) { return Levels.versionName(a) === Levels.versionName(b); }).filter(shown);
+      trendData = { picked: trendPicked, levelUps: Levels.levelUps(sessions, merge) };
+      renderTrendNote(trendPicked);
       updateRanking(picked);
       drawTrend(); // ランキングで選んだ回が絞り込みで外れたら閉じるので、ランキングの後に描く
     }).catch(function (err) {
@@ -51,6 +60,16 @@
     });
   }
 
+
+  // 推移に、選んだ配列とは違うバージョンの回が入っているとき、何をまとめて描いているかを出す
+  function renderTrendNote(rows) {
+    const selected = layoutFilterEl.value;
+    const others = selected !== "" && rows.some(function (s) { return s.keyLayout !== selected; });
+    trendNoteEl.hidden = !others;
+    if (!others) return;
+    const names = Array.from(new Set(rows.map(function (s) { return s.keyLayout; }))).sort(Store.compareLayoutNames);
+    trendNoteEl.textContent = Levels.versionName(selected) + "（" + names.join("・") + "）をまとめて表示、" + rows.length + " 回";
+  }
 
   // 推移のグラフ。ランキングで選んだ回（selectedId）の位置に緑の縦線を引く（1回ごとのときだけ）
   function drawTrend() {
@@ -277,6 +296,13 @@
     drawRanking(rankingCategory);
   });
   groupEl.addEventListener("change", update);
+  try {
+    if (localStorage.getItem(TREND_VERSIONS_STORAGE) === "split") trendVersionsEl.value = "split";
+  } catch (e) { /* 初期値（まとめる）を使う */ }
+  trendVersionsEl.addEventListener("change", function () {
+    try { localStorage.setItem(TREND_VERSIONS_STORAGE, trendVersionsEl.value); } catch (e) { /* 覚えられなくても使える */ }
+    update();
+  });
   // バージョン表示と、記録の書き出し・読み込み（読み込んだら表示を更新する）
   PageFooter.init({ onImport: update });
   filters.ready.then(update);

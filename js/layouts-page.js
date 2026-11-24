@@ -461,7 +461,7 @@
   // 保存した配列を読み込んで一覧に入れる
   function loadSaved() {
     return Store.getAllLayouts().then(function (records) {
-      records.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+      records.sort(function (a, b) { return Store.compareLayoutNames(a.name, b.name); });
       records.forEach(addSaved);
       const selected = layoutEl.value;
       buildLayoutOptions();

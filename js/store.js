@@ -205,6 +205,11 @@ const Store = (function () {
   // ---- 登録したキー配列（layouts） ----
   // 1件 { id: 配列名, name: 配列名, type: "kana"（かな配列）か "eng"（英語の配列）, entries: [[キーの並び, かな（英語の配列は文字）], …], savedAt }。形式は docs/storage.md
 
+  // 配列名の並びの順（名前の中の数字は数の順。v0.2 は v0.10 の前）。配列を並べる所は、どのページもこれを使う
+  function compareLayoutNames(a, b) {
+    return a.localeCompare(b, "ja", { numeric: true });
+  }
+
   function getAllLayouts() {
     return tx("layouts", "readonly", function (t) { return t.objectStore("layouts").getAll(); });
   }
@@ -397,6 +402,7 @@ const Store = (function () {
     getAllSessions: getAllSessions,
     getAllRaws: getAllRaws,
     eachRaw: eachRaw,
+    compareLayoutNames: compareLayoutNames,
     getAllLayouts: getAllLayouts,
     saveLayout: saveLayout,
     deleteLayout: deleteLayout,

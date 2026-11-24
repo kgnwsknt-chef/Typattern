@@ -122,17 +122,25 @@ const Levels = (function () {
       if (s.lang === lang && COUNTED_MODES.indexOf(s.mode) !== -1) set.add(layoutOf(s));
     });
     return Array.from(set).sort(function (a, b) {
-      return (a === "qwerty" ? 0 : 1) - (b === "qwerty" ? 0 : 1) || a.localeCompare(b, "ja", { numeric: true });
+      return (a === "qwerty" ? 0 : 1) - (b === "qwerty" ? 0 : 1) || Store.compareLayoutNames(a, b);
     });
   }
 
-  // 配列の並びを、バージョン違い（「○○v数字.数字」で、名前とメジャーバージョンが同じもの）でまとめる。決まりは docs/records.md の「レベルの達成度」
+  const VERSION_RE = /^(.+v\d+)(?:\.\d+)+$/;
+
+  // バージョン違い（「○○v数字.数字」で、名前とメジャーバージョンが同じもの）の配列に共通の名前（例「○○v0.x」）。形が違う配列はその名前のまま
+  //   決まりは docs/records.md の「レベルの達成度」
+  function versionName(layout) {
+    const m = VERSION_RE.exec(layout);
+    return m ? m[1] + ".x" : layout;
+  }
+
+  // 配列の並びを、バージョン違いでまとめる
   //   返り値 [{ name: 表示名, layouts: 配列の並び }]。1つだけのものは配列名のまま
   function groupVersions(layouts) {
     const groups = new Map();
     layouts.forEach(function (layout) {
-      const m = /^(.+v\d+)(?:\.\d+)+$/.exec(layout);
-      const key = m ? m[1] + ".x" : layout;
+      const key = versionName(layout);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(layout);
     });
@@ -143,17 +151,29 @@ const Levels = (function () {
 
   // 達成レベルが上がった回の一覧（記録の id → { lang, mode, layout, level }）。sessions は古い順。
   // 言語・モード・配列の組ごとに、それまでの達成レベルを初めて超えた回。COUNTED_MODES 以外は数えない
-  function levelUps(sessions) {
+  // merge：配列のバージョン違いをまとめて数える（layout は、まとめた配列の名前。レベルの達成度の表と同じ）
+  function levelUps(sessions, merge) {
+    const merged = {}; // 言語 → 配列 → まとめた配列の名前（2つ以上あるときだけ）
+    if (merge) {
+      sessions.forEach(function (s) {
+        if (merged[s.lang]) return;
+        merged[s.lang] = new Map();
+        groupVersions(layoutsOf(sessions, s.lang)).forEach(function (g) {
+          if (g.layouts.length > 1) g.layouts.forEach(function (l) { merged[s.lang].set(l, g.name); });
+        });
+      });
+    }
     const best = {};
     const ups = new Map();
     sessions.forEach(function (s) {
       if (COUNTED_MODES.indexOf(s.mode) === -1) return;
       const l = ofSession(s);
       if (!l) return;
-      const key = s.lang + "/" + s.mode + "/" + layoutOf(s);
+      const layout = merge && merged[s.lang].get(layoutOf(s)) || layoutOf(s);
+      const key = s.lang + "/" + s.mode + "/" + layout;
       if (!best[key] || l.index > best[key].index) {
         best[key] = l;
-        ups.set(s.id, { lang: s.lang, mode: s.mode, layout: layoutOf(s), level: l });
+        ups.set(s.id, { lang: s.lang, mode: s.mode, layout: layout, level: l });
       }
     });
     return ups;
@@ -194,7 +214,7 @@ const Levels = (function () {
     fromRate: fromRate,
     rateOfSession: rateOfSession,
     ofSession: ofSession,
-    achieved: achieved, layoutOf: layoutOf, layoutName: layoutName, layoutsOf: layoutsOf, groupVersions: groupVersions,
+    achieved: achieved, layoutOf: layoutOf, layoutName: layoutName, layoutsOf: layoutsOf, versionName: versionName, groupVersions: groupVersions,
     next: next,
     summary: summary,
     levelUps: levelUps,

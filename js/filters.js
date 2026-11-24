@@ -16,7 +16,7 @@ const Filters = (function () {
     sessions.forEach(function (s) {
       if (s.keyLayout && !names.has(s.keyLayout)) names.set(s.keyLayout, s.keyLayout + "（削除済）");
     });
-    Array.from(names).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }).forEach(function (n) {
+    Array.from(names).sort(function (a, b) { return Store.compareLayoutNames(a[0], b[0]); }).forEach(function (n) {
       if (hasOption(sel, n[0])) return; // QWERTY など、最初からある選択肢
       const o = document.createElement("option");
       o.value = n[0];
@@ -72,7 +72,8 @@ const Filters = (function () {
     // 概要の記録（古い順）を条件で絞り込む。空の値（「すべて」・期間の指定なし）はその条件で絞り込まない
     //   モードの「練習モード以外」（値 "regular"。IKI・ミスタイプのページ）は、練習モード（practice: true）でない回をまとめて選ぶ。
     //   「IKI 測定以外」（値 "not-iki-measurement"。IKI・ミスタイプのページ）は、IKI 測定でない回（ほかの練習モードも入る）を選ぶ
-    function pick(sessions) {
+    //   sameLayout：配列が条件に合うかを決める関数（記録の配列, 選んだ配列）。省略すると、同じ配列だけ
+    function pick(sessions, sameLayout) {
       const match = function (sel, v) { return !sel || !sel.value || sel.value === v; };
       const modeMatch = function (s) {
         if (f.mode && f.mode.value === "regular") return !s.practice;
@@ -85,7 +86,7 @@ const Filters = (function () {
         // ノーミス連続タイプの回は、記録のページでモードに「ノーミス連続タイプ」を選んだときだけ使う（docs/no-mistype.md）
         if (s.mode === "no-mistype" && !(f.mode && f.mode.value === "no-mistype")) return false;
         const day = localDate(s.finishedAt);
-        return match(f.lang, s.lang) && match(f.layout, s.keyLayout) && modeMatch(s) &&
+        return match(f.lang, s.lang) && (sameLayout && f.layout.value ? sameLayout(s.keyLayout, f.layout.value) : match(f.layout, s.keyLayout)) && modeMatch(s) &&
           (!f.from.value || day >= f.from.value) && (!f.to.value || day <= f.to.value);
       });
     }

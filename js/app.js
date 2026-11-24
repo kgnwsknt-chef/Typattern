@@ -1994,7 +1994,7 @@
   // キー配列の選択。選んだ配列はブラウザに覚えさせ、変えたらその回はやり直す
   // 選択肢は QWERTY と、キー配列のページで登録したかな配列（日本語のときだけ選べる）・英語の配列（英語と日本語のローマ字で選べる）
   function addKanaLayouts(records) {
-    records.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+    records.sort(function (a, b) { return Store.compareLayoutNames(a.name, b.name); });
     records.forEach(function (r) {
       if (r.carry) layoutCarry[r.id] = r.carry; // キー配列習得で引き継いだ割り当て
       if (r.type === "eng") { engLayouts[r.id] = KanaLayout.engMap(r.entries); engEntries[r.id] = r.entries; }
