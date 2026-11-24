@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=154">
+  <link rel="stylesheet" href="style.css?v=155">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -31,6 +31,14 @@
     <section class="stats-section level-section">
       <h2 class="stats-title">レベルの達成度</h2>
       <p class="rhythm-legend">言語・モード・配列ごとの達成レベル（正確率 95% 以上の回の一番よいレベル）と、次の目標。全部の記録から出し、下の絞り込みは効きません。その他のモードは数えません。右の列は、ノーミス連続タイプの自己ベスト（ミスなしで打てた文字数の一番多い回。言語ごと）です。</p>
+      <div class="filters">
+        <label class="filter">配列のバージョン
+          <select id="level-versions" title="「○○v0.2」「○○v0.10」のようなマイナーバージョン違いの配列を、1行にまとめるか">
+            <option value="merge">まとめる</option>
+            <option value="split">分ける</option>
+          </select>
+        </label>
+      </div>
       <div id="levels" class="level-table-wrap"></div>
     </section>
 
@@ -103,20 +111,20 @@
     </section>
   </main>
 
-  <script src="js/store.js?v=154"></script>
-  <script src="js/settings.js?v=154"></script>
-  <script src="js/page-footer.js?v=154"></script>
-  <script src="js/rhythm.js?v=154"></script>
-  <script src="js/keys.js?v=154"></script>
-  <script src="js/romaji.js?v=154"></script>
-  <script src="js/typer.js?v=154"></script>
-  <script src="js/kana-layout.js?v=154"></script>
-  <script src="js/ranking.js?v=154"></script>
-  <script src="js/levels.js?v=154"></script>
-  <script src="js/filters.js?v=154"></script>
-  <script src="js/trend.js?v=154"></script>
-  <script src="js/no-mistype.js?v=154"></script>
-  <script src="js/session-view.js?v=154"></script>
-  <script src="js/stats.js?v=154"></script>
+  <script src="js/store.js?v=155"></script>
+  <script src="js/settings.js?v=155"></script>
+  <script src="js/page-footer.js?v=155"></script>
+  <script src="js/rhythm.js?v=155"></script>
+  <script src="js/keys.js?v=155"></script>
+  <script src="js/romaji.js?v=155"></script>
+  <script src="js/typer.js?v=155"></script>
+  <script src="js/kana-layout.js?v=155"></script>
+  <script src="js/ranking.js?v=155"></script>
+  <script src="js/levels.js?v=155"></script>
+  <script src="js/filters.js?v=155"></script>
+  <script src="js/trend.js?v=155"></script>
+  <script src="js/no-mistype.js?v=155"></script>
+  <script src="js/session-view.js?v=155"></script>
+  <script src="js/stats.js?v=155"></script>
 </body>
 </html>

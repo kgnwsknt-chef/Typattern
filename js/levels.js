@@ -87,20 +87,21 @@ const Levels = (function () {
     return TABLE[level.index + 1] || null;
   }
 
-  // 言語・モード・配列の組の達成度（記録ページの表に使う）。sessions は古い順
-  //   { count: その組の記録の数, level: 達成レベル, bestRate: 正確率95%以上の回の一番速い文字/秒,
+  // 言語・モード・配列の組の達成度（記録ページの表に使う）。sessions は古い順。layouts は配列の並び（バージョン違いをまとめるときは2つ以上）
+  //   { count: その組の記録の数, level: 達成レベル, bestRate: 正確率95%以上の回の一番速い文字/秒, bestLayout: その回の配列,
   //     target: 次の目標, gap: 目標まであと何文字/秒 }
-  function summary(sessions, lang, mode, layout) {
+  function summary(sessions, lang, mode, layouts) {
     const chars = charsFor(lang);
     let count = 0;
     let level = null;
     let bestRate = null;
+    let bestLayout = null;
     sessions.forEach(function (s) {
-      if (s.lang !== lang || s.mode !== mode || layoutOf(s) !== layout) return;
+      if (s.lang !== lang || s.mode !== mode || layouts.indexOf(layoutOf(s)) === -1) return;
       count++;
       if (s.result.accuracy < MIN_ACCURACY) return;
       const rate = rateOfSession(s);
-      if (rate !== null && (bestRate === null || rate > bestRate)) bestRate = rate;
+      if (rate !== null && (bestRate === null || rate > bestRate)) { bestRate = rate; bestLayout = layoutOf(s); }
       const l = fromRate(rate, chars);
       if (l && (!level || l.index > level.index)) {
         level = l;
@@ -110,18 +111,33 @@ const Levels = (function () {
     const gap = target && bestRate !== null ? minRate(target, chars) - bestRate : null;
     return {
       count: count, level: level,
-      bestRate: bestRate, target: target, gap: gap
+      bestRate: bestRate, bestLayout: bestLayout, target: target, gap: gap
     };
   }
 
-  // 達成レベルの表に出す配列（その言語の、達成に数えるモードの記録がある配列）。QWERTY を先に、ほかは配列名の順
+  // 達成レベルの表に出す配列（その言語の、達成に数えるモードの記録がある配列）。QWERTY を先に、ほかは配列名の順（名前の中の数字は数の順）
   function layoutsOf(sessions, lang) {
     const set = new Set();
     sessions.forEach(function (s) {
       if (s.lang === lang && COUNTED_MODES.indexOf(s.mode) !== -1) set.add(layoutOf(s));
     });
     return Array.from(set).sort(function (a, b) {
-      return (a === "qwerty" ? 0 : 1) - (b === "qwerty" ? 0 : 1) || a.localeCompare(b);
+      return (a === "qwerty" ? 0 : 1) - (b === "qwerty" ? 0 : 1) || a.localeCompare(b, "ja", { numeric: true });
+    });
+  }
+
+  // 配列の並びを、バージョン違い（「○○v数字.数字」で、名前とメジャーバージョンが同じもの）でまとめる。決まりは docs/records.md の「レベルの達成度」
+  //   返り値 [{ name: 表示名, layouts: 配列の並び }]。1つだけのものは配列名のまま
+  function groupVersions(layouts) {
+    const groups = new Map();
+    layouts.forEach(function (layout) {
+      const m = /^(.+v\d+)(?:\.\d+)+$/.exec(layout);
+      const key = m ? m[1] + ".x" : layout;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(layout);
+    });
+    return Array.from(groups, function (g) {
+      return { name: g[1].length > 1 ? g[0] : layoutName(g[1][0]), layouts: g[1] };
     });
   }
 
@@ -178,7 +194,7 @@ const Levels = (function () {
     fromRate: fromRate,
     rateOfSession: rateOfSession,
     ofSession: ofSession,
-    achieved: achieved, layoutOf: layoutOf, layoutName: layoutName, layoutsOf: layoutsOf,
+    achieved: achieved, layoutOf: layoutOf, layoutName: layoutName, layoutsOf: layoutsOf, groupVersions: groupVersions,
     next: next,
     summary: summary,
     levelUps: levelUps,

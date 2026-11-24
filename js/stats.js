@@ -11,6 +11,8 @@
   const rankingEl = document.getElementById("ranking");
   const rankingLegendEl = document.getElementById("ranking-legend");
   const levelsEl = document.getElementById("levels");
+  const levelVersionsEl = document.getElementById("level-versions"); // 配列のバージョン違いをまとめるか（"merge"・"split"）
+  const LEVEL_VERSIONS_STORAGE = "typing-test.levelVersions";
   // ランキングの行をクリックしたときに出す、その回のキーごとの間隔
   const svEl = document.getElementById("session-view");
   const svSummaryEl = document.getElementById("sv-summary");
@@ -64,7 +66,18 @@
   const LANGS = [["en", "英語"], ["ja", "日本語"]];
   const MODES = [["normal", "文章"], ["words", "単語"]];
 
+  let levelSessions = null; // 表に使う記録（まとめ方を変えたら描き直す）
+
+  try {
+    if (localStorage.getItem(LEVEL_VERSIONS_STORAGE) === "split") levelVersionsEl.value = "split";
+  } catch (e) { /* 初期値（まとめる）を使う */ }
+  levelVersionsEl.addEventListener("change", function () {
+    try { localStorage.setItem(LEVEL_VERSIONS_STORAGE, levelVersionsEl.value); } catch (e) { /* 覚えられなくても使える */ }
+    if (levelSessions) renderLevels(levelSessions);
+  });
+
   function renderLevels(sessions) {
+    levelSessions = sessions;
     levelsEl.textContent = "";
     const table = document.createElement("table");
     table.className = "level-table";
@@ -87,15 +100,27 @@
         tr.appendChild(streakCell(sessions, lang[0]));
         return;
       }
-      layouts.forEach(function (layout, i) {
+      const rows = levelVersionsEl.value === "merge" ? Levels.groupVersions(layouts)
+        : layouts.map(function (l) { return { name: Levels.layoutName(l), layouts: [l] }; });
+      rows.forEach(function (row, i) {
         const tr = body.insertRow();
         const th = cell("th", lang[1]);
-        th.appendChild(line("level-sub", Levels.layoutName(layout)));
+        th.appendChild(line("level-sub", row.name));
+        const merged = row.layouts.length > 1;
+        if (merged) {
+          th.appendChild(line("level-sub", row.layouts.length + " バージョン"));
+          th.title = row.layouts.join("\n");
+        }
         tr.appendChild(th);
-        MODES.forEach(function (mode) { tr.appendChild(levelCell(Levels.summary(sessions, lang[0], mode[0], layout))); });
+        MODES.forEach(function (mode) {
+          const sum = Levels.summary(sessions, lang[0], mode[0], row.layouts);
+          const td = levelCell(sum);
+          if (merged && sum.bestLayout) td.title = "一番速い回の配列：" + sum.bestLayout;
+          tr.appendChild(td);
+        });
         if (i === 0) {
           const st = streakCell(sessions, lang[0]);
-          st.rowSpan = layouts.length;
+          st.rowSpan = rows.length;
           tr.appendChild(st);
         }
       });
