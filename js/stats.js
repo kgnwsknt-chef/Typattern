@@ -7,6 +7,8 @@
   const groupEl = document.getElementById("f-group"); // 推移のまとめ方
   const trendVersionsEl = document.getElementById("trend-versions"); // 推移で配列のバージョン違いをまとめるか（"merge"・"split"）
   const TREND_VERSIONS_STORAGE = "typing-test.trendVersions";
+  const trendUpsEl = document.getElementById("trend-ups"); // 推移にレベルの達成の印を出すか
+  const TREND_UPS_STORAGE = "typing-test.trendLevelUps";
   const trendNoteEl = document.getElementById("trend-note"); // まとめて描いている配列
   const layoutFilterEl = document.getElementById("f-layout");
   const summaryEl = document.getElementById("stats-summary");
@@ -75,7 +77,7 @@
       Trend.renderStreak(trendEl, trendLegendEl, trendData.picked, groupEl.value);
       return;
     }
-    Trend.render(trendEl, trendLegendEl, trendData.picked, groupEl.value, { levelUps: trendData.levelUps, selectedId: selectedId });
+    Trend.render(trendEl, trendLegendEl, trendData.picked, groupEl.value, { levelUps: trendUpsEl.checked ? trendData.levelUps : null, selectedId: selectedId });
   }
   // レベルの達成度の表（行：言語 × 配列、列：モード（文章・単語）と、ノーミス連続タイプの自己ベスト）。決まりは docs/levels.md
   //   ノーミス連続タイプは言語ごとなので、その言語の行をまとめた1マスにする
@@ -299,6 +301,13 @@
   trendVersionsEl.addEventListener("change", function () {
     try { localStorage.setItem(TREND_VERSIONS_STORAGE, trendVersionsEl.value); } catch (e) { /* 覚えられなくても使える */ }
     update();
+  });
+  try {
+    if (localStorage.getItem(TREND_UPS_STORAGE) === "off") trendUpsEl.checked = false;
+  } catch (e) { /* 初期値（出す）を使う */ }
+  trendUpsEl.addEventListener("change", function () {
+    try { localStorage.setItem(TREND_UPS_STORAGE, trendUpsEl.checked ? "on" : "off"); } catch (e) { /* 覚えられなくても使える */ }
+    drawTrend();
   });
   // バージョン表示と、記録の書き出し・読み込み（読み込んだら表示を更新する）
   PageFooter.init({ onImport: update });
