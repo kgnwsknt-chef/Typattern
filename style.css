@@ -1946,6 +1946,16 @@ a.text-btn {
   stroke-dasharray: 4 3;
 }
 
+/* 差の分布（js/ngram.js の drawDiffHist）。散布図の下に離して置き、0 の線は実線 */
+.corr-diff {
+  margin-top: 12px;
+}
+
+.diff-zero {
+  stroke: var(--sub);
+  stroke-width: 1.5;
+}
+
 .corr-dot {
   stroke: none;
   opacity: 0.75;

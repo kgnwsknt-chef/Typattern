@@ -7,7 +7,7 @@
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=158">
+  <link rel="stylesheet" href="style.css?v=159">
 </head>
 <body>
   <!-- 全ページ共通の一番上：左にロゴ（とバージョン）、右にページへのリンク -->
@@ -73,7 +73,7 @@
     <p id="stats-summary" class="stats-summary">読み込み中…</p>
     <p id="versions-note" class="stats-summary" hidden></p>
 
-    <!-- 並び：絞り込み → 回数・集計・説明 → キーごとの IKI（配列図と、頻度との散布図）→ bigram の2次元ヒストグラム → bigram（表と分布）→ 指と行(row)で分けた bigram・trigram → trigram（表と分布）→ trigram と bigram の相関 -->
+    <!-- 並び：絞り込み → 回数・集計・説明 → キーごとの IKI（配列図と、頻度との散布図）→ bigram の2次元ヒストグラム → bigram（表と分布）→ 指と行(row)で分けた bigram・trigram → trigram（表と分布）→ trigram と bigram の相関（散布図2枚と差の分布） -->
     <section class="stats-section">
       <div class="filters">
         <label class="filter">回数
@@ -229,28 +229,29 @@
 
     <section class="stats-section">
       <h2 class="stats-title">trigram と bigram の相関</h2>
-      <p class="rhythm-legend">点は trigram（上の trigram の表と同じもの。「回数」の絞り込みも同じ）／ trigram abc の中の間隔 = abc と打ったときの a→b（1つ目）と b→c（2つ目）／ bigram 全体の平均 = ab をどの並びの中で打ったかを問わない平均（bigram の表の値）／ 軸の最大値よりも大きい値は最大値のところに描く ／ r = 相関係数（ピアソン。1 に近いほど一直線に並ぶ）／ 点にマウスを乗せると値を表示、クリックでその trigram の分布を表示</p>
+      <p class="rhythm-legend">点は trigram（上の trigram の表と同じもの。「回数」の絞り込みも同じ）／ trigram abc の中の間隔 = abc と打ったときの a→b（1つ目）と b→c（2つ目）／ bigram 全体の平均 = ab をどの並びの中で打ったかを問わない平均（bigram の表の値）／ 軸の最大値よりも大きい値は最大値のところに描く ／ r = 相関係数（ピアソン。1 に近いほど一直線に並ぶ）／ 下の棒グラフは、右の図の点ごとの差（trigram の中の間隔 − bigram 全体の平均）の分布（trigram の回数で重み付け）。0 より左なら trigram の中の方が速い ／ 点にマウスを乗せると値を表示、クリックでその trigram の分布を表示</p>
       <div class="ngram-grid">
         <div class="ngram-col"><div id="corr-pair" class="corr"></div></div>
         <div class="ngram-col"><div id="corr-inner" class="corr"></div></div>
       </div>
+      <div id="corr-diff" class="corr corr-diff"></div>
     </section>
   </main>
 
-  <script src="js/store.js?v=158"></script>
-  <script src="js/keys.js?v=158"></script>
-  <script src="js/settings.js?v=158"></script>
-  <script src="js/page-footer.js?v=158"></script>
-  <script src="js/rhythm.js?v=158"></script>
-  <script src="js/keyboard-shapes.js?v=158"></script>
-  <script src="js/kana-layout.js?v=158"></script>
-  <script src="js/key-map.js?v=158"></script>
-  <script src="js/point-trend.js?v=158"></script>
-  <script src="js/ngram.js?v=158"></script>
-  <script src="js/finger-map.js?v=158"></script>
-  <script src="js/key-scatter.js?v=158"></script>
-  <script src="js/iki-measurement.js?v=158"></script>
-  <script src="js/filters.js?v=158"></script>
-  <script src="js/ngram-page.js?v=158"></script>
+  <script src="js/store.js?v=159"></script>
+  <script src="js/keys.js?v=159"></script>
+  <script src="js/settings.js?v=159"></script>
+  <script src="js/page-footer.js?v=159"></script>
+  <script src="js/rhythm.js?v=159"></script>
+  <script src="js/keyboard-shapes.js?v=159"></script>
+  <script src="js/kana-layout.js?v=159"></script>
+  <script src="js/key-map.js?v=159"></script>
+  <script src="js/point-trend.js?v=159"></script>
+  <script src="js/ngram.js?v=159"></script>
+  <script src="js/finger-map.js?v=159"></script>
+  <script src="js/key-scatter.js?v=159"></script>
+  <script src="js/iki-measurement.js?v=159"></script>
+  <script src="js/filters.js?v=159"></script>
+  <script src="js/ngram-page.js?v=159"></script>
 </body>
 </html>

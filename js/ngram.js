@@ -379,6 +379,101 @@ const NGram = (function () {
     el.appendChild(svg);
   }
 
+  // trigram の中の間隔 − bigram 全体の平均 の分布をヒストグラムで描く（IKI のページ。決まりは docs/analysis_iki.md の「trigram と bigram の相関」）
+  // items：[{ d: 差（ms）, w: その trigram の回数 }]。d が負 = trigram の中の方が速い、正 = trigram の中の方が遅い
+  // 差1つを trigram の回数で重み付けして数える（棒の高さ・平均・中央値・割合とも）
+  // 横軸は 0 を真ん中に ±500 ms。80 個の区間（12.5 ms 幅）に分け、範囲の外の値は両端の区間に入れる
+  function drawDiffHist(el, items) {
+    el.textContent = "";
+    const head = document.createElement("div");
+    head.className = "dist-head";
+    const title = document.createElement("span");
+    title.className = "dist-title";
+    title.textContent = "trigram の中の間隔 − bigram 全体の平均 の分布";
+    const info = document.createElement("span");
+    info.className = "dist-info";
+    head.appendChild(title);
+    head.appendChild(info);
+    el.appendChild(head);
+    const total = items.reduce(function (a, o) { return a + o.w; }, 0);
+    if (!total) {
+      info.textContent = "差 0 個";
+      const p = document.createElement("p");
+      p.className = "hm-empty";
+      p.textContent = "対象になる trigram がありません。";
+      el.appendChild(p);
+      return;
+    }
+    // 重み付きの分位点（p = 0〜1）
+    const quantile = function (list, p) {
+      const sorted = list.slice().sort(function (a, b) { return a.v - b.v; });
+      const goal = total * p;
+      let acc = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        acc += sorted[i].w;
+        if (acc >= goal) return sorted[i].v;
+      }
+      return sorted[sorted.length - 1].v;
+    };
+    const mean = items.reduce(function (a, o) { return a + o.d * o.w; }, 0) / total;
+    const median = quantile(items.map(function (o) { return { v: o.d, w: o.w }; }), 0.5);
+    const faster = items.reduce(function (a, o) { return o.d < 0 ? a + o.w : a; }, 0);
+    const slower = items.reduce(function (a, o) { return o.d > 0 ? a + o.w : a; }, 0);
+    const sign = function (v) { const r = Math.round(v); return (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r); };
+    info.textContent = "差 " + items.length.toLocaleString() + " 個（回数で重み付けして のべ " + total.toLocaleString() + " 回）／ 平均 " +
+      sign(mean) + " ms ／ 中央値 " + sign(median) + " ms ／ trigram の中の方が速い " + Math.round(faster / total * 100) +
+      "%・遅い " + Math.round(slower / total * 100) + "%";
+
+    const range = 500; // 横軸は ±500 ms で固定
+    const nb = 80;
+    const bw = (range * 2) / nb;
+    const counts = new Array(nb).fill(0);
+    items.forEach(function (o) { counts[Math.max(0, Math.min(nb - 1, Math.floor((o.d + range) / bw)))] += o.w; });
+    const maxCount = Math.max.apply(null, counts);
+
+    const W = 640, H = 196, L = 40, R = 18, T = 18, B = 50;
+    const pw = W - L - R, ph = H - T - B;
+    const x = function (v) { return L + ((Math.max(-range, Math.min(v, range)) + range) / (range * 2)) * pw; };
+    const y = function (c) { return T + ph - (c / maxCount) * ph; };
+    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "dist-svg", role: "img",
+      "aria-label": "trigram の中の間隔から bigram 全体の平均を引いた差の分布" });
+    svg.style.maxWidth = (W * 1.4) + "px";
+    const fmt = function (v) { return String(Math.round(v * 10) / 10); };
+
+    // 棒。色は差が負（速い）ほど青、0 で緑、正（遅い）ほど赤（キーごとの間隔と同じ色の並び）
+    counts.forEach(function (c, i) {
+      if (c === 0) return;
+      const lo = -range + i * bw, hi = lo + bw;
+      const bar = svgEl("rect", { x: x(lo), y: y(c), width: x(hi) - x(lo), height: T + ph - y(c),
+        fill: Rhythm.color(100 + ((lo + hi) / 2 / range) * 100, 100) });
+      const tip = svgEl("title", {});
+      tip.textContent = (i === 0 ? fmt(hi) + " ms 未満" : i === nb - 1 ? fmt(lo) + " ms 以上" : fmt(lo) + "〜" + fmt(hi) + " ms") + "：" + c + " 回";
+      bar.appendChild(tip);
+      svg.appendChild(bar);
+    });
+
+    // 軸と目盛り
+    svg.appendChild(svgEl("line", { x1: L, y1: T + ph, x2: L + pw, y2: T + ph, class: "dist-axis" }));
+    svg.appendChild(svgEl("line", { x1: L, y1: T, x2: L, y2: T + ph, class: "dist-axis" }));
+    const tick = 100;
+    for (let v = -Math.floor(range / tick) * tick; v <= range; v += tick) {
+      svg.appendChild(svgEl("line", { x1: x(v), y1: T + ph, x2: x(v), y2: T + ph + 3, class: "dist-axis" }));
+      svg.appendChild(svgText(x(v), T + ph + 14, (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v), "middle"));
+    }
+    svg.appendChild(svgText(L, H - 4, "← trigram の中の方が速い", "start"));
+    svg.appendChild(svgText(L + pw, H - 4, "trigram の中の方が遅い →", "end"));
+    svg.appendChild(svgText(L + pw / 2, H - 4, "差（ms）", "middle"));
+    [0, Math.round(maxCount / 2), maxCount].filter(function (c, i, a) { return a.indexOf(c) === i; }).forEach(function (c) {
+      svg.appendChild(svgText(L - 4, y(c) + 3, String(c), "end"));
+    });
+    svg.appendChild(svgText(L - 4, T - 8, "回", "end"));
+
+    // 0（差なし）の線と、平均の点線
+    svg.appendChild(svgEl("line", { x1: x(0), y1: T, x2: x(0), y2: T + ph, class: "diff-zero" }));
+    svg.appendChild(svgEl("line", { x1: x(mean), y1: T, x2: x(mean), y2: T + ph, class: "dist-mean" }));
+    el.appendChild(svg);
+  }
+
   // 散布図の点の色。f = 0（回数が少ない）〜 1（多い）。薄い青 → 濃い青（一番薄くても背景から見分けられる濃さ）
   function dotColor(f) {
     return "hsl(215, 75%, " + Math.round(80 - f * 55) + "%)";
@@ -816,5 +911,5 @@ const NGram = (function () {
     return el;
   }
 
-  return { create: create, accumulate: accumulate, accumulateKana: accumulateKana, accumulateSpreads: accumulateSpreads, chordsOf: chordsOf, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution, drawScatter: drawScatter };
+  return { create: create, accumulate: accumulate, accumulateKana: accumulateKana, accumulateSpreads: accumulateSpreads, chordsOf: chordsOf, toRows: toRows, drawHeatmap: drawHeatmap, setTrend: setTrend, showDist: showDist, drawDistribution: drawDistribution, drawScatter: drawScatter, drawDiffHist: drawDiffHist };
 })();

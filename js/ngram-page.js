@@ -22,6 +22,7 @@
   const trigramTable = NGram.create(3, "trigram", document.getElementById("trigram-dist"), redrawCorr);
   const corrPairEl = document.getElementById("corr-pair");   // trigram の中の2つの間隔
   const corrInnerEl = document.getElementById("corr-inner"); // trigram の中の間隔と、bigram 全体の平均
+  const corrDiffEl = document.getElementById("corr-diff");   // trigram の中の間隔 − bigram 全体の平均 の分布
   let corrTri = [];            // 相関の図に描く trigram（表と同じ）
   let corrBi = new Map();      // bigram の文字 → 行（「回数」で絞らない全部の bigram）
   const filters = Filters.init(update);
@@ -454,6 +455,8 @@
     NGram.drawScatter(corrInnerEl, inner, { title: "trigram の中の間隔と、bigram 全体の平均", xLabel: "bigram 全体の平均 IKI",
       yLabel: "間隔（trigram の中）", selected: selected, onSelect: onSelect,
       ariaLabel: "trigram の中の間隔と、その bigram の IKI の散布図" });
+    // 右の図と同じ点の、縦 − 横（trigram の中の間隔 − bigram 全体の平均）。trigram の回数で重み付けする
+    NGram.drawDiffHist(corrDiffEl, inner.map(function (p) { return { d: p.y - p.x, w: p.count }; }));
   }
 
   // ---- 指と行(row)で分けた bigram・trigram（分類は js/finger-map.js。決まりは docs/analysis_iki.md） ----
